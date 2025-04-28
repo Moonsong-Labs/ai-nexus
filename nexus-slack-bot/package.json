@@ -7,5 +7,10 @@
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "@slack/bolt": "^3.17.0",
+    "@slack/web-api": "^7.0.0"
   }
 }
