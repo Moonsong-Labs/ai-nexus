@@ -48,17 +48,8 @@ def make_gemini_compatible(tool):
 
 all_github_tools = [make_gemini_compatible(tool) for tool in github_toolkit.get_tools()]
 
-# Print whitelist and actual tool names for debugging
-print("\nWhitelisted tools:")
-for tool in github_whitelisted_tools:
-    print(f"- {tool}")
-
-print("\nAvailable tools:")
-for tool in all_github_tools:
-    print(f"- {tool.name}")
-
 github_tools = [tool for tool in all_github_tools if tool.name in github_whitelisted_tools]
-print(f"\nMatched {len(github_tools)} tools")
+assert len(github_tools) == len(github_whitelisted_tools), "Github tool mismatch"
 
 def call_model(state: State) -> dict:
     system_msg = SystemMessage(content=SYSTEM_PROMPT)
