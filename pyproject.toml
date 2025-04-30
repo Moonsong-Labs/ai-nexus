@@ -1,7 +1,7 @@
 [project]
 name = "ai-nexus"
 version = "0.1.0"
-description = "ai-nexus orchestrator agent."
+description = "ai-nexus agents."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -25,10 +25,12 @@ requires = ["setuptools>=73.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["orchestrator"]
+packages = ["orchestrator", "grumpy"]
 [tool.setuptools.package-dir]
 "orchestrator" = "src/orchestrator"
 "langgraph.templates.orchestrator" = "src/orchestrator"
+"grumpy" = "src/grumpy"
+"langgraph.templates.grumpy" = "src/grumpy"
 
 
 [tool.ruff]
