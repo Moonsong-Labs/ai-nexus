@@ -10,6 +10,7 @@ from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 
 from tester import configuration, tools, utils
+from tester.output import TesterAgentFinalOutput
 from tester.state import State
 
 logger = logging.getLogger(__name__)
@@ -46,15 +47,16 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
     sys = configurable.system_prompt.format(
         user_info=formatted, time=datetime.now().isoformat()
     )
-
     # Invoke the language model with the prepared prompt and tools
-    # "bind_tools" gives the LLM the JSON schema for all tools in the list so it knows how
-    # to use them.
-    msg = await llm.bind_tools([tools.upsert_memory]).ainvoke(
-        [{"role": "system", "content": sys}, *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
-    )
-    return {"messages": [msg]}
+    output = await llm.bind_tools([tools.upsert_memory]) \
+        .with_structured_output(TesterAgentFinalOutput) \
+        .ainvoke(
+            [{"role": "system", "content": sys}, *state.messages],
+            {"configurable": utils.split_model_and_provider(configurable.model)},
+        )
+    
+    # Create a proper message from the structured output
+    return {"messages": [{"role": "assistant", "content": str(output)}]}
 
 
 async def store_memory(state: State, config: RunnableConfig, *, store: BaseStore):
