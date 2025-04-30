@@ -2,7 +2,9 @@
 
 import asyncio
 import logging
+import json
 from datetime import datetime
+from pathlib import Path
 
 from langchain.chat_models import init_chat_model
 from langchain_core.runnables import RunnableConfig
@@ -18,21 +20,102 @@ logger = logging.getLogger(__name__)
 llm = init_chat_model()
 
 
+# Helper function to load static memories
+async def ensure_static_memories(store: BaseStore):
+    """Ensure static memories are loaded in the store."""
+    # Check if any static memories exist
+    try:
+        # Try passing only namespace positionally, rest as keywords
+        static_memories = await store.asearch(
+            ("static_memories", "global"),
+            query="",
+            limit=1
+        )
+        if static_memories:
+            logger.info("Static memories already exist in store")
+            return
+    except Exception as e:
+        logger.error(f"Error checking for static memories: {e}")
+        return
+        
+    # Load memories from file
+    logger.info("Loading static memories into store")
+    static_memories_path = Path(".langgraph/static_memories/project_info.json")
+    
+    if not static_memories_path.exists():
+        logger.warning(f"Static memories file not found at {static_memories_path}")
+        return
+        
+    try:
+        with open(static_memories_path, "r") as f:
+            memories = json.load(f)
+            
+        # Add each memory to the store
+        for i, memory in enumerate(memories):
+            # Use positional arguments for aput as that seems to work
+            await store.aput(
+                ("static_memories", "global"),
+                f"static_{i}",
+                memory
+            )
+        logger.info(f"Loaded {len(memories)} static memories into store")
+    except Exception as e:
+        logger.error(f"Error loading static memories: {e}")
+
+
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
     """Extract the user's state from the conversation and update the memory."""
+    # Ensure static memories are loaded
+    await ensure_static_memories(store)
+    
     configurable = configuration.Configuration.from_runnable_config(config)
+
+    query_text = str([m.content for m in state.messages[-3:]])
 
     # Retrieve the most recent memories for context
     memories = await store.asearch(
         ("memories", configurable.user_id),
-        query=str([m.content for m in state.messages[-3:]]),
+        query=query_text,
         limit=10,
     )
 
-    # Format memories for inclusion in the prompt
-    formatted = "\n".join(
-        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
+    # Retrieve static memories using only namespace positionally
+    static_memories = await store.asearch(
+        ("static_memories", "global"),
+        query=query_text,
+        limit=5
     )
+    
+    logger.info(f"Found {len(static_memories)} relevant static memories")
+    
+    # Format memories for inclusion in the prompt
+    memory_texts = []
+    
+    # Add user memories
+    for mem in memories:
+        memory_text = f"[{mem.key}]: {mem.value} (similarity: {mem.score})"
+        memory_texts.append(memory_text)
+    
+    formatted = "\n".join(memory_texts)
+    
+    # Add static memories with special formatting
+    if static_memories:
+        static_memory_texts = []
+        for mem in static_memories:
+            content = mem.value.get('content', 'No content')
+            context = mem.value.get('context', 'No context')
+            memory_text = f"[{mem.key}]: content: {content}, context: {context}"
+            static_memory_texts.append(memory_text)
+        
+        if static_memory_texts:
+            if formatted:
+                formatted += "\n\n<static_memories>\n"
+            else:
+                formatted = "<static_memories>\n"
+                
+            formatted += "\n".join(static_memory_texts)
+            formatted += "\n</static_memories>"
+    
     if formatted:
         formatted = f"""
 <memories>
