@@ -7,7 +7,7 @@ from typing import Any, Optional
 from langchain_core.runnables import RunnableConfig
 from typing_extensions import Annotated
 
-from agent_template import prompts
+from requirement_gatherer import prompts
 
 
 @dataclass(kw_only=True)
@@ -17,7 +17,7 @@ class Configuration:
     user_id: str = "default"
     """The ID of the user to remember in the conversation."""
     model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="google_genai:gemini-1.5-flash",
+        default="google_genai:gemini-2.0-flash",
         metadata={
             "description": "The name of the language model to use for the agent. "
             "Should be in the form: provider/model-name."

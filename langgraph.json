@@ -4,7 +4,7 @@
         "agent_template": "./src/agent_template/graph.py:graph",
         "orchestrator": "./src/orchestrator/graph.py:graph",
         "grumpy": "./src/grumpy/graph.py:graph",
-        "requirement-gatherer": "./src/requirement-gatherer/graph.py:graph"
+        "requirement_gatherer": "./src/requirement_gatherer/graph.py:graph"
     },
     "default_graph": "agent_template",
     "env": ".env",

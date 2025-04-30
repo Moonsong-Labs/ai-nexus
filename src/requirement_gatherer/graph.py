@@ -9,8 +9,8 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 
-from agent_template import configuration, tools, utils
-from agent_template.state import State
+from requirement_gatherer import configuration, tools, utils
+from requirement_gatherer.state import State
 
 logger = logging.getLogger(__name__)
 
