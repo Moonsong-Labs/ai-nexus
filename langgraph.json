@@ -1,10 +1,12 @@
 {
     "dockerfile_lines": [],
     "graphs": {
+        "agent_template": "./src/agent_template/graph.py:graph",
         "orchestrator": "./src/orchestrator/graph.py:graph",
         "grumpy": "./src/grumpy/graph.py:graph"
     },
+    "default_graph": "agent_template",
     "env": ".env",
-    "python_version": "3.11",
+    "python_version": "3.12",
     "dependencies": ["."]
 }

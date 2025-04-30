@@ -9,16 +9,13 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 
-from orchestrator import configuration, tools, utils
-from orchestrator.state import State
+from agent_template import configuration, tools, utils
+from agent_template.state import State
 
 logger = logging.getLogger(__name__)
 
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model()
-
-# msg = llm.invoke("hello", {"configurable": utils.split_model_and_provider(configuration.Configuration().model)})
-# print(msg)
 
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
     """Extract the user's state from the conversation and update the memory."""
@@ -103,7 +100,7 @@ builder.add_conditional_edges("call_model", route_message, ["store_memory", END]
 # to let it first store memories, then generate a response
 builder.add_edge("store_memory", "call_model")
 graph = builder.compile()
-graph.name = "Orchestrator"
+graph.name = "Agent Template"
 
 
 __all__ = ["graph"]
