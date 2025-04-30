@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model()
 
+
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
     """Extract the user's state from the conversation and update the memory."""
     configurable = configuration.Configuration.from_runnable_config(config)
@@ -29,7 +30,9 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
     )
 
     # Format memories for inclusion in the prompt
-    formatted = "\n".join(f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories)
+    formatted = "\n".join(
+        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
+    )
     if formatted:
         formatted = f"""
 <memories>

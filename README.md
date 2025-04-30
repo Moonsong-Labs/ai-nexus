@@ -51,6 +51,26 @@ This will invoke the `sync` and `deps` targets on its own.
 make clean
 ```
 
+### Linting and Formatting
+
+```sh
+make lint
+```
+
+```sh
+make fmt
+```
+
+### Spell Check
+
+```sh
+make spell_check
+```
+
+```sh
+make spell_fix
+```
+
 ### Example Agent Usage
 
 `make run` should open the LangGraph with the default model to interact with. 

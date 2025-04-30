@@ -39,28 +39,28 @@ extended_tests:
 PYTHON_FILES=src/
 MYPY_CACHE=.mypy_cache
 lint: PYTHON_FILES=src 
-format: PYTHON_FILES=.
+fmt: PYTHON_FILES=.
 lint_diff format_diff: PYTHON_FILES=$(shell git diff --name-only --diff-filter=d main | grep -E '\.py$$|\.ipynb$$')
 lint_package: PYTHON_FILES=src
 lint_tests: PYTHON_FILES=tests
 lint_tests: MYPY_CACHE=.mypy_cache_test
 
 lint lint_diff lint_package lint_tests:
-	python -m ruff check .
-	[ "$(PYTHON_FILES)" = "" ] || python -m ruff format $(PYTHON_FILES) --diff
-	[ "$(PYTHON_FILES)" = "" ] || python -m ruff check --select I $(PYTHON_FILES)
-	[ "$(PYTHON_FILES)" = "" ] || python -m mypy --strict $(PYTHON_FILES)
-	[ "$(PYTHON_FILES)" = "" ] || mkdir -p $(MYPY_CACHE) && python -m mypy --strict $(PYTHON_FILES) --cache-dir $(MYPY_CACHE)
+	uv tool run ruff check .
+	[ "$(PYTHON_FILES)" = "" ] || uv tool run ruff format $(PYTHON_FILES) --diff
+	[ "$(PYTHON_FILES)" = "" ] || uv tool run ruff check --select I $(PYTHON_FILES)
+	[ "$(PYTHON_FILES)" = "" ] || uv tool run mypy --strict $(PYTHON_FILES)
+	[ "$(PYTHON_FILES)" = "" ] || mkdir -p $(MYPY_CACHE) && uv tool run mypy --strict $(PYTHON_FILES) --cache-dir $(MYPY_CACHE)
 
-format format_diff:
+fmt format_diff:
 	uv tool run ruff format $(PYTHON_FILES)
 	uv tool run ruff check --select I --fix $(PYTHON_FILES)
 
 spell_check:
-	codespell --toml pyproject.toml
+	uv tool run codespell --toml pyproject.toml
 
 spell_fix:
-	codespell --toml pyproject.toml -w
+	uv tool run codespell --toml pyproject.toml -w
 
 ######################
 # HELP
