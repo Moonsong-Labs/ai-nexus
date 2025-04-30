@@ -1,9 +1,10 @@
 {
-    "dockerfile_lines": [],
-    "graphs": {
-        "orchestrator": "./src/orchestrator/graph.py:graph"
-    },
-    "env": ".env",
-    "python_version": "3.11",
-    "dependencies": ["."]
+  "dockerfile_lines": [],
+  "graphs": {
+    "orchestrator": "./src/orchestrator/graph.py:graph",
+    "tester": "./src/tester/graph.py:graph"
+  },
+  "env": ".env",
+  "python_version": "3.11",
+  "dependencies": ["."]
 }

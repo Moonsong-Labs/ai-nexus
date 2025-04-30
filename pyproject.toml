@@ -25,10 +25,11 @@ requires = ["setuptools>=73.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["orchestrator"]
+packages = ["orchestrator", "tester"]
 [tool.setuptools.package-dir]
 "orchestrator" = "src/orchestrator"
 "langgraph.templates.orchestrator" = "src/orchestrator"
+"tester" = "src/tester"
 
 
 [tool.ruff]
