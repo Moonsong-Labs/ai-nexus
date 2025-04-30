@@ -1,11 +1,7 @@
 """State for the code agent."""
 
-from typing import List
+from typing import Annotated, TypedDict
+from langgraph.graph.message import add_messages
 
-from langchain_core.messages import BaseMessage
-
-
-class State:
-    """State for the code agent."""
-
-    messages: List[BaseMessage] 
+class State(TypedDict):
+    messages: Annotated[list, add_messages]
