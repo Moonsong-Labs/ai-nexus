@@ -24,9 +24,12 @@ optional-dependencies.dev = [
 requires = ["setuptools>=73.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+# Add new agents here: #1
 [tool.setuptools]
-packages = ["orchestrator", "grumpy"]
+packages = ["agent_template", "orchestrator", "grumpy"]
 [tool.setuptools.package-dir]
+"agent_template" = "src/agent_template"
+"langgraph.templates.agent_template" = "src/agent_template"
 "orchestrator" = "src/orchestrator"
 "langgraph.templates.orchestrator" = "src/orchestrator"
 "grumpy" = "src/grumpy"
