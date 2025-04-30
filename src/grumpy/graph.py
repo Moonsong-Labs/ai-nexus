@@ -9,14 +9,16 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 
-from orchestrator import configuration, tools, utils
-from orchestrator.state import State
+from grumpy import configuration, tools, utils
+from grumpy.state import State
 
 logger = logging.getLogger(__name__)
 
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model()
 
+# import os
+# print(os.getenv("GEMINI_API_KEY", "<>"))
 # msg = llm.invoke("hello", {"configurable": utils.split_model_and_provider(configuration.Configuration().model)})
 # print(msg)
 
@@ -106,7 +108,7 @@ builder.add_conditional_edges("call_model", route_message, ["store_memory", END]
 # to let it first store memories, then generate a response
 builder.add_edge("store_memory", "call_model")
 graph = builder.compile()
-graph.name = "Orchestrator"
+graph.name = "grumpy"
 
 
 __all__ = ["graph"]

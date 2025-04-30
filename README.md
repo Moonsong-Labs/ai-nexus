@@ -8,34 +8,7 @@ This repo provides a simple ReAct-style agent with a tool to save memories. This
 
 ![Memory Diagram](./static/memory_graph.png)
 
-## How it works
-
-This chat bot reads from your memory graph's `Store` to easily list extracted memories. If it calls a tool, LangGraph will route to the `store_memory` node to save the information to the store.
-
-## How to evaluate
-
-Memory management can be challenging to get right, especially if you add additional tools for the bot to choose between.
-To tune the frequency and quality of memories your bot is saving, we recommend starting from an evaluation set, adding to it over time as you find and address common errors in your service.
-
-We have provided a few example evaluation cases in [the test file here](./tests/integration_tests/test_graph.py). As you can see, the metrics themselves don't have to be terribly complicated, especially not at the outset.
-
-We use [LangSmith's @unit decorator](https://docs.smith.langchain.com/how_to_guides/evaluation/unit_testing#write-a-test) to sync all the evaluations to LangSmith so you can better optimize your system and identify the root cause of any issues that may arise.
-
-## How to customize
-
-1. Customize memory content: we've defined a simple memory structure `content: str, context: str` for each memory, but you could structure them in other ways.
-2. Provide additional tools: the bot will be more useful if you connect it to other functions.
-3. Select a different model: We default to google_genai:gemini-1.5-flash. You can select a compatible chat model using provider/model-name via configuration. Example: openai/gpt-4.
-4. Customize the prompts: We provide a default prompt in the [prompts.py](src/memory_agent/prompts.py) file. You can easily update this via configuration.
-
-
 ## Running Locally
-
-### Pre-requisites
-
-* Python > 3.12
-* pip 
-* venv /python3-venv
 
 ### Update `.env`
 Create a `.env` file.
@@ -44,69 +17,65 @@ cp .env.example .env
 ```
 
 Update the following required environment variables in `.env`:
-* `GEMINI_API_KEY`
+* `GOOGLE_API_KEY`
 
 (rest may be omitted unless testing locally)
 
 
-### uv
+### Install uv
 
-<WIP>
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/). It will take care of venv and python interpreters automatically.
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+Inside `uv`, the installed commands may be run as `uv run -- <CMD>`. 
 
+For example LangGraph can be run via: 
 
+```sh
+uv run -- langgraph dev
 ```
-make deps
+
+### Run
+
+Run the agent locally via:
+
+```sh
 make run
-make test
 ```
 
-### Create `venv`
-Create a new virtual environment under `.venv` directory if not already created.
+This will invoke the `sync` and `deps` targets on its own.
+
+
+### Clean
 
 ```sh
-python -m venv .venv
+make clean
 ```
 
-Activate the `vevn` under `.venv`:
-```sh
-source .venv/bin/activate
-```
-
-Install dependencies.
-```sh
-pip install -e .
-```
-
-### Install `pytest`
-Install `pytest` for testing, ideally globally.
-```sh
-sudo apt install python3-pytest
-brew install pytest
-```
-
-Verify tests work: 
-```sh
-make test
-```
-
-### Install LangGraph Studio
-
-Install LangGraph Studio from [source](https://github.com/langchain-ai/langgraph-studio?tab=readme-ov-file#download), or install from [here](https://langchain-ai.github.io/langgraph/concepts/langgraph_cli/#dev). 
-
-**NOTE:** you may need to install the `langgraph-cli[inmem]` package within the `venv` via `pip install langgraph-cli[inmem]`  if it doesn't to pick up the `venv` correctly (buggy).
-
-
-Verify by running 
+### Linting and Formatting
 
 ```sh
-langgraph dev
+make lint
 ```
 
-It should open the studo with the model available to interact with.
+```sh
+make fmt
+```
 
-Navigate to the `orchestrator` graph and have a conversation with it! Try sending some messages saying your name and other things the bot should remember.
+### Spell Check
+
+```sh
+make spell_check
+```
+
+```sh
+make spell_fix
+```
+
+### Example Agent Usage
+
+`make run` should open the LangGraph with the default model to interact with. 
+
+Navigate to the `agent_template` graph and have a conversation with it! Try sending some messages saying your name and other things the bot should remember.
 
 Try saving memories via the `upsert_memory` tool:
 
@@ -140,4 +109,35 @@ Assuming the bot saved some memories, create a _new_ thread using the `+` icon. 
 You can review the saved memories by clicking the "memory" button.
 
 ![Memories Explorer](./static/memories.png)
+
+## Adding Agents
+To experiment, 
+
+1. Copy the `agent_template` and name it accordingly. 
+2. Update package paths
+3. Add new agent package in [pyproject.toml](./pyproject.toml)
+4. `make run` and navigate to the agent
+
+**Note** You can change the `default_graph` key in [langgraph.json](./langgraph.json) ***locally*** to set the default graph to open.
+
+## How it works
+
+This chat bot reads from your memory graph's `Store` to easily list extracted memories. If it calls a tool, LangGraph will route to the `store_memory` node to save the information to the store.
+
+## How to evaluate
+
+Memory management can be challenging to get right, especially if you add additional tools for the bot to choose between.
+To tune the frequency and quality of memories your bot is saving, we recommend starting from an evaluation set, adding to it over time as you find and address common errors in your service.
+
+We have provided a few example evaluation cases in [the test file here](./tests/integration_tests/test_graph.py). As you can see, the metrics themselves don't have to be terribly complicated, especially not at the outset.
+
+We use [LangSmith's @unit decorator](https://docs.smith.langchain.com/how_to_guides/evaluation/unit_testing#write-a-test) to sync all the evaluations to LangSmith so you can better optimize your system and identify the root cause of any issues that may arise.
+
+## How to customize
+
+1. Customize memory content: we've defined a simple memory structure `content: str, context: str` for each memory, but you could structure them in other ways.
+2. Provide additional tools: the bot will be more useful if you connect it to other functions.
+3. Select a different model: We default to google_genai:gemini-1.5-flash. You can select a compatible chat model using provider/model-name via configuration. Example: openai/gpt-4.
+4. Customize the prompts: We provide a default prompt in the [prompts.py](src/memory_agent/prompts.py) file. You can easily update this via configuration.
+
 
