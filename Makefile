@@ -12,7 +12,7 @@ clean:
 deps: sync
 	uv pip install -e .[dev]
 
-run:
+run: deps
 	uv run --env-file .env -- langgraph dev --allow-blocking
 
 # Define a variable for the test file path.
