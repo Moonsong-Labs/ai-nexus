@@ -1,25 +1,24 @@
 [project]
-name = "orchestrator"
-version = "0.0.1"
+name = "ai-nexus"
+version = "0.1.0"
 description = "ai-nexus orchestrator agent."
-authors = [
-    { name = "MSL", email = "contact@moonsonglabs.com" },
-]
 readme = "README.md"
-license = { text = "MIT" }
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 dependencies = [
     "langgraph>=0.2.34,<0.3.0",
-    # Optional (for selecting different models)
-    "langchain-google-genai>=2.0.0",
     "langchain>=0.3.8",
     "langchain-core>=0.3.8",
     "python-dotenv>=1.0.1",
     "langgraph-sdk>=0.1.32",
+    "langchain-google-genai>=2.0.0",
 ]
-
-[project.optional-dependencies]
-dev = ["mypy>=1.11.1", "ruff>=0.6.1", "pytest-asyncio"]
+optional-dependencies.dev = [
+    "mypy>=1.11.1", 
+    "ruff>=0.6.1", 
+    "pytest>=8.3.5",
+    "pytest-asyncio",
+    "langgraph-cli[inmem]>=0.2.7",
+]
 
 [build-system]
 requires = ["setuptools>=73.0.0", "wheel"]
@@ -31,9 +30,6 @@ packages = ["orchestrator"]
 "orchestrator" = "src/orchestrator"
 "langgraph.templates.orchestrator" = "src/orchestrator"
 
-
-[tool.setuptools.package-data]
-"*" = ["py.typed"]
 
 [tool.ruff]
 lint.select = [
@@ -54,4 +50,4 @@ include = ["*.py", "*.pyi", "*.ipynb"]
 convention = "google"
 
 [tool.mypy]
-ignore_errors = true
+ignore_errors = false

@@ -17,7 +17,10 @@ logger = logging.getLogger(__name__)
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model()
 
-msg = llm.invoke("hello", {"configurable": utils.split_model_and_provider(configuration.Configuration().model)})
+# import os
+# print(os.getenv("GEMINI_API_KEY", "<>"))
+# msg = llm.invoke("hello", {"configurable": utils.split_model_and_provider(configuration.Configuration().model)})
+# print(msg)
 
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
     """Extract the user's state from the conversation and update the memory."""

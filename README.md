@@ -49,6 +49,19 @@ Update the following required environment variables in `.env`:
 (rest may be omitted unless testing locally)
 
 
+### uv
+
+<WIP>
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+
+
+```
+make deps
+make run
+make test
+```
+
 ### Create `venv`
 Create a new virtual environment under `.venv` directory if not already created.
 
