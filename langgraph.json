@@ -3,7 +3,8 @@
     "graphs": {
         "agent_template": "./src/agent_template/graph.py:graph",
         "orchestrator": "./src/orchestrator/graph.py:graph",
-        "grumpy": "./src/grumpy/graph.py:graph"
+        "grumpy": "./src/grumpy/graph.py:graph",
+        "architect": "./src/architect/graph.py:graph"
     },
     "default_graph": "agent_template",
     "env": ".env",
