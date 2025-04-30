@@ -13,54 +13,12 @@ from langgraph.store.base import BaseStore
 
 from agent_template import configuration, tools, utils
 from agent_template.state import State
+from agent_template.memory import ensure_static_memories 
 
 logger = logging.getLogger(__name__)
 
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model()
-
-
-# Helper function to load static memories
-async def ensure_static_memories(store: BaseStore):
-    """Ensure static memories are loaded in the store."""
-    # Check if any static memories exist
-    try:
-        # Try passing only namespace positionally, rest as keywords
-        static_memories = await store.asearch(
-            ("static_memories", "global"),
-            query="",
-            limit=1
-        )
-        if static_memories:
-            logger.info("Static memories already exist in store")
-            return
-    except Exception as e:
-        logger.error(f"Error checking for static memories: {e}")
-        return
-        
-    # Load memories from file
-    logger.info("Loading static memories into store")
-    static_memories_path = Path(".langgraph/static_memories/project_info.json")
-    
-    if not static_memories_path.exists():
-        logger.warning(f"Static memories file not found at {static_memories_path}")
-        return
-        
-    try:
-        with open(static_memories_path, "r") as f:
-            memories = json.load(f)
-            
-        # Add each memory to the store
-        for i, memory in enumerate(memories):
-            # Use positional arguments for aput as that seems to work
-            await store.aput(
-                ("static_memories", "global"),
-                f"static_{i}",
-                memory
-            )
-        logger.info(f"Loaded {len(memories)} static memories into store")
-    except Exception as e:
-        logger.error(f"Error loading static memories: {e}")
 
 
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
