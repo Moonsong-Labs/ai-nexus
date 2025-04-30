@@ -10,10 +10,10 @@ clean:
 	rm -rf .venv
 
 deps: sync
-	uv pip install -r pyproject.toml --extra dev
+	uv pip install -e .[dev]
 
 run:
-	uv run --env-file .env -- langgraph dev
+	uv run --env-file .env -- langgraph dev --allow-blocking
 
 # Define a variable for the test file path.
 TEST_FILE ?= tests/unit_tests/
