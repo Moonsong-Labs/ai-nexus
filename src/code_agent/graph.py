@@ -72,6 +72,7 @@ builder.add_node("tools", tool_node)
 
 builder.add_edge("__start__", "call_model")
 builder.add_conditional_edges("call_model", tools_condition)
+builder.add_edge("tools", "call_model")
 
 graph = builder.compile()
 graph.name = "Code Agent"
