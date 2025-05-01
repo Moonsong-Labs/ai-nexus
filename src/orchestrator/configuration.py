@@ -23,7 +23,7 @@ class Configuration:
             "Should be in the form: provider/model-name."
         },
     )
-    system_prompt: str = prompts.SYSTEM_PROMPT
+    system_prompt: str = prompts.ORCHESTRATOR_SYSTEM_PROMPT
 
     @classmethod
     def from_runnable_config(
