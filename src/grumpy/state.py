@@ -16,6 +16,8 @@ class State:
     messages: Annotated[list[AnyMessage], add_messages]
     """The messages in the conversation."""
 
+    analysis_question: str = ""
+
 
 __all__ = [
     "State",
