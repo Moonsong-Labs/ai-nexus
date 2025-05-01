@@ -30,17 +30,28 @@ LANGSMITH_DATASET_NAME = "grumpy-failed-questions"
 def correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict):
     evaluator = create_llm_as_judge(
         prompt=CORRECTNESS_PROMPT,
-        model="google_genai:gemini-2.5-flash-preview-04-17",
+        model="google_genai:gemini-2.0-flash-lite",
         feedback_key="correctness",
     )
-    eval_result = evaluator(
-        inputs=inputs, outputs=outputs, reference_outputs=reference_outputs
-    )
-    return eval_result
+    # Prepare the inputs for the evaluator
+    # The evaluator expects a specific format for  outputs
+    try:
+        outputs_contents = outputs['output']
+        reference_outputs_contents = reference_outputs['message']['content']
+        
+        eval_result = evaluator(
+            inputs=inputs,
+            outputs=outputs_contents,
+            reference_outputs=reference_outputs_contents,
+        )
+        return eval_result
+    except Exception as e:
+        pytest.fail(f"Error during evaluation: {e}")
+        return 0
 
 
 @pytest.mark.asyncio
-async def test_grumpy_easy_review_langsmith():
+async def test_grumpy_easy_review_langsmith(pytestconfig):
     """
     Tests the grumpy agent graph using langsmith.aevaluate against a LangSmith dataset.
     """
@@ -67,30 +78,30 @@ async def test_grumpy_easy_review_langsmith():
             # (Assuming the graph expects BaseMessage objects, not just dicts)
             # Helper function to create message objects with type checking
             def _create_message(msg_dict: dict):
-                """Creates BaseMessage objects (Human, AI, System, Chat) from dict, returns None if type is invalid or data missing."""
-                message_type = msg_dict.get("type")
-                if message_type == "human":
+                """Creates BaseMessage objects (Human, AI, System, Chat) from dict, returns None if role is invalid or data missing."""
+                message_role = msg_dict.get("role")
+                if message_role == "human":
                     # Assuming HumanMessage constructor handles potential missing keys robustly,
                     # or add specific key checks here if needed.
                     return HumanMessage(**msg_dict)
-                elif message_type == "ai":
+                elif message_role == "ai":
                     return AIMessage(**msg_dict)
-                elif message_type == "system":
+                elif message_role == "system":
                     return SystemMessage(**msg_dict)
-                elif message_type == "chat":
+                elif message_role == "chat":
                     if "role" in msg_dict:
                         return ChatMessage(**msg_dict)
                     else:
                         logger.warning(
-                            "ChatMessage type specified but 'role' key missing in test data msg: %s. Skipping.",
+                            "ChatMessage role specified but 'role' key missing in test data msg: %s. Skipping.",
                             msg_dict,
                         )
                         return None
                 else:
-                    # Log and return None for invalid types to be filtered out later
+                    # Log and return None for invalid roles to be filtered out later
                     logger.warning(
-                        "Invalid or missing message type '%s' in test data msg: %s. Skipping.",
-                        message_type,
+                        "Invalid or missing message role '%s' in test data msg: %s. Skipping.",
+                        message_role,
                         msg_dict,
                     )
                     return None
@@ -175,10 +186,10 @@ async def test_grumpy_easy_review_langsmith():
                         last_message
                     )  # Fallback to string representation
             else:
-                logger.warning("Unexpected graph output format: %s", result)
+                pytest.fail(f"Unexpected graph output format: {result}")
                 output_content = str(result)  # Fallback
 
-            return {"output": output_content}
+            return output_content
 
         except Exception as invoke_exception:
             logger.error(
@@ -187,7 +198,7 @@ async def test_grumpy_easy_review_langsmith():
                 invoke_exception,
                 exc_info=True,
             )
-            return {"output": f"Error during graph execution: {invoke_exception}"}
+            return f"Error during graph execution: {invoke_exception}"
 
     try:
         logger.info(
@@ -195,7 +206,10 @@ async def test_grumpy_easy_review_langsmith():
         )
         results = await client.aevaluate(
             run_graph_with_config,  # Pass the wrapper function as the target
-            data=LANGSMITH_DATASET_NAME,
+            data=LANGSMITH_DATASET_NAME, # The whole dataset is used
+            # data=client.list_examples(  # Only the dev split is used
+            #     dataset_name=LANGSMITH_DATASET_NAME, splits=["dev"]
+            # ),
             # input_mapper=lambda x: x, # Default is identity, maps dataset example to target input
             evaluators=[correctness_evaluator],
             experiment_prefix="grumpy-gemini-2.5-correctness-eval",
