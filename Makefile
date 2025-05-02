@@ -16,10 +16,13 @@ run: deps
 	uv run --env-file .env -- langgraph dev --allow-blocking
 
 # Define a variable for the test file path.
-TEST_FILE ?= tests/unit_tests/
+UNIT_TEST_FILE ?= tests/unit_tests/
+INTEGRATION_TEST_FILE ?= tests/integration_tests/
 
 test:
-	uv run --env-file .env -- python -m pytest $(TEST_FILE)
+	uv run --env-file .env -- pytest -rs $(INTEGRATION_TEST_FILE)
+test-grumpy:
+	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_grumpy_agent.py
 
 test_watch:
 	uv run --env-file .env -- python -m ptw --snapshot-update --now . -- -vv tests/unit_tests

@@ -9,8 +9,8 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 
-from grumpy import configuration, tools, utils
-from grumpy.state import State
+from architect import configuration, tools, utils
+from architect.state import State
 
 logger = logging.getLogger(__name__)
 
@@ -22,77 +22,37 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
     """Extract the user's state from the conversation and update the memory."""
     configurable = configuration.Configuration.from_runnable_config(config)
 
-    # Check the model supports memory:
-    if hasattr(store, "asearch"):
-        # Retrieve the most recent memories for context
-        # Assumes store is provided and has asearch
-        memories = await store.asearch(
-            ("memories", configurable.user_id),
-            query=str([m.content for m in state.messages[-3:]]),
-            limit=10,
-        )
+    # Retrieve the most recent memories for context
+    memories = await store.asearch(
+        ("memories", configurable.user_id),
+        query=str([m.content for m in state.messages[-3:]]),
+        limit=10,
+    )
 
-        # Format memories for inclusion in the prompt
-        formatted = "\n".join(
-            f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
-        )
-        if formatted:
-            formatted = f"""
+    # Format memories for inclusion in the prompt
+    formatted = "\n".join(
+        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
+    )
+    if formatted:
+        formatted = f"""
 <memories>
 {formatted}
 </memories>"""
-    else:
-        formatted = ""
 
     # Prepare the system prompt with user memories and current time
     # This helps the model understand the context and temporal relevance
     sys = configurable.system_prompt.format(
-        user_info=formatted,
-        analysis_question=state.analysis_question,
-        time=datetime.now().isoformat(),
+        user_info=formatted, time=datetime.now().isoformat()
     )
-
-    # check if the model supports memory
-    if hasattr(store, "asearch"):
-        memory_tools = [tools.upsert_memory]
-    else:
-        memory_tools = []
 
     # Invoke the language model with the prepared prompt and tools
     # "bind_tools" gives the LLM the JSON schema for all tools in the list so it knows how
     # to use them.
-    msg = await llm.bind_tools(memory_tools).ainvoke(
+    msg = await llm.bind_tools([tools.upsert_memory]).ainvoke(
         [{"role": "system", "content": sys}, *state.messages],
         {"configurable": utils.split_model_and_provider(configurable.model)},
     )
     return {"messages": [msg]}
-
-
-async def ask_question(
-    state: State, config: RunnableConfig, *, store: BaseStore
-) -> dict:
-    """Extract the user's state from the conversation and update the memory."""
-    configurable = configuration.Configuration.from_runnable_config(config)
-
-    # Prepare the system prompt with user memories and current time
-    # This helps the model understand the context and temporal relevance
-    que = configurable.question_prompt.format(time=datetime.now().isoformat())
-
-    # Invoke the language model with the prepared prompt and tools
-    # "bind_tools" gives the LLM the JSON schema for all tools in the list so it knows how
-    # to use them.
-
-    # check if the model supports memory
-    if hasattr(store, "asearch"):
-        memory_tools = [tools.upsert_memory]
-    else:
-        memory_tools = []
-
-    msg = await llm.bind_tools(memory_tools).ainvoke(
-        [{"role": "system", "content": que}, *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
-    )
-    return {"analysis_question": msg.content}
 
 
 async def store_memory(state: State, config: RunnableConfig, *, store: BaseStore):
@@ -100,7 +60,6 @@ async def store_memory(state: State, config: RunnableConfig, *, store: BaseStore
     tool_calls = state.messages[-1].tool_calls
 
     # Concurrently execute all upsert_memory calls
-    # Assumes store is provided
     saved_memories = await asyncio.gather(
         *(
             tools.upsert_memory(**tc["args"], config=config, store=store)
@@ -135,10 +94,8 @@ def route_message(state: State):
 builder = StateGraph(State, config_schema=configuration.Configuration)
 
 # Define the flow of the memory extraction process
-builder.add_node(ask_question)
-builder.add_edge("__start__", "ask_question")
 builder.add_node(call_model)
-builder.add_edge("ask_question", "call_model")
+builder.add_edge("__start__", "call_model")
 builder.add_node(store_memory)
 builder.add_conditional_edges("call_model", route_message, ["store_memory", END])
 # Right now, we're returning control to the user after storing a memory
@@ -146,24 +103,7 @@ builder.add_conditional_edges("call_model", route_message, ["store_memory", END]
 # to let it first store memories, then generate a response
 builder.add_edge("store_memory", "call_model")
 graph = builder.compile()
-graph.name = "grumpy"
+graph.name = "Architect"
 
 
-# Create the graph + all nodes
-builder_no_memory = StateGraph(State, config_schema=configuration.Configuration)
-
-# Define the flow of the memory extraction process
-builder_no_memory.add_node(ask_question)
-builder_no_memory.add_edge("__start__", "ask_question")
-builder_no_memory.add_node(call_model)
-builder_no_memory.add_edge("ask_question", "call_model")
-graph_no_memory = builder_no_memory.compile()
-graph_no_memory.name = "grumpy_no_memory"
-
-
-__all__ = [
-    "graph",
-    "builder",
-    "graph_no_memory",
-    "builder_no_memory",
-]  # Export builder as well
+__all__ = ["graph"]
