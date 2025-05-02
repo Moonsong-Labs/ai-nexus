@@ -30,13 +30,14 @@ build-backend = "setuptools.build_meta"
 
 # Add new agents here: #1
 [tool.setuptools]
-packages = ["common", "agent_template", "orchestrator", "grumpy", "architect"]
+packages = ["common", "agent_template", "orchestrator", "grumpy", "architect", "tester"]
 [tool.setuptools.package-dir]
 "common" = "src/common"
 "agent_template" = "src/agent_template"
 "langgraph.templates.agent_template" = "src/agent_template"
 "orchestrator" = "src/orchestrator"
 "langgraph.templates.orchestrator" = "src/orchestrator"
+"tester" = "src/tester"
 "grumpy" = "src/grumpy"
 "architect" = "src/architect"
 "langgraph.templates.grumpy" = "src/grumpy"
