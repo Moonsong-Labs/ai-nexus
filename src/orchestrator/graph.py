@@ -29,6 +29,8 @@ async def orchestrate(
 
     sys = configurable.system_prompt.format(time=datetime.now().isoformat())
 
+    print(state.messages)
+
     msg = await model_orchestrator.bind_tools([tools.Delegate]).ainvoke(
         [SystemMessage(sys), *state.messages],
         {"configurable": utils.split_model_and_provider(configurable.model)},
@@ -36,6 +38,24 @@ async def orchestrate(
 
     return {"messages": [msg]}
 
+import pprint
+
+async def store_memory(
+    state: State, config: RunnableConfig, *, store: BaseStore
+) -> dict:
+    """Extract the user's state from the conversation and update the memory."""
+    configurable = configuration.Configuration.from_runnable_config(config)
+
+    sys = configurable.system_prompt.format(time=datetime.now().isoformat())
+
+    pprint.pp(state.messages)
+    
+    msg = await model_orchestrator.bind_tools([tools.Delegate]).ainvoke(
+        [SystemMessage(sys), *state.messages],
+        {"configurable": utils.split_model_and_provider(configurable.model)},
+    )
+
+    return {"messages": [msg]}
 
 def delegate_to(
     state: State, config: RunnableConfig, store: BaseStore
@@ -47,9 +67,12 @@ def delegate_to(
     "coder",
     "tester",
     "reviewer",
+    "memorizer",
 ]:
     """Determine the next step based on the presence of tool calls."""
     message = state.messages[-1]
+    print("[TOOL] DelegateTo")
+    pprint.pp(message)
     if len(message.tool_calls) == 0:
         return END
     else:
@@ -66,6 +89,8 @@ def delegate_to(
             return stubs.tester.__name__
         elif tool_call["args"]["to"] == "reviewer":
             return stubs.reviewer.__name__
+        elif tool_call["args"]["to"] == "memorizer":
+            return stubs.memorizer.__name__
         else:
             raise ValueError
 
@@ -75,11 +100,13 @@ builder = StateGraph(State, config_schema=configuration.Configuration)
 
 # Define the flow of the memory extraction process
 builder.add_node(orchestrate)
+# builder.add_node(store_memory)
 builder.add_node(stubs.requirements)
 builder.add_node(stubs.architect)
 builder.add_node(stubs.coder)
 builder.add_node(stubs.tester)
 builder.add_node(stubs.reviewer)
+builder.add_node(stubs.memorizer)
 
 builder.add_edge(START, orchestrate.__name__)
 builder.add_conditional_edges(
@@ -91,6 +118,7 @@ builder.add_edge(stubs.architect.__name__, orchestrate.__name__)
 builder.add_edge(stubs.coder.__name__, orchestrate.__name__)
 builder.add_edge(stubs.tester.__name__, orchestrate.__name__)
 builder.add_edge(stubs.reviewer.__name__, orchestrate.__name__)
+builder.add_edge(stubs.memorizer.__name__, orchestrate.__name__)
 
 graph = builder.compile()
 graph.name = "Orchestrator"
