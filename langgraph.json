@@ -5,7 +5,8 @@
     "orchestrator": "./src/orchestrator/graph.py:graph",
     "grumpy": "./src/grumpy/graph.py:graph",
     "tester": "./src/tester/graph.py:graph",
-    "code_reviewer": "./src/code_reviewer/graph.py:graph"
+    "code_reviewer": "./src/code_reviewer/graph.py:graph",
+    "requirement_gatherer": "./src/requirement_gatherer/graph.py:graph"
   },
   "env": ".env",
   "python_version": "3.12",
