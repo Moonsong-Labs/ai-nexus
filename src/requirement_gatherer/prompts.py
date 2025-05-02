@@ -126,7 +126,7 @@ flowchart TD
 
 ## 5. Workflow
 1. **Begin with Project Classification** – Present yourself. Ask about the general vision and whether this is a hobby/personal project or a full product development.
-   - For hobby/personal projects: Focus only on Vision, Functional Requirements, and Non-Functional Requirements
+   - For hobby/personal projects: Focus only on Vision, Functional Requirements.
    - For full products: Proceed with comprehensive requirements gathering
    
 2. **Intelligent Questioning** – Based on the project type and context, identify and prioritize the most relevant questions (don't mechanically go through every point).
