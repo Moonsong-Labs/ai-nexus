@@ -1,0 +1,14 @@
+[
+  {
+    "content": "This is a Python project that uses uv for dependency management and a Makefile for common tasks. It implements a ReAct-style agent with memory persistence capabilities using LangGraph.",
+    "context": "Basic project architecture information"
+  },
+  {
+    "content": "The project uses GitHub Actions for CI/CD with separate workflows for unit tests and integration tests.",
+    "context": "CI/CD information"
+  },
+  {
+    "content": "Common commands include 'make run' to start the agent, 'make lint' for linting, 'make fmt' for formatting, and 'make clean' to clean up resources.",
+    "context": "Common usage commands"
+  }
+] 

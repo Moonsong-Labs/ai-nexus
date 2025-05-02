@@ -2,7 +2,9 @@
 
 import asyncio
 import logging
+import json
 from datetime import datetime
+from pathlib import Path
 
 from langchain.chat_models import init_chat_model
 from langchain_core.runnables import RunnableConfig
@@ -11,6 +13,7 @@ from langgraph.store.base import BaseStore
 
 from agent_template import configuration, tools, utils
 from agent_template.state import State
+from agent_template.memory import ensure_static_memories 
 
 logger = logging.getLogger(__name__)
 
@@ -20,19 +23,57 @@ llm = init_chat_model()
 
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
     """Extract the user's state from the conversation and update the memory."""
+    # Ensure static memories are loaded
+    await ensure_static_memories(store)
+    
     configurable = configuration.Configuration.from_runnable_config(config)
+
+    query_text = str([m.content for m in state.messages[-3:]])
 
     # Retrieve the most recent memories for context
     memories = await store.asearch(
         ("memories", configurable.user_id),
-        query=str([m.content for m in state.messages[-3:]]),
+        query=query_text,
         limit=10,
     )
 
-    # Format memories for inclusion in the prompt
-    formatted = "\n".join(
-        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
+    # Retrieve static memories using only namespace positionally
+    static_memories = await store.asearch(
+        ("static_memories", "global"),
+        query=query_text,
+        limit=5
     )
+    
+    logger.info(f"Found {len(static_memories)} relevant static memories")
+    
+    # Format memories for inclusion in the prompt
+    memory_texts = []
+    
+    # Add user memories
+    for mem in memories:
+        memory_text = f"[{mem.key}]: {mem.value} (similarity: {mem.score})"
+        memory_texts.append(memory_text)
+    
+    formatted = "\n".join(memory_texts)
+    
+    # Add static memories with special formatting
+    if static_memories:
+        static_memory_texts = []
+        for mem in static_memories:
+            content = mem.value.get('content', 'No content')
+            context = mem.value.get('context', 'No context')
+            memory_text = f"[{mem.key}]: content: {content}, context: {context}"
+            static_memory_texts.append(memory_text)
+        
+        if static_memory_texts:
+            if formatted:
+                formatted += "\n\n<static_memories>\n"
+            else:
+                formatted = "<static_memories>\n"
+                
+            formatted += "\n".join(static_memory_texts)
+            formatted += "\n</static_memories>"
+    
     if formatted:
         formatted = f"""
 <memories>

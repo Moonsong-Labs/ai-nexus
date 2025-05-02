@@ -7,7 +7,7 @@ from typing import Any, Optional
 from langchain_core.runnables import RunnableConfig
 from typing_extensions import Annotated
 
-from orchestrator import prompts
+from architect import prompts
 
 
 @dataclass(kw_only=True)
@@ -23,7 +23,7 @@ class Configuration:
             "Should be in the form: provider/model-name."
         },
     )
-    system_prompt: str = prompts.ORCHESTRATOR_SYSTEM_PROMPT
+    system_prompt: str = prompts.SYSTEM_PROMPT
 
     @classmethod
     def from_runnable_config(
