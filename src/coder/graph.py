@@ -1,16 +1,13 @@
 """Graphs that extract memories on a schedule."""
 
-import asyncio
 import logging
 
 from langchain.chat_models import init_chat_model
 from langchain_community.utilities.github import GitHubAPIWrapper
 from langchain_community.agent_toolkits.github.toolkit import GitHubToolkit
-from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_core.messages import SystemMessage
-from langchain_core.tools import BaseTool
 
 from coder.prompts import SYSTEM_PROMPT
 from coder.state import State
