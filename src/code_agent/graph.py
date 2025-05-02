@@ -2,14 +2,12 @@
 
 import asyncio
 import logging
-from datetime import datetime
 
 from langchain.chat_models import init_chat_model
 from langchain_community.utilities.github import GitHubAPIWrapper
 from langchain_community.agent_toolkits.github.toolkit import GitHubToolkit
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
-from langgraph.store.base import BaseStore
 from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_core.messages import SystemMessage
 from langchain_core.tools import BaseTool
@@ -34,6 +32,7 @@ github_whitelisted_tools = [
     "create_pull_request",
     "list_pull_requests_files",
     "create_file",
+    "update_file",
     "read_file",
     "delete_file",
     "overview_of_existing_files_in_main_branch",
@@ -51,14 +50,14 @@ all_github_tools = [make_gemini_compatible(tool) for tool in github_toolkit.get_
 github_tools = [tool for tool in all_github_tools if tool.name in github_whitelisted_tools]
 assert len(github_tools) == len(github_whitelisted_tools), "Github tool mismatch"
 
-def call_model(state: State) -> dict:
+async def call_model(state: State) -> dict:
     system_msg = SystemMessage(content=SYSTEM_PROMPT)
     
     # Create a list of messages properly
     messages = [system_msg] + state["messages"]
     
     # Invoke the language model with the prepared prompt and tools
-    messages_after_invoke = llm.bind_tools(github_tools).invoke(messages)
+    messages_after_invoke = await llm.bind_tools(github_tools).ainvoke(messages)
     return {"messages": messages_after_invoke}
 
 # Create the graph + all nodes
