@@ -12,8 +12,8 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_core.messages import SystemMessage
 from langchain_core.tools import BaseTool
 
-from code_agent.prompts import SYSTEM_PROMPT
-from code_agent.state import State
+from coder.prompts import SYSTEM_PROMPT
+from coder.state import State
 from dotenv import load_dotenv
 
 load_dotenv()

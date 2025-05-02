@@ -4,7 +4,7 @@
     "agent_template": "./src/agent_template/graph.py:graph",
     "orchestrator": "./src/orchestrator/graph.py:graph",
     "grumpy": "./src/grumpy/graph.py:graph",
-    "code_agent": "./src/code_agent/graph.py:graph",
+    "coder": "./src/coder/graph.py:graph",
     "tester": "./src/tester/graph.py:graph",
     "code_reviewer": "./src/code_reviewer/graph.py:graph",
     "requirement_gatherer": "./src/requirement_gatherer/graph.py:graph"
