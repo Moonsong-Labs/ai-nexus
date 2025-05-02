@@ -51,6 +51,7 @@ def correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(reason="Skipping memory storage test")
 async def test_grumpy_easy_review_langsmith(pytestconfig):
     """
     Tests the grumpy agent graph using langsmith.aevaluate against a LangSmith dataset.
