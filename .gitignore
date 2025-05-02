@@ -164,6 +164,3 @@ cython_debug/
 .idea/
 .DS_Store
 uv.lock
-
-# Cursor config
-.cursor
