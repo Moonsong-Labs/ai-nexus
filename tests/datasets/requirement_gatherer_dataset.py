@@ -1,6 +1,6 @@
 from langsmith import Client
 
-REQUIREMENT_GATHERER_DATASET_NAME = "Requirement-gatherer-naive-dataset2"
+REQUIREMENT_GATHERER_DATASET_NAME = "Requirement-gatherer-naive-dataset"
 
 def create_dataset():
     client = Client()
