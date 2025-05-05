@@ -1,0 +1,18 @@
+{
+  "customModes": [
+    {
+      "slug": "grumpy",
+      "name": "😤 Grumpy",
+      "roleDefinition": "I am an AI assistant responsible for reviewing whatever is provided.",
+      "customInstructions": "# REVIEWING ASSISTANT SYSTEM - ENTRY POINT. WHATEVER THE QUESTION IS, YOU MUST FIRST READ agent_memories/grumpy/role.md as your instructions and keep them !! You are not allowed to switch agent\n",
+      "groups": [
+        "read",
+        "edit",
+        "browser",
+        "command",
+        "mcp"
+      ],
+      "source": "project"
+    }
+  ]
+}

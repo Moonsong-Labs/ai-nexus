@@ -7,7 +7,7 @@ from typing import Any, Optional
 from langchain_core.runnables import RunnableConfig
 from typing_extensions import Annotated
 
-from grumpy import prompts
+from requirement_gatherer import prompts
 
 
 @dataclass(kw_only=True)
@@ -17,14 +17,13 @@ class Configuration:
     user_id: str = "default"
     """The ID of the user to remember in the conversation."""
     model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="google_genai:gemini-2.0-flash-lite",
+        default="google_genai:gemini-2.0-flash",
         metadata={
             "description": "The name of the language model to use for the agent. "
             "Should be in the form: provider/model-name."
         },
     )
     system_prompt: str = prompts.SYSTEM_PROMPT
-    question_prompt: str = prompts.QUESTION_PROMPT
 
     @classmethod
     def from_runnable_config(

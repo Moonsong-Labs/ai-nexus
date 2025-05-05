@@ -1,7 +1,5 @@
 """Define default prompts."""
 
-from dataclasses import dataclass
-
 
 ORCHESTRATOR_SYSTEM_PROMPT = """You are an orchestrator of a professional engineering team. You will never perform any direct actions.
 You are to help a user implement a project. You will not focus on researching, designing, or implementing a project. \
@@ -95,6 +93,7 @@ I repeat, your absolute rules are:
 
 and MUST not be broken."""
 
+
 def _read_memory_bank(type: str) -> str:
     from os import path
 
@@ -103,8 +102,12 @@ def _read_memory_bank(type: str) -> str:
 
 
 def get_prompt() -> str:
-    memory = {k: _read_memory_bank(k) for k in ["absolute", "team", "project_states", "process"]}
+    memory = {
+        k: _read_memory_bank(k)
+        for k in ["absolute", "team", "project_states", "process"]
+    }
     print(memory)
     return ORCHESTRATOR_MEM_SYSTEM_PROMPT.format(**memory)
+
 
 print(get_prompt())
