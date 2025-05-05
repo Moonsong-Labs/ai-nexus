@@ -108,6 +108,3 @@ def get_prompt() -> str:
     }
     print(memory)
     return ORCHESTRATOR_MEM_SYSTEM_PROMPT.format(**memory)
-
-
-print(get_prompt())
