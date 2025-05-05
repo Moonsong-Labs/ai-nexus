@@ -50,11 +50,9 @@ async def test_tester_hello_response():
     """
 
     client = Client()
-    # Create both a memory saver for checkpointing and an in-memory store
     memory_saver = MemorySaver()
     memory_store = InMemoryStore()
 
-    # Compile the graph with both the checkpointer and store
     graph_compiled = tester_graph.compile(
         checkpointer=memory_saver,
         store=memory_store
