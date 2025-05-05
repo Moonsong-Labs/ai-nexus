@@ -50,7 +50,7 @@ def correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict):
 
 
 @pytest.mark.asyncio
-async def test_grumpy_easy_review_langsmith(pytestconfig):
+async def test_requirement_gatherer_langsmith(pytestconfig):
     """
     Tests the grumpy agent graph using langsmith.aevaluate against a LangSmith dataset.
     """
