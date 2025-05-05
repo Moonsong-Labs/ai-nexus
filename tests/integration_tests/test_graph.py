@@ -29,7 +29,6 @@ from orchestrator.graph import builder
     ],
     ids=["short", "medium", "long"],
 )
-@pytest.mark.skip(reason="Skipping memory storage test")
 async def test_memory_storage(conversation: List[str]):
     mem_store = InMemoryStore()
 
