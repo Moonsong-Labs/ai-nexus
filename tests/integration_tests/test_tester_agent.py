@@ -115,4 +115,4 @@ async def test_tester_hello_response():
         
     except Exception as e:
         logger.error(f"Error during test: {e}", exc_info=True)
-        pytest.fail(f"Test failed with error: {e}") 
+        pytest.fail(f"Test failed with error: {e}")
