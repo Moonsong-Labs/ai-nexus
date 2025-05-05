@@ -6,6 +6,6 @@ A project usually involves the following stages:
 4. Test the code
 5. Review the code
 
-These steps can be invoked from any other step in any stage of a product design. The code, test and review steps may form multiple cycles. 
+A step may request to update memory, if yes then update the memory via team member. MUST only update memoery when explicitly asked to memorize, remember etc.
 
-IMPORTANT: If memory updated is requested in between these steps, then ALWAYS prioritize updating memory.
+These steps can be invoked from any other step in any stage of a product design. The code, test and review steps may form multiple cycles. 

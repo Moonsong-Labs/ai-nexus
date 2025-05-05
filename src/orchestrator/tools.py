@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from langchain_core.tools import tool
+
 
 @dataclass
 class Delegate:
@@ -13,18 +15,27 @@ class Delegate:
     - If coding and implementation, then "coder".
     - If code needs testing, then "tester".
     - If code needs review, then "reviewer".
-    - If something is to be memorized, then "memorizer".
     """
 
     to: Literal[
-        "orchestrator", "requirements", "architect", "coder", "tester", "reviewer", "memorizer"
+        "orchestrator", "requirements", "architect", "coder", "tester", "reviewer"
     ]
-    origin: Literal[
-        "user", "requirements", "architect", "coder", "tester", "reviewer"
-    ]
-    content: str
+
+
+@tool
+def store_memory(
+    origin: Literal["user", "requirements", "architect", "coder", "tester", "reviewer"],
+    content: str,
+):
+    """Use this to memorize, store or remember  instructions."""
+    msg = f"[MEMORIZE] for {origin}: {content}"
+    print(msg)
+    return "Memorized '{content}' for '{origin}'"
+
 
 @dataclass
 class Memory:
     """Tool to update memory."""
-    memory: str
+
+    origin: Literal["user", "requirements", "architect", "coder", "tester", "reviewer"]
+    content: str

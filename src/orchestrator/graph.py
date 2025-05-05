@@ -11,9 +11,10 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.store.base import BaseStore
 
 from common import utils
-from common.utils import split_model_and_provider
 from orchestrator import configuration, stubs, tools
 from orchestrator.state import State
+
+import pprint
 
 logger = logging.getLogger(__name__)
 
@@ -31,14 +32,13 @@ async def orchestrate(
 
     print(state.messages)
 
-    msg = await model_orchestrator.bind_tools([tools.Delegate]).ainvoke(
+    msg = await model_orchestrator.bind_tools([tools.Delegate, tools.store_memory]).ainvoke(
         [SystemMessage(sys), *state.messages],
         {"configurable": utils.split_model_and_provider(configurable.model)},
     )
 
     return {"messages": [msg]}
 
-import pprint
 
 async def store_memory(
     state: State, config: RunnableConfig, *, store: BaseStore
@@ -50,7 +50,7 @@ async def store_memory(
 
     pprint.pp(state.messages)
     
-    msg = await model_orchestrator.bind_tools([tools.Delegate]).ainvoke(
+    msg = await model_orchestrator.bind_tools([tools.Delegate, tools.Memory]).ainvoke(
         [SystemMessage(sys), *state.messages],
         {"configurable": utils.split_model_and_provider(configurable.model)},
     )
@@ -77,22 +77,25 @@ def delegate_to(
         return END
     else:
         tool_call = message.tool_calls[0]
-        if tool_call["args"]["to"] == "orchestrator":
-            return orchestrate.__name__
-        elif tool_call["args"]["to"] == "requirements":
-            return stubs.requirements.__name__
-        elif tool_call["args"]["to"] == "architect":
-            return stubs.architect.__name__
-        elif tool_call["args"]["to"] == "coder":
-            return stubs.coder.__name__
-        elif tool_call["args"]["to"] == "tester":
-            return stubs.tester.__name__
-        elif tool_call["args"]["to"] == "reviewer":
-            return stubs.reviewer.__name__
-        elif tool_call["args"]["to"] == "memorizer":
+        if tool_call["name"] == "store_memory":
             return stubs.memorizer.__name__
         else:
-            raise ValueError
+            if tool_call["args"]["to"] == "orchestrator":
+                return orchestrate.__name__
+            elif tool_call["args"]["to"] == "requirements":
+                return stubs.requirements.__name__
+            elif tool_call["args"]["to"] == "architect":
+                return stubs.architect.__name__
+            elif tool_call["args"]["to"] == "coder":
+                return stubs.coder.__name__
+            elif tool_call["args"]["to"] == "tester":
+                return stubs.tester.__name__
+            elif tool_call["args"]["to"] == "reviewer":
+                return stubs.reviewer.__name__
+            # elif tool_call["args"]["to"] == "memorizer":
+            #     return stubs.memorizer.__name__
+            else:
+                raise ValueError
 
 
 # Create the graph + all nodes
