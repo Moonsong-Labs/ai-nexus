@@ -17,5 +17,3 @@ System Time: {{time}}"""
 
 SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{{user_info}}", "{user_info}")
 SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{{time}}", "{time}")
-
-print(SYSTEM_PROMPT)
