@@ -9,51 +9,88 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 
-from agent_template import configuration, tools, utils
-from agent_template.state import State
+from code_reviewer import configuration, tools, utils
+from code_reviewer.state import State
 
 logger = logging.getLogger(__name__)
 
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model()
 
-
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
     """Extract the user's state from the conversation and update the memory."""
     configurable = configuration.Configuration.from_runnable_config(config)
 
-    # Retrieve the most recent memories for context
-    memories = await store.asearch(
-        ("memories", configurable.user_id),
-        query=str([m.content for m in state.messages[-3:]]),
-        limit=10,
-    )
+    # Check the model supports memory:
+    if hasattr(store, "asearch"):
+        # Retrieve the most recent memories for context
+        # Assumes store is provided and has asearch
+        memories = await store.asearch(
+            ("memories", configurable.user_id),
+            query=str([m.content for m in state.messages[-3:]]),
+            limit=10,
+        )
 
-    # Format memories for inclusion in the prompt
-    formatted = "\n".join(
-        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
-    )
-    if formatted:
-        formatted = f"""
+        # Format memories for inclusion in the prompt
+        formatted = "\n".join(
+            f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
+        )
+        if formatted:
+            formatted = f"""
 <memories>
 {formatted}
 </memories>"""
+    else:
+        formatted = ""
 
     # Prepare the system prompt with user memories and current time
     # This helps the model understand the context and temporal relevance
     sys = configurable.system_prompt.format(
-        user_info=formatted, time=datetime.now().isoformat()
+        user_info=formatted,
+        analysis_question="",
+        time=datetime.now().isoformat(),
     )
+
+    # check if the model supports memory
+    if hasattr(store, "asearch"):
+        memory_tools = [tools.upsert_memory]
+    else:
+        memory_tools = []
 
     # Invoke the language model with the prepared prompt and tools
     # "bind_tools" gives the LLM the JSON schema for all tools in the list so it knows how
     # to use them.
-    msg = await llm.bind_tools([tools.upsert_memory]).ainvoke(
+    msg = await llm.bind_tools(memory_tools).ainvoke(
         [{"role": "system", "content": sys}, *state.messages],
         {"configurable": utils.split_model_and_provider(configurable.model)},
     )
     return {"messages": [msg]}
 
+async def ask_question(
+    state: State, config: RunnableConfig, *, store: BaseStore
+) -> dict:
+    """Extract the user's state from the conversation and update the memory."""
+    configurable = configuration.Configuration.from_runnable_config(config)
+
+    # Prepare the system prompt with user memories and current time
+    # This helps the model understand the context and temporal relevance
+    que = configurable.question_prompt.format(time=datetime.now().isoformat())
+
+    # Invoke the language model with the prepared prompt and tools
+    # "bind_tools" gives the LLM the JSON schema for all tools in the list so it knows how
+    # to use them.
+
+    # check if the model supports memory
+    if hasattr(store, "asearch"):
+        memory_tools = [tools.upsert_memory]
+    else:
+        memory_tools = []
+
+    msg = await llm.bind_tools(memory_tools).ainvoke(
+        [{"role": "system", "content": que}, *state.messages],
+        {"configurable": utils.split_model_and_provider(configurable.model)},
+    )
+    return {"response": msg.content}
 
 async def store_memory(state: State, config: RunnableConfig, *, store: BaseStore):
     # Extract tool calls from the last message
@@ -105,5 +142,21 @@ builder.add_edge("store_memory", "call_model")
 graph = builder.compile()
 graph.name = "Agent Template"
 
+# Create the graph + all nodes
+builder_no_memory = StateGraph(State, config_schema=configuration.Configuration)
 
-__all__ = ["graph"]
+# Define the flow of the memory extraction process
+builder_no_memory.add_node(ask_question)
+builder_no_memory.add_edge("__start__", "ask_question")
+builder_no_memory.add_node(call_model)
+builder_no_memory.add_edge("ask_question", "call_model")
+graph_no_memory = builder_no_memory.compile()
+graph_no_memory.name = "code_reviewer_no_memory"
+
+
+__all__ = [
+    "graph",
+    "builder",
+    "graph_no_memory",
+    "builder_no_memory",
+]
