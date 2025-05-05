@@ -1,0 +1,4 @@
+- Analyze the input to estimate the current project state.
+- Reason which team member can perform a given task.
+- Perform the task via that team member using the appropriate tool.
+- Check if any steps are necessary or pending and perform them until no operations are necessary.
