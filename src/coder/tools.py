@@ -62,7 +62,7 @@ def _convert_args_schema_to_string(func, args_schema: Type[BaseModel]):
     """Wrap a function to convert its BaseModel argument to a string."""
     def wrapper(args: dict):
         # Get the first field from the schema class
-        field_names = list(args_schema.schema()["properties"].keys())
+        field_names = list(args_schema.model_json_schema()["properties"].keys())
         if len(field_names) > 1:
             raise AssertionError(f"Expected one argument in tool schema, got {field_names}.")
         field = field_names[0] if field_names else ""

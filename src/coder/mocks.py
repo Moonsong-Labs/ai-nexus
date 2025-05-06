@@ -11,6 +11,9 @@ class MockGithubApi:
     # Track file operations: [{type: str, args: dict}]
     operations = []
 
+    def __init__(self):
+        pass
+
     def set_active_branch(self, branch_name: str):
         if branch_name in self.branches:
             self.active_branch = branch_name
