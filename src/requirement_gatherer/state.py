@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
 from langchain_core.messages import AnyMessage
 from langgraph.graph import add_messages
@@ -15,7 +16,7 @@ class State:
 
     messages: Annotated[list[AnyMessage], add_messages]
     """The messages in the conversation."""
-
+    veredict: Literal["Completed", "needs_more"] = "needs_more"
 
 __all__ = [
     "State",

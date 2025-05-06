@@ -23,7 +23,8 @@ class Configuration:
             "Should be in the form: provider/model-name."
         },
     )
-    system_prompt: str = prompts.SYSTEM_PROMPT
+    gatherer_system_prompt: str = prompts.SYSTEM_PROMPT
+    evaluator_system_prompt: str = prompts.EVALUATOR_SYSTEM_PROMPT
 
     @classmethod
     def from_runnable_config(

@@ -3,20 +3,37 @@
 import asyncio
 import logging
 from datetime import datetime
+from typing import Literal
 
 from langchain.chat_models import init_chat_model
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 
+from pydantic import BaseModel, Field
+
 from requirement_gatherer import configuration, tools, utils
 from requirement_gatherer.state import State
+
+class Veredict(BaseModel):
+    "Feedback to decide if all requirements are meet"
+    verdict: Literal["Completed", "needs_more"] = Field(
+        description="Decide if requirements are complete" 
+    )
 
 logger = logging.getLogger(__name__)
 
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model()
+evaluator_llm = init_chat_model()
+evaluator = evaluator_llm.with_structured_output(Veredict)
 
+def call_evaluator_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
+    """Extract the user's state from the conversation and update the memory."""
+    configurable = configuration.Configuration.from_runnable_config(config)
+
+    veredict = evaluator.invoke(f'evaluate the info: {state.messages[-1]}')
+    return {"veredict": veredict}
 
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
     """Extract the user's state from the conversation and update the memory."""
@@ -41,7 +58,7 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
 
     # Prepare the system prompt with user memories and current time
     # This helps the model understand the context and temporal relevance
-    sys = configurable.system_prompt.format(
+    sys = configurable.gatherer_system_prompt.format(
         user_info=formatted, time=datetime.now().isoformat()
     )
 
@@ -80,14 +97,20 @@ async def store_memory(state: State, config: RunnableConfig, *, store: BaseStore
     return {"messages": results}
 
 
-def route_message(state: State):
+def route_memory(state: State):
     """Determine the next step based on the presence of tool calls."""
     msg = state.messages[-1]
     if msg.tool_calls:
         # If there are tool calls, we need to store memories
         return "store_memory"
     # Otherwise, finish; user can send the next message
-    return END
+    return "call_evaluator_model"
+
+def route_veredict(state: State):
+    """Determine the nect step based on task completion"""
+    if state.veredict == "Completed":
+        return END
+    return "call_model"
 
 
 # Create the graph + all nodes
@@ -95,15 +118,18 @@ builder = StateGraph(State, config_schema=configuration.Configuration)
 
 # Define the flow of the memory extraction process
 builder.add_node(call_model)
-builder.add_edge("__start__", "call_model")
 builder.add_node(store_memory)
-builder.add_conditional_edges("call_model", route_message, ["store_memory", END])
+builder.add_node(call_evaluator_model)
+
+builder.add_edge("__start__", "call_model")
+builder.add_conditional_edges("call_model", route_memory, ["store_memory", "call_evaluator_model"])
+builder.add_conditional_edges("call_evaluator_model", route_veredict, ["call_model", END])
 # Right now, we're returning control to the user after storing a memory
 # Depending on the model, you may want to route back to the model
 # to let it first store memories, then generate a response
 builder.add_edge("store_memory", "call_model")
 graph = builder.compile()
-graph.name = "Agent Template"
+graph.name = "Requirement Gatherer Agent"
 
 
 __all__ = ["graph"]
