@@ -66,32 +66,6 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
     )
     return {"messages": [msg]}
 
-async def ask_question(
-    state: State, config: RunnableConfig, *, store: BaseStore
-) -> dict:
-    """Extract the user's state from the conversation and update the memory."""
-    configurable = configuration.Configuration.from_runnable_config(config)
-
-    # Prepare the system prompt with user memories and current time
-    # This helps the model understand the context and temporal relevance
-    que = configurable.question_prompt.format(time=datetime.now().isoformat())
-
-    # Invoke the language model with the prepared prompt and tools
-    # "bind_tools" gives the LLM the JSON schema for all tools in the list so it knows how
-    # to use them.
-
-    # check if the model supports memory
-    if hasattr(store, "asearch"):
-        memory_tools = [tools.upsert_memory]
-    else:
-        memory_tools = []
-
-    msg = await llm.bind_tools(memory_tools).ainvoke(
-        [{"role": "system", "content": que}, *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
-    )
-    return {"response": msg.content}
-
 async def store_memory(state: State, config: RunnableConfig, *, store: BaseStore):
     # Extract tool calls from the last message
     tool_calls = state.messages[-1].tool_calls
@@ -146,10 +120,8 @@ graph.name = "Code Reviewer"
 builder_no_memory = StateGraph(State, config_schema=configuration.Configuration)
 
 # Define the flow of the memory extraction process
-builder_no_memory.add_node(ask_question)
-builder_no_memory.add_edge("__start__", "ask_question")
 builder_no_memory.add_node(call_model)
-builder_no_memory.add_edge("ask_question", "call_model")
+builder_no_memory.add_edge("__start__", "call_model")
 graph_no_memory = builder_no_memory.compile()
 graph_no_memory.name = "code_reviewer_no_memory"
 
