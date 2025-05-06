@@ -49,12 +49,19 @@ async def test_grumpy_easy_review_langsmith(pytestconfig):
         # ),
         # input_mapper=lambda x: x, # Default is identity, maps dataset example to target input
         # evaluators=[correctness_evaluator],
-        evaluators=[llm_judge.create_correctness_evaluator(continuous=False)],
-        experiment_prefix="grumpy-gemini-2.5-correctness-eval",
-        num_repetitions=1,
+        evaluators=[
+            llm_judge.create_correctness_evaluator(plaintext=True, continuous=False)
+        ],
+        experiment_prefix="grumpy-gemini-2.5-correctness-eval-plain",
+        num_repetitions=10,
         max_concurrency=4,
         # metadata={"revision_id": "my-test-run-001"} # Optional: Add metadata
     )
 
     # Assert that results were produced.
+    import pprint
+
+    async for result in results:
+        pprint.pp(result)
+
     assert results is not None, "evaluation did not return results"

@@ -26,7 +26,8 @@ def create_async_graph_caller(
 
     async def call_model(inputs: dict):
         result = await graph.ainvoke(inputs, config=config)
-        return result["messages"][-1]
+        print(result["messages"][-1].content)
+        return result["messages"][-1].content
 
     return call_model
 
