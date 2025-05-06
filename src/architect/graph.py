@@ -11,6 +11,7 @@ from langgraph.store.base import BaseStore
 
 from architect import configuration, tools, utils
 from architect.state import State
+from architect.output import ArchitectAgentFinalOutput
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,8 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
         [{"role": "system", "content": sys}, *state.messages],
         {"configurable": utils.split_model_and_provider(configurable.model)},
     )
-    return {"messages": [msg]}
+
+    return {"messages": [{"role": "assistant", "content": str(msg)}]}
 
 
 async def store_memory(state: State, config: RunnableConfig, *, store: BaseStore):

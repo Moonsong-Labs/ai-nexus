@@ -1,6 +1,6 @@
 """Define default prompts."""
 
-with open("src/architect/prompts/v0.md") as file:
+with open("src/architect/prompts/v0.1.md", "r") as file:
     system_prompt_content = file.read()
 
 if system_prompt_content is None:
