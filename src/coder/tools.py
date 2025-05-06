@@ -25,6 +25,8 @@ from langchain_community.tools.github.prompt import (
 from langchain_core.tools import Tool
 from langchain_core.runnables import RunnableLambda
 from coder.mocks import MockGithubApi
+from pydantic import BaseModel
+from typing import Type
 
 GITHUB_TOOLS = [
     "set_active_branch",
@@ -57,6 +59,18 @@ def github_tools():
     
     return github_tools 
 
+def _convert_args_schema_to_string(func, args_schema: Type[BaseModel]):
+    """Wrap a function to convert its BaseModel argument to a string."""
+    def wrapper(args: dict):
+        # Get the first field from the schema class
+        field_names = list(args_schema.schema()["properties"].keys())
+        if len(field_names) > 1:
+            raise AssertionError(f"Expected one argument in tool schema, got {field_names}.")
+        field = field_names[0] if field_names else ""
+        value = args.get(field, "")
+        return func(str(value))
+    return wrapper
+
 def mock_github_tools(mock_api: MockGithubApi):
     """Create mocked GitHub tools using RunnableLambda.
     
@@ -64,42 +78,42 @@ def mock_github_tools(mock_api: MockGithubApi):
         mock_api: An instance of MockGithubApi to use for the tool implementations
     """
     tools = [
-        RunnableLambda(mock_api.set_active_branch).as_tool(
+        RunnableLambda(_convert_args_schema_to_string(mock_api.set_active_branch, BranchName)).as_tool(
             name="set_active_branch",
             description=SET_ACTIVE_BRANCH_PROMPT,
             args_schema=BranchName
         ),
-        RunnableLambda(mock_api.create_branch).as_tool(
+        RunnableLambda(_convert_args_schema_to_string(mock_api.create_branch, BranchName)).as_tool(
             name="create_a_new_branch",
             description=CREATE_BRANCH_PROMPT,
             args_schema=BranchName
         ),
-        RunnableLambda(mock_api.get_files_from_directory).as_tool(
+        RunnableLambda(_convert_args_schema_to_string(mock_api.get_files_from_directory, DirectoryPath)).as_tool(
             name="get_files_from_a_directory",
             description=GET_FILES_FROM_DIRECTORY_PROMPT,
             args_schema=DirectoryPath
         ),
-        RunnableLambda(mock_api.create_pull_request).as_tool(
+        RunnableLambda(_convert_args_schema_to_string(mock_api.create_pull_request, CreatePR)).as_tool(
             name="create_pull_request",
             description=CREATE_PULL_REQUEST_PROMPT,
             args_schema=CreatePR
         ),
-        RunnableLambda(mock_api.create_file).as_tool(
+        RunnableLambda(_convert_args_schema_to_string(mock_api.create_file, CreateFile)).as_tool(
             name="create_file",
             description=CREATE_FILE_PROMPT,
             args_schema=CreateFile
         ),
-        RunnableLambda(mock_api.update_file).as_tool(
+        RunnableLambda(_convert_args_schema_to_string(mock_api.update_file, UpdateFile)).as_tool(
             name="update_file",
             description=UPDATE_FILE_PROMPT,
             args_schema=UpdateFile
         ),
-        RunnableLambda(mock_api.read_file).as_tool(
+        RunnableLambda(_convert_args_schema_to_string(mock_api.read_file, ReadFile)).as_tool(
             name="read_file",
             description=READ_FILE_PROMPT,
             args_schema=ReadFile
         ),
-        RunnableLambda(mock_api.delete_file).as_tool(
+        RunnableLambda(_convert_args_schema_to_string(mock_api.delete_file, DeleteFile)).as_tool(
             name="delete_file",
             description=DELETE_FILE_PROMPT,
             args_schema=DeleteFile
