@@ -54,7 +54,7 @@ import asyncio
 
 if __name__ == "__main__":
     async def main():
-        user_input = "This is a python project.Add an entry point to the project and print Hello World."
+        user_input = "This is a python project. Add an entry point (main.py) to the project and print Hello World."
         config = {"configurable": {"thread_id": "1"}}
 
         events = graph.astream(
@@ -67,3 +67,5 @@ if __name__ == "__main__":
                     event["messages"][-1].pretty_print()
 
     asyncio.run(main())
+
+    print(mock_api.operations)
