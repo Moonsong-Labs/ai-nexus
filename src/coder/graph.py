@@ -34,23 +34,3 @@ def graph_builder(github_toolset: list[Tool]) -> StateGraph:
     return builder
 
 __all__ = ["graph_builder"]
-
-#import asyncio
-
-# if __name__ == "__main__":
-#     async def main():
-#         user_input = "This is a python project. Add an entry point (main.py) to the project and print Hello World."
-#         config = {"configurable": {"thread_id": "1"}}
-
-#         events = graph.astream(
-#             {"messages": [{"role": "user", "content": user_input}]},
-#             config,
-#             stream_mode="values",
-#         )
-#         async for event in events:
-#                 if "messages" in event:
-#                     event["messages"][-1].pretty_print()
-
-#     asyncio.run(main())
-
-#     print(mock_api.operations)
