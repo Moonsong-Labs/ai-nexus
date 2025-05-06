@@ -19,10 +19,14 @@ def get_logger(name=None, *, level: int | str = logging.INFO) -> logging.Logger:
 def create_async_graph_caller(
     graph: CompiledStateGraph, config: RunnableConfig
 ) -> Callable[[dict], Awaitable[dict]]:
-    """Create a basic graph caller that calls ainvoke on the dataset inputs with the provided config."""
+    """
+    Create a basic graph caller that calls ainvoke on the dataset inputs with the provided config.
+    Returns the last message.
+    """
 
     async def call_model(inputs: dict):
-        return await graph.ainvoke(inputs, config=config)
+        result = await graph.ainvoke(inputs, config=config)
+        return result["messages"][-1]
 
     return call_model
 
