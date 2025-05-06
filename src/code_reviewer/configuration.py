@@ -7,7 +7,7 @@ from typing import Any, Optional
 from langchain_core.runnables import RunnableConfig
 from typing_extensions import Annotated
 
-from grumpy import prompts
+from code_reviewer import prompts
 
 
 @dataclass(kw_only=True)
