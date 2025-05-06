@@ -8,6 +8,7 @@ from typing import Literal
 from langchain.chat_models import init_chat_model
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.base import BaseStore
 
 from pydantic import BaseModel, Field
@@ -112,23 +113,28 @@ def route_veredict(state: State):
         return END
     return "call_model"
 
+def human_feedback(state: State):
+    msg = state.messages[-1].content
+    user_input = input("{msg}")
+    
+    return graph.update_state({"messages": [user_input]}, as_node="human_feedback")
+
+memory = MemorySaver()
 
 # Create the graph + all nodes
 builder = StateGraph(State, config_schema=configuration.Configuration)
 
 # Define the flow of the memory extraction process
 builder.add_node(call_model)
-builder.add_node(store_memory)
 builder.add_node(call_evaluator_model)
+builder.add_node(human_feedback)
 
 builder.add_edge("__start__", "call_model")
-builder.add_conditional_edges("call_model", route_memory, ["store_memory", "call_evaluator_model"])
+builder.add_edge("call_model", "human_feedback")
+builder.add_edge("human_feedback", "call_evaluator_model")
 builder.add_conditional_edges("call_evaluator_model", route_veredict, ["call_model", END])
-# Right now, we're returning control to the user after storing a memory
-# Depending on the model, you may want to route back to the model
-# to let it first store memories, then generate a response
-builder.add_edge("store_memory", "call_model")
-graph = builder.compile()
+
+graph = builder.compile(interrupt_before=["human_feedback"])
 graph.name = "Requirement Gatherer Agent"
 
 
