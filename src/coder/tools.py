@@ -1,4 +1,4 @@
-"""Tools configuration for the code agent."""
+"""Tools for the code agent."""
 
 from langchain_community.utilities.github import GitHubAPIWrapper
 from langchain_community.agent_toolkits.github.toolkit import (
@@ -26,7 +26,7 @@ from langchain_core.tools import Tool
 from langchain_core.runnables import RunnableLambda
 from coder.mocks import MockGithubApi
 from pydantic import BaseModel
-from typing import Type
+from typing import Type, Union
 
 GITHUB_TOOLS = [
     "set_active_branch",
@@ -43,9 +43,8 @@ GITHUB_TOOLS = [
     #"search_code",
 ]
 
-def github_tools():
+def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[Tool]:
     """Configure and return GitHub tools for the code agent."""
-    github_api_wrapper = GitHubAPIWrapper()
     github_toolkit = GitHubToolkit.from_github_api_wrapper(github_api_wrapper)
 
 
@@ -72,7 +71,7 @@ def _convert_args_schema_to_string(func, args_schema: Type[BaseModel]):
     return wrapper
 
 def mock_github_tools(mock_api: MockGithubApi):
-    """Create mocked GitHub tools using RunnableLambda.
+    """Create mocked GitHub tools
     
     Args:
         mock_api: An instance of MockGithubApi to use for the tool implementations
@@ -126,10 +125,12 @@ def mock_github_tools(mock_api: MockGithubApi):
     
     return tools
 
-if __name__ == "__main__":
-    mock_api = MockGithubApi()
-    tools = mock_github_tools(mock_api)
-    for tool in tools:
-        print(tool.name)
-        print(tool.args_schema)
-        print(tool.description)
+def get_github_tools(source: Union[GitHubAPIWrapper, MockGithubApi]) -> list[Tool]:
+    """Get the GitHub tools
+    
+    Args:
+        source: Either a GitHubAPIWrapper or MockGithubApi instance
+    """
+    if isinstance(source, GitHubAPIWrapper):
+        return github_tools(source)
+    return mock_github_tools(source)
