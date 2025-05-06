@@ -131,8 +131,10 @@ def route_message(state: State):
 builder = StateGraph(State, config_schema=configuration.Configuration)
 
 # Define the flow of the memory extraction process
+builder.add_node(ask_question)
+builder.add_edge("__start__", "ask_question")
 builder.add_node(call_model)
-builder.add_edge("__start__", "call_model")
+builder.add_edge("ask_question", "call_model")
 builder.add_node(store_memory)
 builder.add_conditional_edges("call_model", route_message, ["store_memory", END])
 # Right now, we're returning control to the user after storing a memory
