@@ -105,9 +105,6 @@ class MockGithubApi:
                 "Please create a new branch and try again."
             )
 
-        print("--------------------------------")
-        print(file_query)
-        print("--------------------------------")
         file_path = file_query.split("\n")[0]
         file_contents = file_query[len(file_path) + 2 :]
 
