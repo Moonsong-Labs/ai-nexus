@@ -26,6 +26,8 @@ test-grumpy:
 test-code-reviewer:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_code_reviewer_agent.py
 
+test-requirement-gatherer:
+	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_requirement_gatherer.py	
 test_watch:
 	uv run --env-file .env -- python -m ptw --snapshot-update --now . -- -vv tests/unit_tests
 
@@ -34,6 +36,9 @@ test_profile:
 
 extended_tests:
 	uv run --env-file .env -- python -m pytest --only-extended $(TEST_FILE)
+
+set-requirement-dataset:
+	uv run --env-file .env -- python tests/datasets/requirement_gatherer_dataset.py
 
 
 ######################
