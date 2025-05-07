@@ -1,9 +1,8 @@
 import logging
+import traceback
 import uuid  # Add import for unique thread IDs
 
 import pytest
-
-import traceback
 
 # from langsmith import aevaluate # Remove this potentially confusing import
 from langchain_core.messages import (  # Import message types
@@ -38,11 +37,11 @@ def correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict):
     # Prepare the inputs for the evaluator
     # The evaluator expects a specific format for  outputs
     try:
-        outputs_contents = outputs['output']
+        outputs_contents = outputs["output"]
         print(f"outputs_contents: {outputs_contents}")
         print(f"reference_outputs: {reference_outputs}")
-        reference_outputs_contents = reference_outputs['message'][0]['content']
-        
+        reference_outputs_contents = reference_outputs["message"][0]["content"]
+
         eval_result = evaluator(
             inputs=inputs,
             outputs=outputs_contents,
@@ -50,7 +49,9 @@ def correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict):
         )
         return eval_result
     except Exception as e:
-        pytest.fail(f"Error during evaluation: {e}\n\nTraceback: {traceback.format_exc()}")
+        pytest.fail(
+            f"Error during evaluation: {e}\n\nTraceback: {traceback.format_exc()}"
+        )
         return 0
 
 
@@ -210,7 +211,7 @@ async def test_code_reviewer_easy_review_langsmith(pytestconfig):
         )
         results = await client.aevaluate(
             run_graph_with_config,  # Pass the wrapper function as the target
-            data=LANGSMITH_DATASET_NAME, # The whole dataset is used
+            data=LANGSMITH_DATASET_NAME,  # The whole dataset is used
             # data=client.list_examples(  # Only the dev split is used
             #     dataset_name=LANGSMITH_DATASET_NAME, splits=["dev"]
             # ),
