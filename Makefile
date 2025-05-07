@@ -23,6 +23,8 @@ test-grumpy:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_grumpy_agent.py
 test-requirement-gatherer:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_requirement_gatherer.py	
+test-tester:
+	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_tester_agent.py
 test_watch:
 	uv run --env-file .env -- python -m ptw --snapshot-update --now . -- -vv tests/unit_tests
 
