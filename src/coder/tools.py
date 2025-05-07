@@ -1,7 +1,6 @@
 """Tools for the code agent."""
 from typing import Type, Union
 
-from langchain_core.tools import BaseTool
 from langchain_community.agent_toolkits.github.toolkit import (
     BranchName,
     CreateFile,
@@ -24,6 +23,7 @@ from langchain_community.tools.github.prompt import (
 )
 from langchain_community.utilities.github import GitHubAPIWrapper
 from langchain_core.runnables import RunnableLambda
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 
 from coder.mocks import MockGithubApi

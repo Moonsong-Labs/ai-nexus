@@ -1,8 +1,11 @@
-import pytest
 import uuid
+
+import pytest
+
+from coder.graph import graph_builder
 from coder.mocks import MockGithubApi
 from coder.tools import get_github_tools
-from coder.graph import graph_builder
+
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_coder_creates_hello_world():
