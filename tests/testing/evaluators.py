@@ -1,4 +1,5 @@
 from typing import Any, Callable, Union
+from langchain.chat_models import init_chat_model
 
 from openevals import create_llm_as_judge
 from openevals.prompts.correctness import CORRECTNESS_PROMPT
@@ -10,6 +11,7 @@ class LLMJudge:
         self,
         *,
         model: str = "google_genai:gemini-2.0-flash-lite",
+        temperature: float = 0.0,
     ):
         """Create a LLM as a judge using preset defaults.
 
@@ -19,12 +21,12 @@ class LLMJudge:
         Returns:
             A LLMJudge object that can create evaluators.
         """
-        self.model = model
+        self.judge = init_chat_model(model=model, temperature=temperature)
 
     def create_correctness_evaluator(
         self,
         *,
-        plaintext=False,
+        plaintext = False,
         continuous: bool = True,
         prompt: str = CORRECTNESS_PROMPT,
         **kwargs,
@@ -43,7 +45,7 @@ class LLMJudge:
             evaluator = create_llm_as_judge(
                 prompt=prompt,
                 continuous=continuous,
-                model=self.model,
+                judge=self.judge,
                 **kwargs,
             )
 
