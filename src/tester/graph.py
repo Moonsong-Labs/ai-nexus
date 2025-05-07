@@ -127,18 +127,15 @@ async def generate_tests(state: State, config: RunnableConfig, *, store: BaseSto
         "workflow_stage": WorkflowStage.GENERATE_TESTS if has_more_categories else WorkflowStage.COMPLETE
     }
 
-def determine_next_step(state: State) -> str:
+def route_based_on_workflow_stage(state: State):
     """Route to the appropriate node based on the current workflow stage."""
-    # If user has just responded, continue the workflow based on current stage
-    if state.messages[-1]["role"] == "user":
-        return state.workflow_stage
+    # Check if workflow_stage is set
+    if not hasattr(state, "workflow_stage"):
+        # Default to starting at the beginning
+        return "analyze_requirements"
     
-    # If we're in the COMPLETE stage, end the workflow
-    if state.workflow_stage == WorkflowStage.COMPLETE:
-        return END
-    
-    # Otherwise, wait for user input
-    return END
+    # Route based on the current workflow stage
+    return state.workflow_stage
 
 # Create the graph with the workflow stages
 builder = StateGraph(State, config_schema=configuration.Configuration)
@@ -150,20 +147,22 @@ builder.add_node("process_answers", process_answers)
 builder.add_node("group_requirements", group_requirements)
 builder.add_node("generate_tests", generate_tests)
 
-# Define the flow
+# Define the initial flow
 builder.add_edge("__start__", "analyze_requirements")
 builder.add_edge("analyze_requirements", "generate_questions")
 builder.add_edge("generate_questions", END)  # Wait for user to answer questions
+
+# Add conditional routing for continuing the workflow after user inputs
+builder.add_conditional_edges(
+    "__start__",  # Start node
+    route_based_on_workflow_stage,
+    ["analyze_requirements", "generate_questions", "process_answers", "group_requirements", "generate_tests"]
+)
+
+# Define the rest of the workflow
 builder.add_edge("process_answers", "group_requirements")
 builder.add_edge("group_requirements", "generate_tests")
 builder.add_edge("generate_tests", END)  # End or wait for user input before next category
-
-# Add conditional routing based on user messages
-builder.add_conditional_edges(
-    "__user_message__",  # Special node triggered when user sends a message
-    determine_next_step,
-    ["analyze_requirements", "generate_questions", "process_answers", "group_requirements", "generate_tests", END]
-)
 
 graph = builder.compile()
 graph.name = "Tester"
