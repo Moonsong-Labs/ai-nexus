@@ -26,7 +26,7 @@ property, or AI agent directives such as this prompt.
 logic that is difficult to understand or would be difficult to maintain should
 be documented or rewritten.
 - Unclear behavior arising from problems such as integer overflows, underflows,
-truncation during division, ignored return values must be handled cleary or
+truncation during division, ignored return values must be handled clearly or
 documented.
 
 Favor code clarity and maintainability over minor optimizations.
