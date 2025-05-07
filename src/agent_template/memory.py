@@ -1,13 +1,43 @@
 import json
 import logging
+import uuid
+from typing import Annotated, Optional
 from pathlib import Path
-
+from langmem import create_manage_memory_tool, create_search_memory_tool
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import InjectedToolArg, Tool
+from langgraph.store.memory import InMemoryStore
 from langgraph.store.base import BaseStore
+from agent_template.configuration import Configuration
 
 logger = logging.getLogger(__name__)
 
 # Define the directory where static memory files are stored
 STATIC_MEMORIES_DIR = Path(".langgraph/static_memories/")
+
+def get_langmem_tools(user_id: str) -> list:
+    gemini_embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-exp-03-07")
+    
+    store = InMemoryStore(
+        index={
+            "dims": 3072,
+            "embed": gemini_embeddings,
+        }
+    )
+
+    memory_tools = [
+        create_manage_memory_tool(
+            namespace=("memories", user_id),
+            store=store
+        ),
+        create_search_memory_tool(
+            namespace=("memories", user_id),
+            store=store
+        ),
+    ]
+
+    return memory_tools
 
 
 async def _load_memories_from_directory(directory_path: Path, store: BaseStore):
