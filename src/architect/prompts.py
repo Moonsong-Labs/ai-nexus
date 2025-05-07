@@ -4,7 +4,7 @@ with open("src/architect/prompts/v0.md", "r") as file:
     system_prompt_content = file.read()
 
 if system_prompt_content is None:
-  raise ValueError("File prompt is not found")
+    raise ValueError("File prompt is not found")
 
 SYSTEM_PROMPT = f"""
 {system_prompt_content}

@@ -4,7 +4,7 @@ with open("src/code_reviewer/system_prompt.md", "r") as file:
     system_prompt_content = file.read()
 
 if system_prompt_content is None:
-  raise ValueError("File prompt is not found")
+    raise ValueError("File prompt is not found")
 
 SYSTEM_PROMPT = f"""
 {system_prompt_content}

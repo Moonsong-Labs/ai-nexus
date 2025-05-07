@@ -1,4 +1,4 @@
-.PHONY: all clean deps sync run format lint test tests test_watch integration_tests docker_tests help extended_tests
+.PHONY: all clean deps sync run fmt lint spell_check spell_fix test test_unit test_integration test_watch help extended_tests
 
 # Default target executed when no arguments are given to make.
 all: help
@@ -19,8 +19,6 @@ run: deps
 UNIT_TEST_FILE ?= tests/unit_tests/
 INTEGRATION_TEST_FILE ?= tests/integration_tests/
 
-test:
-	uv run --env-file .env -- pytest -rs $(INTEGRATION_TEST_FILE)
 test-grumpy:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_grumpy_agent.py
 test-requirement-gatherer:
@@ -28,8 +26,12 @@ test-requirement-gatherer:
 test_watch:
 	uv run --env-file .env -- python -m ptw --snapshot-update --now . -- -vv tests/unit_tests
 
-test_profile:
-	uv run --env-file .env -- python -m pytest -vv tests/unit_tests/ --profile-svg
+test_unit:
+	uv run --env-file .env pytest tests/unit_tests
+test_integration:
+	uv run --env-file .env -- pytest -rs $(INTEGRATION_TEST_FILE)
+
+test: test_unit test_integration
 
 extended_tests:
 	uv run --env-file .env -- python -m pytest --only-extended $(TEST_FILE)

@@ -1,6 +1,7 @@
 """Graphs that orchestrates a software project."""
 
 import logging
+import pprint
 from datetime import datetime
 from typing import Literal
 
@@ -13,8 +14,6 @@ from langgraph.store.base import BaseStore
 from common import utils
 from orchestrator import configuration, stubs, tools
 from orchestrator.state import State
-
-import pprint
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,9 @@ async def orchestrate(
 
     print(state.messages)
 
-    msg = await model_orchestrator.bind_tools([tools.Delegate, tools.store_memory]).ainvoke(
+    msg = await model_orchestrator.bind_tools(
+        [tools.Delegate, tools.store_memory]
+    ).ainvoke(
         [SystemMessage(sys), *state.messages],
         {"configurable": utils.split_model_and_provider(configurable.model)},
     )
@@ -49,13 +50,14 @@ async def store_memory(
     sys = configurable.system_prompt.format(time=datetime.now().isoformat())
 
     pprint.pp(state.messages)
-    
+
     msg = await model_orchestrator.bind_tools([tools.Delegate, tools.Memory]).ainvoke(
         [SystemMessage(sys), *state.messages],
         {"configurable": utils.split_model_and_provider(configurable.model)},
     )
 
     return {"messages": [msg]}
+
 
 def delegate_to(
     state: State, config: RunnableConfig, store: BaseStore

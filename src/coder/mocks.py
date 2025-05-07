@@ -2,10 +2,7 @@ class MockGithubApi:
     branches = ["main"]
     active_branch = "main"
     # Mock file system structure: {type: "dir"|"file", content: str|dict}
-    files = {
-        "type": "dir",
-        "content": {}
-    }
+    files = {"type": "dir", "content": {}}
     # Store the current pull request: {title: str, body: str, head: str, base: str}
     pull_request = None
     # Track file operations: [{type: str, args: dict}]
@@ -27,7 +24,7 @@ class MockGithubApi:
         until a unique name is found."""
         i = 0
         new_branch_name = proposed_branch_name
-        
+
         for i in range(1000):
             if new_branch_name not in self.branches:
                 self.branches.append(new_branch_name)
@@ -38,7 +35,7 @@ class MockGithubApi:
                 )
             i += 1
             new_branch_name = f"{proposed_branch_name}_v{i}"
-            
+
         return (
             "Unable to create branch. "
             "At least 1000 branches exist with named derived from "
@@ -60,40 +57,40 @@ class MockGithubApi:
         """Recursively fetches files from a directory in the repo."""
         # Split path into components
         path_parts = [p for p in directory_path.split("/") if p]
-        
+
         # Navigate to the target directory
         current = self.files
         for part in path_parts:
             if current["type"] != "dir" or part not in current["content"]:
                 return f"No files found in directory: {directory_path}"
             current = current["content"][part]
-            
+
         if current["type"] != "dir":
             return f"Error: {directory_path} is not a directory"
-            
+
         # Get all files under this directory
         files = self._get_files_recursive(directory_path, current)
-        
+
         if not files:
             return f"No files found in directory: {directory_path}"
-            
+
         return str(files)
 
     def create_pull_request(self, pr_query: str) -> str:
         """Creates a pull request from the bot's branch to the base branch."""
         if self.active_branch == "main":
             return "Cannot make a pull request because commits are already in the main branch."
-            
+
         title = pr_query.split("\n")[0]
         body = pr_query[len(title) + 2 :]
-        
+
         self.pull_request = {
             "title": title,
             "body": body,
             "head": self.active_branch,
-            "base": "main"
+            "base": "main",
         }
-        
+
         return "Successfully created PR number 1"
 
     def create_file(self, file_query: str) -> str:
@@ -111,15 +108,17 @@ class MockGithubApi:
         file_path = file_query.split("\n")[0]
         file_contents = file_query[len(file_path) + 2 :]
 
-        self.operations.append({
-            "type": "create",
-            "args": {
-                "path": file_path,
-                "content": file_contents,
-                "branch": self.active_branch
+        self.operations.append(
+            {
+                "type": "create",
+                "args": {
+                    "path": file_path,
+                    "content": file_contents,
+                    "branch": self.active_branch,
+                },
             }
-        })
-        
+        )
+
         return f"Created file {file_path}"
 
     def update_file(self, file_query: str) -> str:
@@ -135,16 +134,18 @@ class MockGithubApi:
         old_content = file_query.split("OLD <<<<")[1].split(">>>> OLD")[0].strip()
         new_content = file_query.split("NEW <<<<")[1].split(">>>> NEW")[0].strip()
 
-        self.operations.append({
-            "type": "update",
-            "args": {
-                "path": file_path,
-                "old_content": old_content,
-                "new_content": new_content,
-                "branch": self.active_branch
+        self.operations.append(
+            {
+                "type": "update",
+                "args": {
+                    "path": file_path,
+                    "old_content": old_content,
+                    "new_content": new_content,
+                    "branch": self.active_branch,
+                },
             }
-        })
-        
+        )
+
         return f"Updated file {file_path}"
 
     def delete_file(self, file_path: str) -> str:
@@ -156,29 +157,28 @@ class MockGithubApi:
                 "Please create a new branch and try again."
             )
 
-        self.operations.append({
-            "type": "delete",
-            "args": {
-                "path": file_path,
-                "branch": self.active_branch
+        self.operations.append(
+            {
+                "type": "delete",
+                "args": {"path": file_path, "branch": self.active_branch},
             }
-        })
-        
+        )
+
         return f"Deleted file {file_path}"
 
     def read_file(self, file_path: str) -> str:
         """Read a file from the repo."""
         # Split path into components
         path_parts = [p for p in file_path.split("/") if p]
-        
+
         # Navigate to the target file
         current = self.files
         for part in path_parts:
             if current["type"] != "dir" or part not in current["content"]:
                 return f"File not found `{file_path}`"
             current = current["content"][part]
-            
+
         if current["type"] != "file":
             return f"Error: {file_path} is not a file"
-            
-        return current["content"] 
+
+        return current["content"]
