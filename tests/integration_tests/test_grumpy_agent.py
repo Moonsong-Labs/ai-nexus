@@ -12,13 +12,13 @@ logger = get_logger(__name__)
 # Define the LangSmith dataset ID
 LANGSMITH_DATASET_NAME = "grumpy-failed-questions"
 CORRECTNESS_PROMPT = """You are an expert data labeler evaluating model outputs for correctness.
-Your task is to assign a score from 0.0 to 1.0 (in 0.1 increments) based on the following rubric:
+Your task is to assign a score from 0.0 to 1.0 based on the following rubric:
 
 <Rubric>
   A correct answer:
   - Provides review of the user input
   - Expresses agreement or disagreement with the user input
-  - Contains a clear and concise explanation of the reasoning behind the score
+  - Contains a clear and concise explanation of the reasoning behind the score. No more than 2 sentences.
   - Contains no factual errors
   - Is logically consistent
   - Uses precise and accurate terminology
@@ -31,6 +31,8 @@ Your task is to assign a score from 0.0 to 1.0 (in 0.1 increments) based on the 
   - Incorrect terminology
   - Logical inconsistencies
   - Missing key information
+  - Excessive verbosity or unnecessary details
+  - Extra information that is not relevant to a review
 </Rubric>
 
 <Instructions>
