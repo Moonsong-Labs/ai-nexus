@@ -1,4 +1,4 @@
-.PHONY: all clean deps sync run fmt lint spell_check spell_fix test test_unit test_integration test_watch help extended_tests
+.PHONY: all clean check deps sync run fmt lint spell_check spell_fix test test_unit test_integration test_watch help extended_tests
 
 # Default target executed when no arguments are given to make.
 all: help
@@ -70,6 +70,8 @@ spell_check:
 
 spell_fix:
 	uv tool run codespell --toml pyproject.toml -w
+
+check: lint spell_check
 
 ######################
 # HELP
