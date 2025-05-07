@@ -1,9 +1,8 @@
 import logging
+import traceback
 import uuid  # Add import for unique thread IDs
 
 import pytest
-
-import traceback
 
 # from langsmith import aevaluate # Remove this potentially confusing import
 from langchain_core.messages import (  # Import message types
