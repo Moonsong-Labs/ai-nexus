@@ -23,6 +23,7 @@ llm = init_chat_model()
 # msg = llm.invoke("hello", {"configurable": utils.split_model_and_provider(configuration.Configuration().model)})
 # print(msg)
 
+
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
     """Extract the user's state from the conversation and update the memory."""
     configurable = configuration.Configuration.from_runnable_config(config)
@@ -35,7 +36,9 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
     )
 
     # Format memories for inclusion in the prompt
-    formatted = "\n".join(f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories)
+    formatted = "\n".join(
+        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
+    )
     if formatted:
         formatted = f"""
 <memories>
@@ -48,13 +51,15 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
         user_info=formatted, time=datetime.now().isoformat()
     )
     # Invoke the language model with the prepared prompt and tools
-    output = await llm.bind_tools([tools.upsert_memory]) \
-        .with_structured_output(TesterAgentFinalOutput) \
+    output = (
+        await llm.bind_tools([tools.upsert_memory])
+        .with_structured_output(TesterAgentFinalOutput)
         .ainvoke(
             [{"role": "system", "content": sys}, *state.messages],
             {"configurable": utils.split_model_and_provider(configurable.model)},
         )
-    
+    )
+
     # Create a proper message from the structured output
     return {"messages": [{"role": "assistant", "content": str(output)}]}
 

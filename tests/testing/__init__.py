@@ -2,7 +2,6 @@ import logging
 import uuid
 from typing import Any, Awaitable, Callable
 
-from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
 from termcolor import colored
 
@@ -19,7 +18,7 @@ def get_logger(name=None, *, level: int | str = logging.INFO) -> logging.Logger:
 
 
 def create_async_graph_caller(
-    graph: CompiledStateGraph
+    graph: CompiledStateGraph,
 ) -> Callable[[dict], Awaitable[dict]]:
     """
     Create a basic graph caller that calls ainvoke on the dataset inputs with the provided config.
