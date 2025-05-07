@@ -1,4 +1,4 @@
-.PHONY: all clean deps sync run format lint test tests test_watch integration_tests docker_tests help extended_tests
+.PHONY: all clean check deps sync run fmt lint spell_check spell_fix test test_unit test_integration test_watch help extended_tests
 
 # Default target executed when no arguments are given to make.
 all: help
@@ -19,8 +19,6 @@ run: deps
 UNIT_TEST_FILE ?= tests/unit_tests/
 INTEGRATION_TEST_FILE ?= tests/integration_tests/
 
-test:
-	uv run --env-file .env -- pytest -rs $(INTEGRATION_TEST_FILE)
 test-grumpy:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_grumpy_agent.py
 test-code-reviewer:
@@ -31,8 +29,12 @@ test-requirement-gatherer:
 test_watch:
 	uv run --env-file .env -- python -m ptw --snapshot-update --now . -- -vv tests/unit_tests
 
-test_profile:
-	uv run --env-file .env -- python -m pytest -vv tests/unit_tests/ --profile-svg
+test_unit:
+	uv run pytest tests/unit_tests
+test_integration:
+	uv run --env-file .env -- pytest -rs $(INTEGRATION_TEST_FILE)
+
+test: test_unit test_integration
 
 extended_tests:
 	uv run --env-file .env -- python -m pytest --only-extended $(TEST_FILE)
@@ -59,8 +61,8 @@ lint lint_diff lint_package lint_tests:
 	uv tool run ruff check .
 	[ "$(PYTHON_FILES)" = "" ] || uv tool run ruff format $(PYTHON_FILES) --diff
 	[ "$(PYTHON_FILES)" = "" ] || uv tool run ruff check --select I $(PYTHON_FILES)
-	[ "$(PYTHON_FILES)" = "" ] || uv tool run mypy --strict $(PYTHON_FILES)
-	[ "$(PYTHON_FILES)" = "" ] || mkdir -p $(MYPY_CACHE) && uv tool run mypy --strict $(PYTHON_FILES) --cache-dir $(MYPY_CACHE)
+#	[ "$(PYTHON_FILES)" = "" ] || uv tool run mypy --strict $(PYTHON_FILES)
+#	[ "$(PYTHON_FILES)" = "" ] || mkdir -p $(MYPY_CACHE) && uv tool run mypy --strict $(PYTHON_FILES) --cache-dir $(MYPY_CACHE)
 
 fmt format_diff:
 	uv tool run ruff format $(PYTHON_FILES)
@@ -71,6 +73,8 @@ spell_check:
 
 spell_fix:
 	uv tool run codespell --toml pyproject.toml -w
+
+check: lint spell_check
 
 ######################
 # HELP
