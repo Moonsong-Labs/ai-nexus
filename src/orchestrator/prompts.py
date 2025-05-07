@@ -1,6 +1,5 @@
 """Define default prompts."""
 
-
 ORCHESTRATOR_SYSTEM_PROMPT = """You are an orchestrator of a professional engineering team. You will never perform any direct actions.
 You are to help a user implement a project. You will not focus on researching, designing, or implementing a project. \
 Instead you will delegate the responsibilities to your team, depending upon the conversations of your team and human input.
@@ -102,9 +101,10 @@ def _read_memory_bank(type: str) -> str:
 
 
 def get_prompt() -> str:
+    """Missing docs."""
     memory = {
         k: _read_memory_bank(k)
         for k in ["absolute", "team", "project_states", "process"]
     }
-    print(memory)
+    print(memory)  # noqa: T201
     return ORCHESTRATOR_MEM_SYSTEM_PROMPT.format(**memory)

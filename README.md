@@ -51,6 +51,12 @@ This will invoke the `sync` and `deps` targets on its own.
 make clean
 ```
 
+### Lint + Spell Check
+
+```sh
+make check
+```
+
 ### Linting and Formatting
 
 ```sh

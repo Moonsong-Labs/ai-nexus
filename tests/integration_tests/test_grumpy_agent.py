@@ -95,7 +95,9 @@ async def test_grumpy_easy_review_langsmith(pytestconfig):
         # input_mapper=lambda x: x, # Default is identity, maps dataset example to target input
         # evaluators=[correctness_evaluator],
         evaluators=[
-            llm_judge.create_correctness_evaluator(plaintext=True, prompt=CORRECTNESS_PROMPT)
+            llm_judge.create_correctness_evaluator(
+                plaintext=True, prompt=CORRECTNESS_PROMPT
+            )
         ],
         experiment_prefix="grumpy-gemini-2.5-correctness-eval-plain",
         num_repetitions=5,

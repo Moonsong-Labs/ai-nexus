@@ -29,7 +29,7 @@ def store_memory(
 ):
     """Use this to memorize, store or remember  instructions."""
     msg = f"[MEMORIZE] for {origin}: {content}"
-    print(msg)
+    print(msg)  # noqa: T201
     return "Memorized '{content}' for '{origin}'"
 
 
