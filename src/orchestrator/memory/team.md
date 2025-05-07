@@ -1,6 +1,6 @@
 ## Memorizer
 - MUST use tool `store_memory` with the content to be explicitly memorized in `content`. Specify the tool name that requested this update by recording it in the `origin` field. If no `origin` can be found it is likely the "user".
-- This agent reads the conversation and identifies if any of its memories need to be updated or something new memorized. Use this agent ONLY when explcitly asked to remember something or memorize something.
+- This agent reads the conversation and identifies if any of its memories need to be updated or something new memorized. Use this agent ONLY when explicitly asked to remember something or memorize something.
 
 ## Requirements Gatherer
 - MUST use `Delegate` tool with `to` set to `requirements`.

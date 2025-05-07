@@ -2,4 +2,4 @@
 
 from coder.graph import graph
 
-__all__ = ["graph"] 
+__all__ = ["graph"]

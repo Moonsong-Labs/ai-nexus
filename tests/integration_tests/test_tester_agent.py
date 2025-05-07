@@ -2,18 +2,14 @@ import logging
 import uuid
 
 import pytest
-
-from langsmith import Client
-from langchain_core.messages import (
-    AIMessage,
-    HumanMessage
-)
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.memory import InMemoryStore
+from langsmith import Client
 from openevals.llm import create_llm_as_judge
 from openevals.prompts import CORRECTNESS_PROMPT
 
-# Stop chaging this for graph, we need the builder
+# Stop changing this for graph, we need the builder
 from tester.graph import builder as tester_graph
 
 logging.basicConfig(
@@ -30,8 +26,8 @@ def correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict):
     )
 
     try:
-        outputs_contents = outputs['output']
-        
+        outputs_contents = outputs["output"]
+
         eval_result = evaluator(
             inputs=inputs,
             outputs=outputs_contents,
@@ -55,19 +51,21 @@ async def test_tester_hello_response():
     memory_store = InMemoryStore()
 
     # Compile the graph with both the checkpointer and store
-    graph_compiled = tester_graph.compile(
-        checkpointer=memory_saver,
-        store=memory_store
-    )
+    graph_compiled = tester_graph.compile(checkpointer=memory_saver, store=memory_store)
 
     async def call_tester_agent(input_message: dict):
         # put all this into a try block
         try:
-            input_message = input_message['message']
+            input_message = input_message["message"]
 
             result = await graph_compiled.ainvoke(
                 {"messages": [HumanMessage(content=input_message)]},
-                config={"configurable": {"thread_id": str(uuid.uuid4()), "user_id": "test_user"}}
+                config={
+                    "configurable": {
+                        "thread_id": str(uuid.uuid4()),
+                        "user_id": "test_user",
+                    }
+                },
             )
             if isinstance(result, dict) and "messages" in result and result["messages"]:
                 last_message = result["messages"][-1]
@@ -99,9 +97,10 @@ async def test_tester_hello_response():
 
         return output_content
 
-    
     try:
-        logger.info(f"Testing tester agent with input dataset: tester-agent-test-dataset")
+        logger.info(
+            "Testing tester agent with input dataset: tester-agent-test-dataset"
+        )
         results = await client.aevaluate(
             call_tester_agent,
             data="tester-agent-test-dataset",
@@ -112,7 +111,7 @@ async def test_tester_hello_response():
         logger.info(f"LangSmith Evaluation Results: {results}")
 
         assert results is not None, "LangSmith evaluation did not return results."
-        
+
     except Exception as e:
         logger.error(f"Error during test: {e}", exc_info=True)
         pytest.fail(f"Test failed with error: {e}")

@@ -1,17 +1,18 @@
 """Graphs that extract memories on a schedule."""
 
+import asyncio
 import logging
 
+from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
-from langgraph.graph import END, StateGraph
-from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_core.messages import SystemMessage
+from langgraph.graph import StateGraph
+from langgraph.prebuilt import ToolNode, tools_condition
 
+from coder.mocks import MockGithubApi
 from coder.prompts import SYSTEM_PROMPT
 from coder.state import State
 from coder.tools import github_tools, mock_github_tools
-from coder.mocks import MockGithubApi
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -20,17 +21,19 @@ logger = logging.getLogger(__name__)
 llm = init_chat_model("google_genai:gemini-2.0-flash")
 
 mock_api = MockGithubApi()
-github_tools = mock_github_tools(mock_api)
+github_tools = mock_github_tools(mock_api)  # noqa: F811
+
 
 async def call_model(state: State) -> dict:
     system_msg = SystemMessage(content=SYSTEM_PROMPT)
-    
+
     # Create a list of messages properly
     messages = [system_msg] + state["messages"]
-    
+
     # Invoke the language model with the prepared prompt and tools
     messages_after_invoke = await llm.bind_tools(github_tools).ainvoke(messages)
     return {"messages": messages_after_invoke}
+
 
 # Create the graph + all nodes
 builder = StateGraph(State)
@@ -50,9 +53,8 @@ graph.name = "Code Agent"
 
 __all__ = ["graph"]
 
-import asyncio
-
 if __name__ == "__main__":
+
     async def main():
         user_input = "This is a python project. Add an entry point (main.py) to the project and print Hello World."
         config = {"configurable": {"thread_id": "1"}}
@@ -63,8 +65,8 @@ if __name__ == "__main__":
             stream_mode="values",
         )
         async for event in events:
-                if "messages" in event:
-                    event["messages"][-1].pretty_print()
+            if "messages" in event:
+                event["messages"][-1].pretty_print()
 
     asyncio.run(main())
 
