@@ -1,5 +1,3 @@
-import uuid
-
 import pytest
 from langgraph.checkpoint.memory import MemorySaver
 from langsmith import Client
@@ -85,10 +83,9 @@ async def test_grumpy_easy_review_langsmith(pytestconfig):
     graph_compiled = graph_builder.compile(checkpointer=MemorySaver())
 
     # Generate a unique thread_id for each evaluation run
-    config = {"configurable": {"thread_id": str(uuid.uuid4())}}
 
     results = await client.aevaluate(
-        create_async_graph_caller(graph_compiled, config),
+        create_async_graph_caller(graph_compiled),
         data=LANGSMITH_DATASET_NAME,  # The whole dataset is used
         # data=client.list_examples(  # Only the dev split is used
         #     dataset_name=LANGSMITH_DATASET_NAME, splits=["dev"]
