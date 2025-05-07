@@ -1,8 +1,8 @@
 import logging
+import traceback
 import uuid  # Add import for unique thread IDs
 
 import pytest
-from datasets.requirement_gatherer_dataset import REQUIREMENT_GATHERER_DATASET_NAME
 
 # from langsmith import aevaluate # Remove this potentially confusing import
 from langchain_core.messages import (  # Import message types
@@ -12,18 +12,20 @@ from langchain_core.messages import (  # Import message types
     SystemMessage,
 )
 from langgraph.checkpoint.memory import MemorySaver  # Keep checkpointer
-from langgraph.store.memory import InMemoryStore
 from langsmith import Client
 from openevals.llm import create_llm_as_judge
 from openevals.prompts import CORRECTNESS_PROMPT
 
-from requirement_gatherer.graph import builder as graph_builder
+from code_reviewer.graph import builder_no_memory as graph_builder  # Import the builder
 
 # Setup basic logging for the test
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# Define the LangSmith dataset ID
+LANGSMITH_DATASET_NAME = "code-reviewer-testing"
 
 
 def correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict):
@@ -36,7 +38,9 @@ def correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict):
     # The evaluator expects a specific format for  outputs
     try:
         outputs_contents = outputs["output"]
-        reference_outputs_contents = reference_outputs["message"]["content"]
+        print(f"outputs_contents: {outputs_contents}")
+        print(f"reference_outputs: {reference_outputs}")
+        reference_outputs_contents = reference_outputs["message"][0]["content"]
 
         eval_result = evaluator(
             inputs=inputs,
@@ -45,36 +49,31 @@ def correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict):
         )
         return eval_result
     except Exception as e:
-        pytest.fail(f"Error during evaluation: {e}")
+        pytest.fail(
+            f"Error during evaluation: {e}\n\nTraceback: {traceback.format_exc()}"
+        )
         return 0
 
 
 @pytest.mark.asyncio
-async def test_requirement_gatherer_langsmith(pytestconfig):
+async def test_code_reviewer_easy_review_langsmith(pytestconfig):
     """
-    Tests the grumpy agent graph using langsmith.aevaluate against a LangSmith dataset.
+    Tests the code_reviewer agent graph using langsmith.aevaluate against a LangSmith dataset.
     """
     client = Client()  # Initialize LangSmith client
-    if not client.has_dataset(dataset_name=REQUIREMENT_GATHERER_DATASET_NAME):
-        logger.error(
-            "Dataset %s not found in LangSmith!", REQUIREMENT_GATHERER_DATASET_NAME
-        )
+    if not client.has_dataset(dataset_name=LANGSMITH_DATASET_NAME):
+        logger.error("Dataset %s not found in LangSmith!", LANGSMITH_DATASET_NAME)
         # Print existing datasets for debugging
         datasets = client.list_datasets()
         logger.error("Existing datasets: %s", datasets)
         for dataset in datasets:
             logger.error("Dataset ID: %s, Name: %s", dataset.id, dataset.name)
-        pytest.fail(
-            f"Dataset {REQUIREMENT_GATHERER_DATASET_NAME} not found in LangSmith!"
-        )
+        pytest.fail(f"Dataset {LANGSMITH_DATASET_NAME} not found in LangSmith!")
 
     memory_saver = MemorySaver()  # Checkpointer for the graph
-    memory_store = InMemoryStore()
 
     # Compile the graph - needs checkpointer for stateful execution during evaluation
-    graph_compiled = graph_builder.compile(
-        checkpointer=memory_saver, store=memory_store
-    )
+    graph_compiled = graph_builder.compile(checkpointer=memory_saver)
 
     # Define the function to be evaluated for each dataset example
     async def run_graph_with_config(input_example: dict):
@@ -173,7 +172,7 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
 
             # Format the output for the evaluator
             # The 'correctness_evaluator' expects outputs={'output': ...}
-            # The grumpy graph likely returns state {'messages': [..., AIMessage]}
+            # The code_reviewer graph likely returns state {'messages': [..., AIMessage]}
             output_content = "Error: Graph did not return expected output format."  # Default error message
             if isinstance(result, dict) and "messages" in result and result["messages"]:
                 last_message = result["messages"][-1]
@@ -208,18 +207,17 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
 
     try:
         logger.info(
-            "Attempting client.aevaluate with dataset_name: %s",
-            REQUIREMENT_GATHERER_DATASET_NAME,
+            "Attempting client.aevaluate with dataset_name: %s", LANGSMITH_DATASET_NAME
         )
         results = await client.aevaluate(
             run_graph_with_config,  # Pass the wrapper function as the target
-            data=REQUIREMENT_GATHERER_DATASET_NAME,  # The whole dataset is used
+            data=LANGSMITH_DATASET_NAME,  # The whole dataset is used
             # data=client.list_examples(  # Only the dev split is used
-            #     dataset_name=REQUIREMENT_GATHERER_DATASET_NAME, splits=["dev"]
+            #     dataset_name=LANGSMITH_DATASET_NAME, splits=["dev"]
             # ),
             # input_mapper=lambda x: x, # Default is identity, maps dataset example to target input
             evaluators=[correctness_evaluator],
-            experiment_prefix="grumpy-gemini-2.5-correctness-eval",
+            experiment_prefix="code-reviewer-gemini-2.5-correctness-eval",
             num_repetitions=1,
             max_concurrency=4,
             # metadata={"revision_id": "my-test-run-001"} # Optional: Add metadata

@@ -72,7 +72,6 @@ model_reviewer_messages = MessageWheel(
 
 def requirements(state: State, config: RunnableConfig, store: BaseStore):
     """Call requirements."""
-    print("calling REQUIREMENTS")
     tool_call_id = state.messages[-1].tool_calls[0]["id"]
     return {
         "messages": [
@@ -102,9 +101,6 @@ def architect(state: State, config: RunnableConfig, store: BaseStore):
 def coder(state: State, config: RunnableConfig, store: BaseStore):
     """Call code."""
     tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    print(
-        f"CODER returns {model_coder_messages.peek()} with toolcall id {tool_call_id}"
-    )
     return {
         "messages": [
             ToolMessage(
@@ -148,7 +144,7 @@ def memorizer(state: State, config: RunnableConfig, store: BaseStore):
     origin = message.tool_calls[0]["args"]["origin"]
     content = message.tool_calls[0]["args"]["content"]
     msg = f"[MEMORIZE] for {origin}: {content}"
-    print(msg)
+    print(msg)  # noqa: T201
     return {
         "messages": [
             ToolMessage(

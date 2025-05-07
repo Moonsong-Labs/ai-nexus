@@ -1,10 +1,10 @@
 """Define default prompts."""
 
-with open("src/code_reviewer/system_prompt.md", "r") as file:
+with open("src/code_reviewer/system_prompt.md") as file:
     system_prompt_content = file.read()
 
 if system_prompt_content is None:
-  raise ValueError("File prompt is not found")
+    raise ValueError("File prompt is not found")
 
 SYSTEM_PROMPT = f"""
 {system_prompt_content}
@@ -14,4 +14,4 @@ System Time: {{time}}"""
 SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{{user_info}}", "{user_info}")
 SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{{time}}", "{time}")
 
-print(SYSTEM_PROMPT)
+# print(SYSTEM_PROMPT)

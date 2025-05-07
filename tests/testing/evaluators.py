@@ -1,9 +1,10 @@
 from typing import Any, Callable, Union
-from langchain.chat_models import init_chat_model
 
+from langchain.chat_models import init_chat_model
 from openevals import create_llm_as_judge
-from openevals.prompts.correctness import CORRECTNESS_PROMPT
 from openevals.types import SimpleEvaluator
+
+from testing.prompts import CORRECTNESS_PROMPT
 
 
 class LLMJudge:
@@ -26,7 +27,7 @@ class LLMJudge:
     def create_correctness_evaluator(
         self,
         *,
-        plaintext = False,
+        plaintext=False,
         continuous: bool = True,
         prompt: str = CORRECTNESS_PROMPT,
         **kwargs,
