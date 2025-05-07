@@ -2,4 +2,4 @@
 
 from coder.lg_server import graph
 
-__all__ = ["graph"] 
+__all__ = ["graph"]

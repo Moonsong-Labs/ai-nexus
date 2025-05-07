@@ -1,10 +1,10 @@
 """Graphs that extract memories on a schedule."""
 
 from langchain.chat_models import init_chat_model
-from langgraph.graph import END, StateGraph
-from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_core.messages import SystemMessage
 from langchain_core.tools import Tool
+from langgraph.graph import StateGraph
+from langgraph.prebuilt import ToolNode, tools_condition
 from coder.prompts import SYSTEM_PROMPT
 from coder.state import State
 
