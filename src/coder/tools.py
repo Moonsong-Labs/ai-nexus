@@ -1,4 +1,5 @@
 """Tools for the code agent."""
+
 from typing import Type, Union
 
 from langchain_community.agent_toolkits.github.toolkit import (
@@ -43,6 +44,7 @@ GITHUB_TOOLS = [
     # "search_code",
 ]
 
+
 def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
     """Configure and return GitHub tools for the code agent."""
     github_toolkit = GitHubToolkit.from_github_api_wrapper(github_api_wrapper)
@@ -79,7 +81,7 @@ def _convert_args_schema_to_string(func, args_schema: Type[BaseModel]):
 
 def mock_github_tools(mock_api: MockGithubApi):
     """Create mocked GitHub tools
-    
+
     Args:
         mock_api: An instance of MockGithubApi to use for the tool implementations
     """
@@ -142,9 +144,10 @@ def mock_github_tools(mock_api: MockGithubApi):
 
     return tools
 
+
 def get_github_tools(source: Union[GitHubAPIWrapper, MockGithubApi]) -> list[BaseTool]:
     """Get the GitHub tools
-    
+
     Args:
         source: Either a GitHubAPIWrapper or MockGithubApi instance
     """
