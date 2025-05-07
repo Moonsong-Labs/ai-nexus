@@ -26,6 +26,7 @@ class CallModel:
 
 
 def graph_builder(github_toolset: list[Tool]) -> StateGraph:
+    """Return coder graph builder."""
     builder = StateGraph(State)
 
     tool_node = ToolNode(tools=github_toolset)

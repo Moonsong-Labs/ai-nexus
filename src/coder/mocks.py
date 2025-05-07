@@ -1,4 +1,9 @@
+"""Mock Github API for testing."""
+
+
 class MockGithubApi:
+    """Mock Github API that keeps changes in memory."""
+
     branches = ["main"]
     active_branch = "main"
     # Mock file system structure: {type: "dir"|"file", content: str|dict}
@@ -8,10 +13,8 @@ class MockGithubApi:
     # Track file operations: [{type: str, args: dict}]
     operations = []
 
-    def __init__(self):
-        pass
-
     def set_active_branch(self, branch_name: str):
+        """Set the active branch."""
         if branch_name in self.branches:
             self.active_branch = branch_name
             return f"Switched to branch `{branch_name}`"
@@ -23,7 +26,8 @@ class MockGithubApi:
 
     def create_branch(self, proposed_branch_name: str) -> str:
         """Create a new branch, and set it as the active bot branch.
-        If the proposed branch already exists, we append _v1 then _v2...
+
+        If the proposed branch already exists, append _v1 then _v2...
         until a unique name is found.
         """
         i = 0
@@ -47,7 +51,6 @@ class MockGithubApi:
         )
 
     def _get_files_recursive(self, current_path: str, node: dict) -> list:
-        """Helper function to recursively get all files under a path."""
         files = []
         if node["type"] == "file":
             files.append(current_path)
@@ -59,7 +62,6 @@ class MockGithubApi:
 
     def get_files_from_directory(self, directory_path: str) -> str:
         """Recursively fetches files from a directory in the repo."""
-        # Split path into components
         path_parts = [p for p in directory_path.split("/") if p]
 
         # Navigate to the target directory
@@ -81,7 +83,7 @@ class MockGithubApi:
         return str(files)
 
     def create_pull_request(self, pr_query: str) -> str:
-        """Creates a pull request from the bot's branch to the base branch."""
+        """Create a pull request from the bot's branch to the base branch."""
         if self.active_branch == "main":
             return "Cannot make a pull request because commits are already in the main branch."
 
@@ -98,7 +100,7 @@ class MockGithubApi:
         return "Successfully created PR number 1"
 
     def create_file(self, file_query: str) -> str:
-        """Creates a new file on the Github repo."""
+        """Create a new file on the Github repo."""
         if self.active_branch == "main":
             return (
                 "You're attempting to commit to the directly to the"
@@ -123,7 +125,7 @@ class MockGithubApi:
         return f"Created file {file_path}"
 
     def update_file(self, file_query: str) -> str:
-        """Updates a file with new content."""
+        """Update a file with new content."""
         if self.active_branch == "main":
             return (
                 "You're attempting to commit to the directly"
@@ -150,7 +152,7 @@ class MockGithubApi:
         return f"Updated file {file_path}"
 
     def delete_file(self, file_path: str) -> str:
-        """Deletes a file from the repo."""
+        """Delete a file from the repo."""
         if self.active_branch == "main":
             return (
                 "You're attempting to commit to the directly"

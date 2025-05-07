@@ -80,7 +80,7 @@ def _convert_args_schema_to_string(func, args_schema: Type[BaseModel]):
 
 
 def mock_github_tools(mock_api: MockGithubApi):
-    """Create mocked GitHub tools
+    """Create mocked GitHub tools.
 
     Args:
         mock_api: An instance of MockGithubApi to use for the tool implementations
@@ -146,7 +146,7 @@ def mock_github_tools(mock_api: MockGithubApi):
 
 
 def get_github_tools(source: Union[GitHubAPIWrapper, MockGithubApi]) -> list[BaseTool]:
-    """Get the GitHub tools
+    """Get the GitHub tools.
 
     Args:
         source: Either a GitHubAPIWrapper or MockGithubApi instance

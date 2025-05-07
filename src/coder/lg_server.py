@@ -1,3 +1,5 @@
+"""Coder graph for LangGraph Server."""
+
 from coder.graph import graph_builder
 from coder.mocks import MockGithubApi
 from coder.tools import get_github_tools
