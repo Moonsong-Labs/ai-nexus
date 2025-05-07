@@ -9,7 +9,7 @@ from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 
 from tester import configuration, tools, utils
-from tester.output import TesterAgentFinalOutput
+from tester.output import TesterAgentFinalOutput, TesterAgentQuestionOutput, TesterAgentTestOutput
 from tester.state import State
 
 logger = logging.getLogger(__name__)
@@ -39,20 +39,15 @@ async def analyze_requirements(
         + "If the requirements are clear enough, generate tests based on them."
     )
 
-    output = await llm.ainvoke(
-        [{"role": "system", "content": sys_prompt}, *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
+    output = await llm.with_structured_output(TesterAgentFinalOutput).ainvoke(
+        [{"role": "system", "content": sys_prompt}, *state.messages]
     )
-
-    # Check if the response contains questions
-    has_questions = "?" in output.content or "question" in output.content.lower()
     
-    # If there are questions, stay in analyze_requirements stage
-    # If no questions, move to generate_tests stage
-    next_stage = WorkflowStage.ANALYZE_REQUIREMENTS if has_questions else WorkflowStage.GENERATE_TESTS
+    # Determine next stage based on whether questions were asked
+    next_stage = WorkflowStage.ANALYZE_REQUIREMENTS if output.questions else WorkflowStage.GENERATE_TESTS
     
     return {
-        "messages": [{"role": "assistant", "content": output.content}],
+        "messages": [{"role": "assistant", "content": str(output)}],
         "workflow_stage": next_stage,
     }
 
@@ -73,20 +68,15 @@ async def generate_tests(
         + "If you still need more information, ask specific questions instead."
     )
 
-    output = await llm.ainvoke(
-        [{"role": "system", "content": sys_prompt}, *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
+    output = await llm.with_structured_output(TesterAgentFinalOutput).ainvoke(
+        [{"role": "system", "content": sys_prompt}, *state.messages]
     )
-
-    # Check if the response contains questions
-    has_questions = "?" in output.content or "question" in output.content.lower()
     
-    # If there are questions, go back to analyze_requirements stage
-    # If no questions, stay in generate_tests stage
-    next_stage = WorkflowStage.ANALYZE_REQUIREMENTS if has_questions else WorkflowStage.GENERATE_TESTS
+    # Determine next stage based on whether questions were asked
+    next_stage = WorkflowStage.ANALYZE_REQUIREMENTS if output.questions else WorkflowStage.GENERATE_TESTS
 
     return {
-        "messages": [{"role": "assistant", "content": output.content}],
+        "messages": [{"role": "assistant", "content": str(output)}],
         "workflow_stage": next_stage,
     }
 
