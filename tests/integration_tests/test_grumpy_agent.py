@@ -58,10 +58,10 @@ async def test_grumpy_easy_review_langsmith(pytestconfig):
         # metadata={"revision_id": "my-test-run-001"} # Optional: Add metadata
     )
 
+    # View results
+    # import pprint
+    # async for result in results:
+    #     pprint.pp(result)
+
     # Assert that results were produced.
-    import pprint
-
-    async for result in results:
-        pprint.pp(result)
-
     assert results is not None, "evaluation did not return results"

@@ -22,7 +22,12 @@ class LLMJudge:
         self.model = model
 
     def create_correctness_evaluator(
-        self, *, plaintext=False, continuous: bool = True, prompt: str = CORRECTNESS_PROMPT, **kwargs
+        self,
+        *,
+        plaintext=False,
+        continuous: bool = True,
+        prompt: str = CORRECTNESS_PROMPT,
+        **kwargs,
     ) -> Union[SimpleEvaluator, Callable[..., Any]]:
         """Create a correctness evaluator using preset defaults.
 
@@ -42,20 +47,15 @@ class LLMJudge:
                 **kwargs,
             )
 
-            # print(outputs)
-            # print(reference_outputs)
-
             if plaintext:
-                outputs_contents = outputs['output']
-                reference_outputs_contents = reference_outputs['message']['content']
+                outputs_contents = outputs["output"]
+                reference_outputs_contents = reference_outputs["message"]["content"]
             else:
                 outputs_contents = outputs
                 reference_outputs_contents = reference_outputs
 
             eval_result = evaluator(
                 inputs=inputs,
-                # outputs=outputs,
-                # reference_outputs=reference_outputs,
                 outputs=outputs_contents,
                 reference_outputs=reference_outputs_contents,
             )
