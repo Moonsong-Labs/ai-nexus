@@ -26,7 +26,7 @@ ARCHITECT_DATASET_NAME = "Architect-dataset"
 @pytest.mark.asyncio
 async def test_architect_easy_review_langsmith(pytestconfig):
     """
-    Tests the grumpy agent graph using langsmith.aevaluate against a LangSmith dataset.
+    Tests the architect agent graph using langsmith.aevaluate against a LangSmith dataset.
     """
     client = Client()
 
@@ -46,10 +46,36 @@ async def test_architect_easy_review_langsmith(pytestconfig):
     # Compile the graph - needs checkpointer for stateful execution during evaluation
     graph_compiled = graph_builder.compile(checkpointer=memory_saver, store=memory_store)
 
-        # Define the function to be evaluated for each dataset example
-    async def run_graph_with_config(input_example: dict):
+
+    # Define the function to be evaluated for each dataset example
+    async def run_graph_with_attachments(inputs: dict, attachments: dict):
+        projectbrief = attachments["projectbrief"]["presigned_url"]
+        projectbrief_completion = client.chat.completions.create(
+            model="google_genai:gemini-2.0-flash-lite",
+            messages=[
+                {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": inputs["project_question"]},
+                    {
+                    "type": "projectbrief",
+                    "image_url": {
+                        "url": projectbrief,
+                    },
+                    },
+                ],
+                }
+            ],
+        )
+
+        return {
+            "project_answer": projectbrief_completion.choices[0].message.content,
+        }
+
+    # Define the function to be evaluated for each dataset example
+    async def run_graph_with_config(inputs, attachments):
         # Check if the input is already formatted as 'messages'
-        if "messages" in input_example and isinstance(input_example["messages"], list):
+        if "messages" in inputs and isinstance(inputs["messages"], list):
             # Use the messages list directly, converting dicts to BaseMessage objects if needed
             # (Assuming the graph expects BaseMessage objects, not just dicts)
             # Helper function to create message objects with type checking
@@ -86,7 +112,7 @@ async def test_architect_easy_review_langsmith(pytestconfig):
                 # Create messages using the helper, filter out invalid ones (None)
                 graph_input_messages = [
                     created_msg  # Assign the result of _create_message to created_msg
-                    for msg in input_example["messages"]
+                    for msg in inputs["messages"]
                     # Basic validation: Ensure it's a dict with content before processing
                     if isinstance(msg, dict) and "content" in msg
                     # Call helper and filter out None results inline using assignment expression
@@ -95,42 +121,51 @@ async def test_architect_easy_review_langsmith(pytestconfig):
                 # Ensure we have actual messages after conversion
                 if not graph_input_messages:
                     logger.error(
-                        "Failed to parse messages from example: %s", input_example
+                        "Failed to parse messages from example: %s", inputs
                     )
                     return {
                         "output": "Error: Could not parse messages from dataset example."
                     }
-                graph_input = {"messages": graph_input_messages}
+                test_message = [SystemMessage(content=f"These are the contents of the projectbrief.md file:\n\n{attachments["projectbrief.md"]["reader"].read()}"),
+                                SystemMessage(content=f"These are the contents of the projectRequirements.md file:\n\n{attachments["projectRequirements.md"]["reader"].read()}"),
+                                SystemMessage(content=f"These are the contents of the techContext.md file:\n\n{attachments["techContext.md"]["reader"].read()}"),
+                                SystemMessage(content=f"These are the contents of the featuresContext.md file:\n\n{attachments["featuresContext.md"]["reader"].read()}"),
+                                SystemMessage(content=f"These are the contents of the testingContext.md file:\n\n{attachments["testingContext.md"]["reader"].read()}"),
+                                SystemMessage(content=f"These are the contents of the systemPatterns.md file:\n\n{attachments["systemPatterns.md"]["reader"].read()}"),
+                                SystemMessage(content=f"These are the contents of the securityContext.md file:\n\n{attachments["securityContext.md"]["reader"].read()}")]
+                test_message.extend(graph_input_messages)
+                # logger.info(f"GRAPH INPUT MESSAGES: {test_message}")
+                graph_input = {"messages": test_message}
             except Exception as parse_error:
                 logger.error(
                     "Error parsing messages from example %s: %s",
-                    input_example,
+                    inputs,
                     parse_error,
                     exc_info=True,
                 )
                 return {"output": f"Error parsing messages: {parse_error}"}
 
         # Fallback: Check for 'input' or other simple string keys if 'messages' isn't present
-        elif "input" in input_example:
-            graph_input_content = input_example["input"]
+        elif "input" in inputs:
+            graph_input_content = inputs["input"]
             graph_input = {"messages": [HumanMessage(content=graph_input_content)]}
         else:
             # Attempt to find another suitable string input key
             input_key = next(
-                (k for k in input_example if isinstance(input_example[k], str)), None
+                (k for k in inputs if isinstance(inputs[k], str)), None
             )
             if input_key:
                 logger.warning(
                     "Dataset example missing 'messages' and 'input' keys, using '%s': %s",
                     input_key,
-                    input_example,
+                    inputs,
                 )
-                graph_input_content = input_example[input_key]
+                graph_input_content = inputs[input_key]
                 graph_input = {"messages": [HumanMessage(content=graph_input_content)]}
             else:
                 logger.error(
                     "Cannot find suitable input key ('messages', 'input', or string) in example: %s",
-                    input_example,
+                    inputs,
                 )
                 return {"output": "Error: Could not find input in dataset example."}
 
@@ -143,7 +178,7 @@ async def test_architect_easy_review_langsmith(pytestconfig):
 
             # Format the output for the evaluator
             # The 'correctness_evaluator' expects outputs={'output': ...}
-            # The grumpy graph likely returns state {'messages': [..., AIMessage]}
+            # The architect graph likely returns state {'messages': [..., AIMessage]}
             output_content = "Error: Graph did not return expected output format."  # Default error message
             if isinstance(result, dict) and "messages" in result and result["messages"]:
                 last_message = result["messages"][-1]
@@ -170,7 +205,7 @@ async def test_architect_easy_review_langsmith(pytestconfig):
         except Exception as invoke_exception:
             logger.error(
                 "Error invoking graph for input %s: %s",
-                input_example,
+                inputs,
                 invoke_exception,
                 exc_info=True,
             )
@@ -189,7 +224,7 @@ async def test_architect_easy_review_langsmith(pytestconfig):
         # ),
         # input_mapper=lambda x: x, # Default is identity, maps dataset example to target input
         evaluators=[llm_judge.create_correctness_evaluator(continuous=False)],
-        experiment_prefix="grumpy-gemini-2.5-correctness-eval",
+        experiment_prefix="architect-gemini-2.5-correctness-eval",
         num_repetitions=1,
         max_concurrency=4,
         # metadata={"revision_id": "my-test-run-001"} # Optional: Add metadata
