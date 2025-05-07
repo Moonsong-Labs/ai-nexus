@@ -14,18 +14,3 @@ System Time: {{time}}"""
 
 SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{{user_info}}", "{user_info}")
 SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{{time}}", "{time}")
-
-### Question prompt (used for evaluation testing
-with open("src/code_reviewer/evaluation_prompt.md", "r") as file:
-    question_prompt_content = file.read()
-
-if question_prompt_content is None:
-  raise ValueError("File prompt is not found")
-
-QUESTION_PROMPT = f"""
-{question_prompt_content}
-System Time: {{time}}"""
-
-QUESTION_PROMPT = QUESTION_PROMPT.replace("{{user_info}}", "{user_info}")
-QUESTION_PROMPT = QUESTION_PROMPT.replace("{{time}}", "{time}")
-QUESTION_PROMPT = QUESTION_PROMPT.replace("{{analysis_question}}", "{analysis_question}")

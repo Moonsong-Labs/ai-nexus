@@ -24,7 +24,6 @@ class Configuration:
         },
     )
     system_prompt: str = prompts.SYSTEM_PROMPT
-    question_prompt: str = prompts.QUESTION_PROMPT
 
     @classmethod
     def from_runnable_config(
