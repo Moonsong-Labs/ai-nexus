@@ -1,4 +1,4 @@
-"""Enrichment for a pre-defined schema."""
+"""Task Manager agent for project planning and management."""
 
 from task_manager.graph import graph
 

@@ -79,6 +79,8 @@ A flat list of **ALL** engineering tasks identified during the splitting process
 - Multiple tasks can reference the same pull request link if they'll be addressed in the same PR
 - **Assignee**: Each task must include an assignee field specifying which engineer/agent is responsible for the task (e.g., "Engineer 1", "Engineer 2")
 
+**Important**: Your generated tasks.json will be automatically saved using the `save_tasks_json` tool to a file in the project directory. The project name provided by the user will be used to create this directory structure.
+
 ---
 
 ### planning.md
@@ -171,6 +173,14 @@ This file outlines the sprint planning and timeline:
 - Ensure tasks in a sprint don't depend on tasks from future sprints unless explicitly pulled forward according to the capacity-filling rule.
 - Always respect the configured team size when planning parallel work streams.
 - Ensure resource allocation is balanced across the team members.
+
+## Output Format and Storage
+
+- The tasks.json you generate will be automatically saved to a file using the `save_tasks_json` tool.
+- This tool will save your output to: task_manager/output/project_name/tasks.json
+- You do not need to explicitly call this tool - it happens automatically when you generate task data.
+- Make sure your tasks JSON is properly formatted as shown in the example above.
+- The project name from the user's input will be used to create the directory structure.
 
 ## Technical Decision Guardrails
 
