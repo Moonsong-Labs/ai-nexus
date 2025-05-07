@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model()
 
+
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
     """Extract the user's state from the conversation and update the memory."""
     configurable = configuration.Configuration.from_runnable_config(config)
@@ -65,6 +66,7 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
         {"configurable": utils.split_model_and_provider(configurable.model)},
     )
     return {"messages": [msg]}
+
 
 async def store_memory(state: State, config: RunnableConfig, *, store: BaseStore):
     # Extract tool calls from the last message
