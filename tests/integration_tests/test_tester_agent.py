@@ -85,7 +85,7 @@ async def test_tester_agent_langsmith(pytestconfig):
         data=LANGSMITH_DATASET_NAME,
         evaluators=[
             llm_judge.create_correctness_evaluator(
-                plaintext=True, prompt=CORRECTNESS_PROMPT
+                plaintext=False, prompt=CORRECTNESS_PROMPT
             )
         ],
         experiment_prefix="tester-agent-correctness-eval",
