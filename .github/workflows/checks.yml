@@ -18,9 +18,11 @@ concurrency:
 jobs:
   lint:
     name: Lint
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -30,9 +32,11 @@ jobs:
         run: make lint
   spell-check:
     name: Spell Check
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - name: Check README spelling
         uses: codespell-project/actions-codespell@v2
         with:
@@ -45,9 +49,11 @@ jobs:
           path: src/
   unit-tests:
     name: Unit Tests
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -57,9 +63,11 @@ jobs:
         run: make test_unit
   # integration-tests:
   #   name: Integration Tests
-  #   runs-on: "ubuntu-latest"
+  #   runs-on: ubuntu-latest
   #   steps:
   #     - uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ github.head_ref }}
   #     - name: Install uv
   #       run: |
   #         curl -LsSf https://astral.sh/uv/install.sh | sh
