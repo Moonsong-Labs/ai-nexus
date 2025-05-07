@@ -1,6 +1,6 @@
 """Define default prompts."""
 
-with open("src/architect/prompts/v0.md", "r") as file:
+with open("src/architect/prompts/v0.md") as file:
     system_prompt_content = file.read()
 
 if system_prompt_content is None:
@@ -14,4 +14,4 @@ System Time: {{time}}"""
 SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{{user_info}}", "{user_info}")
 SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{{time}}", "{time}")
 
-print(SYSTEM_PROMPT)
+# print(SYSTEM_PROMPT)

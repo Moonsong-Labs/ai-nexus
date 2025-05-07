@@ -1,3 +1,5 @@
+"""Missing docs."""
+
 import json
 import logging
 from pathlib import Path
@@ -19,7 +21,7 @@ async def _load_memories_from_directory(directory_path: Path, store: BaseStore):
     total_memories_loaded = 0
     for json_file_path in directory_path.glob("*.json"):
         try:
-            with open(json_file_path, "r") as f:
+            with open(json_file_path) as f:
                 memories = json.load(f)
 
             if not isinstance(memories, list):

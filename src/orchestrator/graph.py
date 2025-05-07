@@ -29,8 +29,6 @@ async def orchestrate(
 
     sys = configurable.system_prompt.format(time=datetime.now().isoformat())
 
-    print(state.messages)
-
     msg = await model_orchestrator.bind_tools(
         [tools.Delegate, tools.store_memory]
     ).ainvoke(
@@ -73,7 +71,6 @@ def delegate_to(
 ]:
     """Determine the next step based on the presence of tool calls."""
     message = state.messages[-1]
-    print("[TOOL] DelegateTo")
     pprint.pp(message)
     if len(message.tool_calls) == 0:
         return END

@@ -24,7 +24,6 @@ from langchain_community.tools.github.prompt import (
 )
 from langchain_community.utilities.github import GitHubAPIWrapper
 from langchain_core.runnables import RunnableLambda
-from langchain_core.tools import Tool
 from pydantic import BaseModel
 
 from coder.mocks import MockGithubApi

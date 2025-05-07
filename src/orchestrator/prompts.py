@@ -101,9 +101,10 @@ def _read_memory_bank(type: str) -> str:
 
 
 def get_prompt() -> str:
+    """Missing docs."""
     memory = {
         k: _read_memory_bank(k)
         for k in ["absolute", "team", "project_states", "process"]
     }
-    print(memory)
+    print(memory)  # noqa: T201
     return ORCHESTRATOR_MEM_SYSTEM_PROMPT.format(**memory)

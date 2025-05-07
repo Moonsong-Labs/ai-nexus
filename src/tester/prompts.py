@@ -1,6 +1,6 @@
 """Define default prompts."""
 
-with open("src/tester/test-agent-system-prompt.md", "r") as file:
+with open("src/tester/test-agent-system-prompt.md") as file:
     system_prompt_content = file.read()
 
 if system_prompt_content is None:

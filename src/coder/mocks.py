@@ -21,7 +21,8 @@ class MockGithubApi:
     def create_branch(self, proposed_branch_name: str) -> str:
         """Create a new branch, and set it as the active bot branch.
         If the proposed branch already exists, we append _v1 then _v2...
-        until a unique name is found."""
+        until a unique name is found.
+        """
         i = 0
         new_branch_name = proposed_branch_name
 

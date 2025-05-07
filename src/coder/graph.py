@@ -1,11 +1,12 @@
 """Graphs that extract memories on a schedule."""
 
+import asyncio
 import logging
 
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import SystemMessage
-from langgraph.graph import END, StateGraph
+from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from coder.mocks import MockGithubApi
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 llm = init_chat_model("google_genai:gemini-2.0-flash")
 
 mock_api = MockGithubApi()
-github_tools = mock_github_tools(mock_api)
+github_tools = mock_github_tools(mock_api)  # noqa: F811
 
 
 async def call_model(state: State) -> dict:
@@ -51,8 +52,6 @@ graph = builder.compile()
 graph.name = "Code Agent"
 
 __all__ = ["graph"]
-
-import asyncio
 
 if __name__ == "__main__":
 

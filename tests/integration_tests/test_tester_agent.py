@@ -99,7 +99,7 @@ async def test_tester_hello_response():
 
     try:
         logger.info(
-            f"Testing tester agent with input dataset: tester-agent-test-dataset"
+            "Testing tester agent with input dataset: tester-agent-test-dataset"
         )
         results = await client.aevaluate(
             call_tester_agent,

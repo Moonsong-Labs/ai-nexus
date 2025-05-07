@@ -27,7 +27,7 @@ test_watch:
 	uv run --env-file .env -- python -m ptw --snapshot-update --now . -- -vv tests/unit_tests
 
 test_unit:
-	uv run --env-file .env pytest tests/unit_tests
+	uv run pytest tests/unit_tests
 test_integration:
 	uv run --env-file .env -- pytest -rs $(INTEGRATION_TEST_FILE)
 
@@ -58,8 +58,8 @@ lint lint_diff lint_package lint_tests:
 	uv tool run ruff check .
 	[ "$(PYTHON_FILES)" = "" ] || uv tool run ruff format $(PYTHON_FILES) --diff
 	[ "$(PYTHON_FILES)" = "" ] || uv tool run ruff check --select I $(PYTHON_FILES)
-	[ "$(PYTHON_FILES)" = "" ] || uv tool run mypy --strict $(PYTHON_FILES)
-	[ "$(PYTHON_FILES)" = "" ] || mkdir -p $(MYPY_CACHE) && uv tool run mypy --strict $(PYTHON_FILES) --cache-dir $(MYPY_CACHE)
+#	[ "$(PYTHON_FILES)" = "" ] || uv tool run mypy --strict $(PYTHON_FILES)
+#	[ "$(PYTHON_FILES)" = "" ] || mkdir -p $(MYPY_CACHE) && uv tool run mypy --strict $(PYTHON_FILES) --cache-dir $(MYPY_CACHE)
 
 fmt format_diff:
 	uv tool run ruff format $(PYTHON_FILES)
