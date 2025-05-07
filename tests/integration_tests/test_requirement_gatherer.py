@@ -2,6 +2,7 @@ import logging
 import uuid  # Add import for unique thread IDs
 
 import pytest
+from datasets.requirement_gatherer_dataset import REQUIREMENT_GATHERER_DATASET_NAME
 
 # from langsmith import aevaluate # Remove this potentially confusing import
 from langchain_core.messages import (  # Import message types
@@ -17,7 +18,6 @@ from openevals.llm import create_llm_as_judge
 from openevals.prompts import CORRECTNESS_PROMPT
 
 from requirement_gatherer.graph import builder as graph_builder
-from datasets.requirement_gatherer_dataset import REQUIREMENT_GATHERER_DATASET_NAME
 
 # Setup basic logging for the test
 logging.basicConfig(
@@ -35,9 +35,9 @@ def correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict):
     # Prepare the inputs for the evaluator
     # The evaluator expects a specific format for  outputs
     try:
-        outputs_contents = outputs['output']
-        reference_outputs_contents = reference_outputs['message']['content']
-        
+        outputs_contents = outputs["output"]
+        reference_outputs_contents = reference_outputs["message"]["content"]
+
         eval_result = evaluator(
             inputs=inputs,
             outputs=outputs_contents,
@@ -56,19 +56,25 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
     """
     client = Client()  # Initialize LangSmith client
     if not client.has_dataset(dataset_name=REQUIREMENT_GATHERER_DATASET_NAME):
-        logger.error("Dataset %s not found in LangSmith!", REQUIREMENT_GATHERER_DATASET_NAME)
+        logger.error(
+            "Dataset %s not found in LangSmith!", REQUIREMENT_GATHERER_DATASET_NAME
+        )
         # Print existing datasets for debugging
         datasets = client.list_datasets()
         logger.error("Existing datasets: %s", datasets)
         for dataset in datasets:
             logger.error("Dataset ID: %s, Name: %s", dataset.id, dataset.name)
-        pytest.fail(f"Dataset {REQUIREMENT_GATHERER_DATASET_NAME} not found in LangSmith!")
+        pytest.fail(
+            f"Dataset {REQUIREMENT_GATHERER_DATASET_NAME} not found in LangSmith!"
+        )
 
     memory_saver = MemorySaver()  # Checkpointer for the graph
     memory_store = InMemoryStore()
 
     # Compile the graph - needs checkpointer for stateful execution during evaluation
-    graph_compiled = graph_builder.compile(checkpointer=memory_saver, store=memory_store)
+    graph_compiled = graph_builder.compile(
+        checkpointer=memory_saver, store=memory_store
+    )
 
     # Define the function to be evaluated for each dataset example
     async def run_graph_with_config(input_example: dict):
@@ -202,11 +208,12 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
 
     try:
         logger.info(
-            "Attempting client.aevaluate with dataset_name: %s", REQUIREMENT_GATHERER_DATASET_NAME
+            "Attempting client.aevaluate with dataset_name: %s",
+            REQUIREMENT_GATHERER_DATASET_NAME,
         )
         results = await client.aevaluate(
             run_graph_with_config,  # Pass the wrapper function as the target
-            data=REQUIREMENT_GATHERER_DATASET_NAME, # The whole dataset is used
+            data=REQUIREMENT_GATHERER_DATASET_NAME,  # The whole dataset is used
             # data=client.list_examples(  # Only the dev split is used
             #     dataset_name=REQUIREMENT_GATHERER_DATASET_NAME, splits=["dev"]
             # ),

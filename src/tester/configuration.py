@@ -9,6 +9,7 @@ from typing_extensions import Annotated
 
 from tester import prompts
 
+
 @dataclass(kw_only=True)
 class Configuration:
     """Main configuration class for the memory graph system."""
