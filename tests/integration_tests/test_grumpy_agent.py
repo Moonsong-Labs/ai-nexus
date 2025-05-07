@@ -13,6 +13,52 @@ logger = get_logger(__name__)
 
 # Define the LangSmith dataset ID
 LANGSMITH_DATASET_NAME = "grumpy-failed-questions"
+CORRECTNESS_PROMPT = """You are an expert data labeler evaluating model outputs for correctness.
+Your task is to assign a score from 0.0 to 1.0 (in 0.1 increments) based on the following rubric:
+
+<Rubric>
+  A correct answer:
+  - Provides review of the user input
+  - Expresses agreement or disagreement with the user input
+  - Contains a clear and concise explanation of the reasoning behind the score
+  - Contains no factual errors
+  - Is logically consistent
+  - Uses precise and accurate terminology
+
+  When scoring, you should penalize:
+  - Factual errors or inaccuracies
+  - Missing or unclear score
+  - Incomplete or partial answers
+  - Misleading or ambiguous statements
+  - Incorrect terminology
+  - Logical inconsistencies
+  - Missing key information
+</Rubric>
+
+<Instructions>
+  - Carefully read the input and output
+  - Check for factual accuracy and completeness
+  - Focus on correctness of information rather than style or verbosity
+</Instructions>
+
+<Reminder>
+  The goal is to evaluate factual correctness and completeness of the response.
+</Reminder>
+
+<input>
+{inputs}
+</input>
+
+<output>
+{outputs}
+</output>
+
+Use the reference outputs below to help you evaluate the correctness of the response:
+
+<reference_outputs>
+{reference_outputs}
+</reference_outputs>
+"""
 
 # Create a LLMJudge
 llm_judge = LLMJudge()
@@ -50,10 +96,10 @@ async def test_grumpy_easy_review_langsmith(pytestconfig):
         # input_mapper=lambda x: x, # Default is identity, maps dataset example to target input
         # evaluators=[correctness_evaluator],
         evaluators=[
-            llm_judge.create_correctness_evaluator(plaintext=True, continuous=False)
+            llm_judge.create_correctness_evaluator(plaintext=True, prompt=CORRECTNESS_PROMPT)
         ],
         experiment_prefix="grumpy-gemini-2.5-correctness-eval-plain",
-        num_repetitions=10,
+        num_repetitions=5,
         max_concurrency=4,
         # metadata={"revision_id": "my-test-run-001"} # Optional: Add metadata
     )
