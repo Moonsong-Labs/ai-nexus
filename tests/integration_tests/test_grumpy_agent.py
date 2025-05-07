@@ -1,7 +1,7 @@
 import pytest
 from langgraph.checkpoint.memory import MemorySaver
 from langsmith import Client
-from testing import create_async_graph_caller, get_logger
+from testing import create_async_graph_caller, get_logger, print_results
 from testing.evaluators import LLMJudge
 
 from grumpy.graph import builder_no_memory as graph_builder
@@ -11,7 +11,11 @@ logger = get_logger(__name__)
 
 # Define the LangSmith dataset ID
 LANGSMITH_DATASET_NAME = "grumpy-failed-questions"
-CORRECTNESS_PROMPT = """You are an expert data labeler evaluating model outputs for correctness.
+
+# Create a LLMJudge
+llm_judge = LLMJudge()
+
+GRUMPY_CORRECTNESS_PROMPT = """You are an expert data labeler evaluating model outputs for correctness.
 Your task is to assign a score from 0.0 to 1.0 based on the following rubric:
 
 <Rubric>
@@ -60,9 +64,6 @@ Use the reference outputs below to help you evaluate the correctness of the resp
 </reference_outputs>
 """
 
-# Create a LLMJudge
-llm_judge = LLMJudge()
-
 
 @pytest.mark.asyncio
 async def test_grumpy_easy_review_langsmith(pytestconfig):
@@ -95,18 +96,17 @@ async def test_grumpy_easy_review_langsmith(pytestconfig):
         # input_mapper=lambda x: x, # Default is identity, maps dataset example to target input
         # evaluators=[correctness_evaluator],
         evaluators=[
-            llm_judge.create_correctness_evaluator(plaintext=True, prompt=CORRECTNESS_PROMPT)
+            llm_judge.create_correctness_evaluator(
+                plaintext=True, prompt=GRUMPY_CORRECTNESS_PROMPT
+            )
         ],
         experiment_prefix="grumpy-gemini-2.5-correctness-eval-plain",
-        num_repetitions=5,
+        num_repetitions=4,
         max_concurrency=4,
         # metadata={"revision_id": "my-test-run-001"} # Optional: Add metadata
     )
 
-    # View results
-    # import pprint
-    # async for result in results:
-    #     pprint.pp(result)
+    await print_results(results)
 
     # Assert that results were produced.
     assert results is not None, "evaluation did not return results"
