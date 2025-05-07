@@ -10,6 +10,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.base import BaseStore
+from langgraph.types import interrupt
 
 from pydantic import BaseModel, Field
 
@@ -115,9 +116,11 @@ def route_veredict(state: State):
 
 def human_feedback(state: State):
     msg = state.messages[-1].content
-    user_input = input("{msg}")
+
+    user_input = interrupt({"query": msg})
+    print(user_input)
     
-    return graph.update_state({"messages": [user_input]}, as_node="human_feedback")
+    return user_input 
 
 memory = MemorySaver()
 
@@ -134,7 +137,7 @@ builder.add_edge("call_model", "human_feedback")
 builder.add_edge("human_feedback", "call_evaluator_model")
 builder.add_conditional_edges("call_evaluator_model", route_veredict, ["call_model", END])
 
-graph = builder.compile(interrupt_before=["human_feedback"])
+graph = builder.compile()
 graph.name = "Requirement Gatherer Agent"
 
 
