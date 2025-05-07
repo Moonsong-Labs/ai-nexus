@@ -1,6 +1,6 @@
-"""Tools configuration for the code agent."""
+"""Tools for the code agent."""
 
-from typing import Type
+from typing import Type, Union
 
 from langchain_community.agent_toolkits.github.toolkit import (
     BranchName,
@@ -24,6 +24,7 @@ from langchain_community.tools.github.prompt import (
 )
 from langchain_community.utilities.github import GitHubAPIWrapper
 from langchain_core.runnables import RunnableLambda
+from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 
 from coder.mocks import MockGithubApi
@@ -44,9 +45,8 @@ GITHUB_TOOLS = [
 ]
 
 
-def github_tools():
+def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
     """Configure and return GitHub tools for the code agent."""
-    github_api_wrapper = GitHubAPIWrapper()
     github_toolkit = GitHubToolkit.from_github_api_wrapper(github_api_wrapper)
 
     def make_gemini_compatible(tool):
@@ -67,7 +67,7 @@ def _convert_args_schema_to_string(func, args_schema: Type[BaseModel]):
 
     def wrapper(args: dict):
         # Get the first field from the schema class
-        field_names = list(args_schema.schema()["properties"].keys())
+        field_names = list(args_schema.model_json_schema()["properties"].keys())
         if len(field_names) > 1:
             raise AssertionError(
                 f"Expected one argument in tool schema, got {field_names}."
@@ -80,7 +80,7 @@ def _convert_args_schema_to_string(func, args_schema: Type[BaseModel]):
 
 
 def mock_github_tools(mock_api: MockGithubApi):
-    """Create mocked GitHub tools using RunnableLambda.
+    """Create mocked GitHub tools.
 
     Args:
         mock_api: An instance of MockGithubApi to use for the tool implementations
@@ -145,10 +145,12 @@ def mock_github_tools(mock_api: MockGithubApi):
     return tools
 
 
-if __name__ == "__main__":
-    mock_api = MockGithubApi()
-    tools = mock_github_tools(mock_api)
-    for tool in tools:
-        print(tool.name)
-        print(tool.args_schema)
-        print(tool.description)
+def get_github_tools(source: Union[GitHubAPIWrapper, MockGithubApi]) -> list[BaseTool]:
+    """Get the GitHub tools.
+
+    Args:
+        source: Either a GitHubAPIWrapper or MockGithubApi instance
+    """
+    if isinstance(source, GitHubAPIWrapper):
+        return github_tools(source)
+    return mock_github_tools(source)
