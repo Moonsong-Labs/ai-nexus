@@ -1,3 +1,5 @@
+"""Missing docs."""
+
 import json
 import logging
 from pathlib import Path
@@ -19,7 +21,7 @@ async def _load_memories_from_directory(directory_path: Path, store: BaseStore):
     total_memories_loaded = 0
     for json_file_path in directory_path.glob("*.json"):
         try:
-            with open(json_file_path, "r") as f:
+            with open(json_file_path) as f:
                 memories = json.load(f)
 
             if not isinstance(memories, list):
@@ -55,14 +57,18 @@ async def ensure_static_memories(store: BaseStore):
     # Check if any static memories exist
     try:
         # Try passing only namespace positionally, rest as keywords
-        static_memories = await store.asearch(("static_memories", "global"), query="", limit=1)
+        static_memories = await store.asearch(
+            ("static_memories", "global"), query="", limit=1
+        )
         if static_memories:
             logger.debug("Static memories already exist in store, skipping load.")
             return
     except Exception as e:
         # Log the error but proceed, as the store might be empty or have issues
-        logger.warning(f"Could not check for existing static memories, proceeding to load: {e}")
+        logger.warning(
+            f"Could not check for existing static memories, proceeding to load: {e}"
+        )
 
     # Define the directory and load memories
     logger.info("Attempting to load static memories into store.")
-    await _load_memories_from_directory(STATIC_MEMORIES_DIR, store) 
+    await _load_memories_from_directory(STATIC_MEMORIES_DIR, store)
