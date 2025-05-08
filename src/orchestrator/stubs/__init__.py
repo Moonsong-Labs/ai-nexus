@@ -143,8 +143,8 @@ def memorizer(state: State, config: RunnableConfig, store: BaseStore):
     tool_call_id = message.tool_calls[0]["id"]
     origin = message.tool_calls[0]["args"]["origin"]
     content = message.tool_calls[0]["args"]["content"]
-    msg = f"[MEMORIZE] for {origin}: {content}"
-    print(msg)  # noqa: T201
+    # msg = f"[MEMORIZE] for {origin}: {content}"
+    # print(msg)  # noqa: T201
     return {
         "messages": [
             ToolMessage(

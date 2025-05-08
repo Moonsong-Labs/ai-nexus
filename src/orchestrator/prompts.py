@@ -106,5 +106,5 @@ def get_prompt() -> str:
         k: _read_memory_bank(k)
         for k in ["absolute", "team", "project_states", "process"]
     }
-    print(memory)  # noqa: T201
+    # print(memory)  # noqa: T201
     return ORCHESTRATOR_MEM_SYSTEM_PROMPT.format(**memory)

@@ -1,9 +1,8 @@
 import logging
 import uuid
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable
 
 from langgraph.graph.state import CompiledStateGraph
-from termcolor import colored
 
 
 def get_logger(name=None, *, level: int | str = logging.INFO) -> logging.Logger:
@@ -33,40 +32,7 @@ def create_async_graph_caller(
     return call_model
 
 
-async def print_results(results: Any):
-    """Print AsyncEvaluationResults."""
-    async for result in results:
-        run = result["run"]
-        eval_result = result["evaluation_results"]["results"][-1]  # get last result
-
-        print(
-            f"{colored('run', 'cyan')}#{colored(run.id, 'cyan')} [score: {colored(eval_result.score, 'green')}] ({run.extra['metadata']['num_repetitions']} reps)"
-        )
-
-        print("== Input ==")
-        for msg in run.inputs["inputs"]["messages"]:
-            print(
-                f"\t{colored(msg['role'], 'yellow'):<18}: {colored(msg['content'], 'grey')}"
-            )
-
-        print("== Output ==")
-        print(
-            f"\t{colored('ai', 'yellow'):<18}: {colored(run.outputs['output'], 'grey')}"
-        )
-
-        print("== Reference Output ==")
-        msg_out = result["example"].outputs["message"]
-        print(
-            f"\t{colored(msg_out['role'], 'yellow'):<18}: {colored(msg_out['content'], 'grey')}"
-        )
-
-        print("== Evaluation ==")
-        print(f"\t{colored(eval_result.comment, 'grey')}")
-        print("---" * 30)
-
-
 __all__ = [
     get_logger.__name__,
-    print_results.__name__,
     create_async_graph_caller.__name__,
 ]

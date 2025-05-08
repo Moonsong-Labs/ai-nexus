@@ -1,8 +1,9 @@
 import pytest
 from langgraph.checkpoint.memory import MemorySaver
 from langsmith import Client
-from testing import create_async_graph_caller, get_logger, print_results
+from testing import create_async_graph_caller, get_logger
 from testing.evaluators import LLMJudge
+from testing.formatter import Verbosity, print_evaluation
 
 from grumpy.graph import builder_no_memory as graph_builder
 
@@ -106,7 +107,7 @@ async def test_grumpy_easy_review_langsmith(pytestconfig):
         # metadata={"revision_id": "my-test-run-001"} # Optional: Add metadata
     )
 
-    await print_results(results)
+    await print_evaluation(results, client, verbosity=Verbosity.SCORE_DETAILED)
 
     # Assert that results were produced.
     assert results is not None, "evaluation did not return results"
