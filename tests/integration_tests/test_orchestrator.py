@@ -82,8 +82,8 @@ async def test_orchestrator(pytestconfig):
             "tool_calls": [
                 {
                     "function": {
-                        "name": "Delegate",
-                        "arguments": '{"to": "store_memory"}',
+                        "name": "store_memory",
+                        "arguments": '{"origin": "requirements", "content": "Memorize something"}',
                     }
                 }
             ],
