@@ -15,6 +15,7 @@ dependencies = [
     "pygithub>=2.6.1",
     "langchain-community>=0.3.23",
     "termcolor>=3.1.0",
+    "agentevals>=0.0.7",
 ]
 optional-dependencies.dev = [
     "mypy>=1.11.1",
