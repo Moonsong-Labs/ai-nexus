@@ -19,7 +19,7 @@ from requirement_gatherer.state import State
 
 class Veredict(BaseModel):
     "Feedback to decide if all requirements are meet"
-    verdict: Literal["Completed", "needs_more"] = Field(
+    veredict: Literal["Completed", "needs_more"] = Field(
         description="Decide if requirements are complete" 
     )
 
@@ -110,17 +110,16 @@ def route_memory(state: State):
 
 def route_veredict(state: State):
     """Determine the nect step based on task completion"""
-    if state.veredict == "Completed":
+    if state.veredict and state.veredict.veredict == "Completed":
         return END
-    return "call_model"
+    return "call_model" 
 
 def human_feedback(state: State):
     msg = state.messages[-1].content
 
     user_input = interrupt({"query": msg})
-    print(user_input)
     
-    return user_input 
+    return {"messages": user_input}
 
 memory = MemorySaver()
 
