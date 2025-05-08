@@ -40,38 +40,32 @@ def call_evaluator_model(
 ) -> dict:
     """Extract the user's state from the conversation and update the memory."""
     configurable = configuration.Configuration.from_runnable_config(config)
-    sys_prompt_content = configurable.evaluator_system_prompt.format(
-        time=datetime.now().isoformat()
+
+    # Retrieve the most recent memories for context
+    memories = store.search(
+        ("memories", configurable.user_id),
+        query=str([m.content for m in state.messages[-3:]]),
+        limit=10,
+    )
+
+    # Format memories for inclusion in the prompt
+    formatted = "\n".join(
+        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
+    )
+    if formatted:
+        formatted = f"""
+<memories>
+{formatted}
+</memories>"""
+
+    # Prepare the system prompt with user memories and current time
+    # This helps the model understand the context and temporal relevance
+    sys = configurable.gatherer_system_prompt.format(
+        user_info=formatted, time=datetime.now().isoformat()
     )
     
-    # Prepare the list of messages for the evaluator.
-    # The first message should be the system prompt.
-    evaluator_input_messages = [{"role": "system", "content": sys_prompt_content}]
-
-    # Process the rest of the messages from the state.
-    for msg in state.messages:
-        if isinstance(msg, AIMessage) and msg.tool_calls:
-            # If an AIMessage from history has tool_calls, we'll simplify it
-            # for the evaluator. This is to prevent potential conflicts if the
-            # evaluator's structured output mechanism mishandles prior, unrelated tool_calls.
-            # We'll pass only its text content, if available and is a string.
-            if msg.content and isinstance(msg.content, str):
-                # Create a new AIMessage with only the content and original id (if present).
-                simplified_ai_msg = AIMessage(
-                    content=msg.content, 
-                    id=getattr(msg, 'id', None) # Safely get id
-                )
-                evaluator_input_messages.append(simplified_ai_msg)
-            # If the AIMessage had tool_calls but no valid string content,
-            # it's omitted from the evaluator_input_messages to avoid sending
-            # potentially empty or problematic messages. The message that caused
-            # the error in your trace did have valid string content.
-        else:
-            # For all other message types, or AIMessages without tool_calls, pass them as is.
-            evaluator_input_messages.append(msg)
-    
     veredict = evaluator.invoke(
-        evaluator_input_messages, # Pass the processed list of messages
+        [{"role": "system", "content": sys}, *state.messages],
         {"configurable": utils.split_model_and_provider(configurable.model)},
     )
     print(veredict)
@@ -157,9 +151,7 @@ def route_veredict(state: State):
 
 def human_feedback(state: State):
     msg = state.messages[-1].content
-
     user_input = interrupt({"query": msg})
-
     return {"messages": user_input}
 
 
