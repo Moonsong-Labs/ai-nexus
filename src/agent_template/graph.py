@@ -2,19 +2,16 @@
 
 import logging
 from datetime import datetime
-from pathlib import Path
-from typing import Optional
 
 from langchain.chat_models import init_chat_model
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
-from langgraph.store.base import BaseStore
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.store.base import BaseStore
 
 from agent_template import configuration, utils
-from agent_template.state import State
 from agent_template.memory import ensure_static_memories
+from agent_template.state import State
 from agent_template.tools import get_memory_tools
 
 logger = logging.getLogger(__name__)
@@ -27,7 +24,7 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
     """Extract the user's state from the conversation and update the memory."""
     # Ensure static memories are loaded
     await ensure_static_memories(store)
-    
+
     configurable = configuration.Configuration.from_runnable_config(config)
 
     query_text = str([m.content for m in state.messages[-3:]])
@@ -37,9 +34,7 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
 
     # Retrieve static memories using only namespace positionally
     static_memories = await store.asearch(
-        ("static_memories", "global"),
-        query=query_text,
-        limit=5
+        ("static_memories", "global"), query=query_text, limit=5
     )
 
     logger.info(f"Found {len(static_memories)} relevant static memories")
@@ -58,8 +53,8 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
     if static_memories:
         static_memory_texts = []
         for mem in static_memories:
-            content = mem.value.get('content', 'No content')
-            context = mem.value.get('context', 'No context')
+            content = mem.value.get("content", "No content")
+            context = mem.value.get("context", "No context")
             memory_text = f"[{mem.key}]: content: {content}, context: {context}"
             static_memory_texts.append(memory_text)
 
@@ -93,6 +88,7 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
         {"configurable": utils.split_model_and_provider(configurable.model)},
     )
     return {"messages": [msg]}
+
 
 def route_message(state: State):
     return END

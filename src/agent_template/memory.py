@@ -2,25 +2,35 @@
 
 import json
 import logging
-import uuid
-from typing import Annotated, Optional
 from pathlib import Path
-from langmem import create_manage_memory_tool, create_search_memory_tool
+
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg, Tool
-from langgraph.store.memory import InMemoryStore
 from langgraph.store.base import BaseStore
-from agent_template.configuration import Configuration
+from langgraph.store.memory import InMemoryStore
+from langmem import create_manage_memory_tool, create_search_memory_tool
 
 logger = logging.getLogger(__name__)
 
 # Define the directory where static memory files are stored
 STATIC_MEMORIES_DIR = Path(".langgraph/static_memories/")
 
+
 def get_langmem_tools(user_id: str) -> list:
-    gemini_embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-exp-03-07")
-    
+    """Create and return a list of memory tools for the agent.
+
+    Initializes an in-memory store with Gemini embeddings and creates
+    management and search tools for the specified user ID.
+
+    Args:
+        user_id (str): The user ID for which to create the memory tools.
+
+    Returns:
+        list: A list of memory tools for the agent.
+    """
+    gemini_embeddings = GoogleGenerativeAIEmbeddings(
+        model="models/gemini-embedding-exp-03-07"
+    )
+
     store = InMemoryStore(
         index={
             "dims": 3072,
@@ -29,14 +39,8 @@ def get_langmem_tools(user_id: str) -> list:
     )
 
     memory_tools = [
-        create_manage_memory_tool(
-            namespace=("memories", user_id),
-            store=store
-        ),
-        create_search_memory_tool(
-            namespace=("memories", user_id),
-            store=store
-        ),
+        create_manage_memory_tool(namespace=("memories", user_id), store=store),
+        create_search_memory_tool(namespace=("memories", user_id), store=store),
     ]
 
     return memory_tools
