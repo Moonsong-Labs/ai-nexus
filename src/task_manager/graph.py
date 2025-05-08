@@ -1,10 +1,7 @@
 """Task Manager graph."""
 
 import logging
-import re
-import json
 from datetime import datetime
-import os
 
 from langchain.chat_models import init_chat_model
 from langchain_core.runnables import RunnableConfig
@@ -41,24 +38,6 @@ async def call_model(state: State, config: RunnableConfig) -> dict:
         [{"role": "system", "content": sys}, *state.messages],
         {"configurable": utils.split_model_and_provider(configurable.model)},
     )
-    
-    # Extract project name from the user's message or recent messages
-    project_name = None
-    for message in reversed(state.messages):
-        if hasattr(message, 'content'):
-            # Try to find "Project name: X" or "Project: X" pattern
-            name_match = re.search(r'Project[\s\w]*[:\-]?\s*["\']?([a-zA-Z0-9_\- ]+)["\']?', message.content, re.IGNORECASE)
-            if name_match:
-                project_name = name_match.group(1).strip().replace(" ", "_").lower()
-                break
-    
-    # When the model responds, try to save any tasks.json content to a file
-    if msg.content and project_name:
-        # Check if the content has json-formatted tasks list
-        if '[' in msg.content and '"id":' in msg.content:
-            logger.info(f"Tasks generated, attempting to save to file for project: {project_name}")
-            save_result = await tools.save_tasks_json(project_name, msg.content)
-            logger.info(f"Save result: {save_result}")
     
     return {"messages": [msg]}
 
