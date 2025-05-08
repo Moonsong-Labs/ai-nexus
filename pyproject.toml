@@ -14,6 +14,7 @@ dependencies = [
     "pytest-asyncio>=0.26.0",
     "pygithub>=2.6.1",
     "langchain-community>=0.3.23",
+    "termcolor>=3.1.0",
 ]
 optional-dependencies.dev = [
     "mypy>=1.11.1",
@@ -31,10 +32,11 @@ build-backend = "setuptools.build_meta"
 
 # Add new agents here: #1
 [tool.setuptools]
-packages = ["common", "agent_template", "orchestrator", "grumpy", "architect", "coder", "tester", "requirement_gatherer", "task_manager"]
+packages = ["common", "agent_template", "code_reviewer", "orchestrator", "grumpy", "architect", "coder", "tester", "requirement_gatherer", "task_manager"]
 [tool.setuptools.package-dir]
 "common" = "src/common"
 "agent_template" = "src/agent_template"
+"code_reviewer" = "src/code_reviewer"
 "langgraph.templates.agent_template" = "src/agent_template"
 "orchestrator" = "src/orchestrator"
 "langgraph.templates.orchestrator" = "src/orchestrator"
@@ -63,7 +65,7 @@ lint.select = [
 lint.ignore = ["UP006", "UP007", "UP035", "D417", "E501"]
 include = ["*.py", "*.pyi", "*.ipynb"]
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D", "UP"]
+"tests/*" = ["D", "UP", "T201"]
 "ntbk/*" = ["D", "UP", "T201"]
 [tool.ruff.lint.pydocstyle]
 convention = "google"

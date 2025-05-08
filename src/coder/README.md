@@ -1,5 +1,5 @@
 # Coding Agent
-Receives intruction
+Receives instruction
 
 ## Setup
 
