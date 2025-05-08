@@ -18,7 +18,7 @@ from requirement_gatherer.state import State
 
 
 class Veredict(BaseModel):
-    "Feedback to decide if all requirements are meet"
+    """Feedback to decide if all requirements are meet."""
 
     veredict: Literal["Completed", "needs_more"] = Field(
         description="Decide if requirements are complete"
@@ -37,8 +37,6 @@ def call_evaluator_model(
     state: State, config: RunnableConfig, *, store: BaseStore
 ) -> dict:
     """Extract the user's state from the conversation and update the memory."""
-    configurable = configuration.Configuration.from_runnable_config(config)
-
     veredict = evaluator.invoke(f"evaluate the info: {state.messages[-1]}")
     return {"veredict": veredict}
 
@@ -116,7 +114,7 @@ def route_memory(state: State):
 
 
 def route_veredict(state: State):
-    """Determine the nect step based on task completion"""
+    """Determine the nect step based on task completion."""
     if state.veredict and state.veredict.veredict == "Completed":
         return END
     return "call_model"
