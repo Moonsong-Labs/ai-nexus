@@ -106,3 +106,52 @@ async def ensure_static_memories(store: BaseStore):
     # Define the directory and load memories
     logger.info("Attempting to load static memories into store.")
     await _load_memories_from_directory(STATIC_MEMORIES_DIR, store)
+
+
+def format_static_memories_for_prompt(static_memories: list) -> str:
+    """Format a list of static memories for inclusion in a prompt.
+
+    Args:
+        static_memories: A list of memory objects, typically from store.asearch.
+
+    Returns:
+        A string formatted for inclusion in the LLM prompt, or an empty string
+        if no relevant memories are found.
+    """
+    if not static_memories:
+        return ""
+
+    memory_texts = []
+    # Add user memories (note: the original code calls these "user memories" but they are static_memories)
+    for mem in static_memories:
+        memory_text = f"[{mem.key}]: {mem.value} (similarity: {mem.score})"
+        memory_texts.append(memory_text)
+
+    formatted_str = "\n".join(memory_texts)
+
+    # Add static memories with special formatting
+    # This part seems redundant or mislabeled in the original code, as static_memories
+    # are already being processed. Assuming the intent was to format them in a specific way
+    # if they exist.
+    static_memory_texts_special = []
+    for mem in static_memories:
+        content = mem.value.get("content", "No content")
+        context = mem.value.get("context", "No context")
+        memory_text = f"[{mem.key}]: content: {content}, context: {context}"
+        static_memory_texts_special.append(memory_text)
+
+    if static_memory_texts_special:
+        if formatted_str:
+            formatted_str += "\n\n<static_memories>\n"
+        else:
+            formatted_str = "<static_memories>\n"
+
+        formatted_str += "\n".join(static_memory_texts_special)
+        formatted_str += "\n</static_memories>"
+
+    if formatted_str:
+        return f"""
+<memories>
+{formatted_str}
+</memories>"""
+    return ""
