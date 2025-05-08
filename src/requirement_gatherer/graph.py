@@ -60,7 +60,7 @@ def call_evaluator_model(
 
     # Prepare the system prompt with user memories and current time
     # This helps the model understand the context and temporal relevance
-    sys = configurable.gatherer_system_prompt.format(
+    sys = configurable.evaluator_system_prompt.format(
         user_info=formatted, time=datetime.now().isoformat()
     )
     
