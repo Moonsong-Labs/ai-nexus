@@ -7,21 +7,23 @@ from typing import Literal
 
 from langchain.chat_models import init_chat_model
 from langchain_core.runnables import RunnableConfig
-from langgraph.graph import END, StateGraph
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import interrupt
-
 from pydantic import BaseModel, Field
 
 from requirement_gatherer import configuration, tools, utils
 from requirement_gatherer.state import State
 
+
 class Veredict(BaseModel):
     "Feedback to decide if all requirements are meet"
+
     veredict: Literal["Completed", "needs_more"] = Field(
-        description="Decide if requirements are complete" 
+        description="Decide if requirements are complete"
     )
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +32,16 @@ llm = init_chat_model()
 evaluator_llm = init_chat_model()
 evaluator = evaluator_llm.with_structured_output(Veredict)
 
-def call_evaluator_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
+
+def call_evaluator_model(
+    state: State, config: RunnableConfig, *, store: BaseStore
+) -> dict:
     """Extract the user's state from the conversation and update the memory."""
     configurable = configuration.Configuration.from_runnable_config(config)
 
-    veredict = evaluator.invoke(f'evaluate the info: {state.messages[-1]}')
+    veredict = evaluator.invoke(f"evaluate the info: {state.messages[-1]}")
     return {"veredict": veredict}
+
 
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
     """Extract the user's state from the conversation and update the memory."""
@@ -108,18 +114,21 @@ def route_memory(state: State):
     # Otherwise, finish; user can send the next message
     return "call_evaluator_model"
 
+
 def route_veredict(state: State):
     """Determine the nect step based on task completion"""
     if state.veredict and state.veredict.veredict == "Completed":
         return END
-    return "call_model" 
+    return "call_model"
+
 
 def human_feedback(state: State):
     msg = state.messages[-1].content
 
     user_input = interrupt({"query": msg})
-    
+
     return {"messages": user_input}
+
 
 memory = MemorySaver()
 
@@ -134,7 +143,9 @@ builder.add_node(human_feedback)
 builder.add_edge("__start__", "call_model")
 builder.add_edge("call_model", "human_feedback")
 builder.add_edge("human_feedback", "call_evaluator_model")
-builder.add_conditional_edges("call_evaluator_model", route_veredict, ["call_model", END])
+builder.add_conditional_edges(
+    "call_evaluator_model", route_veredict, ["call_model", END]
+)
 
 graph = builder.compile()
 graph.name = "Requirement Gatherer Agent"

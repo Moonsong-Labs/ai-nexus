@@ -18,6 +18,7 @@ class State:
     """The messages in the conversation."""
     veredict: Literal["Completed", "needs_more"] = "needs_more"
 
+
 __all__ = [
     "State",
 ]

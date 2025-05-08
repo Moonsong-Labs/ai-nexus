@@ -183,4 +183,4 @@ verdict: "<Completed | needs_more >"
 - **Risks** include both an **owner** and a **due date**
 - Markdown formatting and `upsert_memory` usage are correct
 - You **only judge** — do **not** ask the user more questions
-""" 
+"""
