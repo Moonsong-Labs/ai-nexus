@@ -520,10 +520,46 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
 
 *   **Role:** Elicits, clarifies, and refines project goals, needs, and constraints.
 *   **`prompts.py` (`src/requirement_gatherer/prompts.py`):**
-    *   `SYSTEM_PROMPT = """You are an agent responsible for gathering and clarifying requirements."""` (Likely more detailed in a full implementation).
-*   **Structure:** Follows the `agent_template` pattern.
-    *   `configuration.py`, `graph.py`, `state.py`, `tools.py` (with `upsert_memory`), `utils.py` are all standard, similar to `agent_template`.
-    *   Its primary function is to interact and use its memory capabilities (`upsert_memory` tool and retrieval in `call_model`) to build a comprehensive understanding of requirements.
+    *   The `SYSTEM_PROMPT` is a detailed markdown document guiding the agent. Key aspects include:
+        *   **Operating Principles:** First question classification (vision, project type), adaptive inquiry depth (hobby projects focus on Vision and Functional Requirements; full products are comprehensive), prioritization intelligence, product-first mindset, zero-assumption rule, iterative refinement, structured output, proactive clarification, memory utilization.
+        *   **Requirement Bank Structure:** Defines categories like Vision, Goals, User Stories, Functional/Non-Functional Requirements, Constraints, Risks, etc.
+        *   **Interaction Style:** Professional, empathetic, inquisitive, structured.
+        *   **Workflow:**
+            1.  Begin with Project Classification (vision, hobby/full product). For hobby/personal projects, focus only on Vision and Functional Requirements.
+            2.  Intelligent Questioning based on project type and context.
+            3.  Iterative Deep Dive for each relevant section of the Requirement Bank.
+            4.  Memory Update using `upsert_memory` tool.
+            5.  Consolidation and Review.
+            6.  Handling User Feedback.
+        *   **Tool Usage:** `upsert_memory` for storing gathered information.
+*   **Structure:** While based on `agent_template`, its graph has specific modifications.
+    *   `configuration.py`: Standard.
+    *   `graph.py` (`src/requirement_gatherer/graph.py`):
+        *   Nodes: `call_model` (from template), `store_memory` (from template), `call_evaluator_model`, `human_feedback`.
+        *   `call_evaluator_model` node:
+            *   Retrieves `Configuration` from `RunnableConfig`.
+            *   Retrieves recent memories from the `store` based on `user_id` and recent messages.
+            *   Formats these memories for inclusion in the system prompt.
+            *   Uses `configurable.evaluator_system_prompt` (content not specified in this memory, but used by the node) formatted with memories and current time.
+            *   Invokes an `evaluator` (presumably an LLM) with this system prompt and current messages.
+            *   Returns a `veredict`.
+        *   `human_feedback` node:
+            *   Takes the last message content.
+            *   Uses `interrupt({"query": msg})` to pause for user input.
+            *   Returns the user input as new messages.
+        *   Flow:
+            1.  Entry point: `call_model`.
+            2.  `call_model` (conditional edge `route_memory`):
+                *   If tool calls (e.g., `upsert_memory`): to `store_memory`.
+                *   Else: to `human_feedback`.
+            3.  `store_memory` -> `call_model` (allows LLM to respond after memory update).
+            4.  `human_feedback` -> `call_evaluator_model`.
+            5.  `call_evaluator_model` (conditional edge `route_veredict`):
+                *   If veredict indicates further processing: to `call_model`.
+                *   Else: to `END`.
+    *   `state.py`: Standard `State` with `messages`. May include other fields like `veredict` if `call_evaluator_model` updates it directly in the state.
+    *   `tools.py`: Standard `upsert_memory`.
+    *   `utils.py`: Standard.
 
 #### 5.7. Grumpy (`src/grumpy/`)
 
