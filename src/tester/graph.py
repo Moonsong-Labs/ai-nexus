@@ -10,11 +10,9 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 
-from tester import configuration, tools, utils
+from tester import configuration, utils
 from tester.output import (
     TesterAgentFinalOutput,
-    TesterAgentQuestionOutput,
-    TesterAgentTestOutput,
 )
 from tester.state import State
 
@@ -52,8 +50,7 @@ def ensure_messages_format(messages: List[dict]) -> List[BaseMessage]:
 async def analyze_requirements(
     state: State, config: RunnableConfig, *, store: BaseStore
 ) -> dict:
-    """
-    Analyze requirements and identify ambiguities.
+    """Analyze requirements and identify ambiguities.
     Will either ask questions if information is missing or generate tests if requirements are clear.
     """
     try:
@@ -107,8 +104,7 @@ async def analyze_requirements(
 async def generate_tests(
     state: State, config: RunnableConfig, *, store: BaseStore
 ) -> dict:
-    """
-    Generate tests based on the requirements.
+    """Generate tests based on the requirements.
     If more information is needed, will ask questions instead.
     """
     try:
