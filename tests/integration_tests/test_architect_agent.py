@@ -46,32 +46,6 @@ async def test_architect_easy_review_langsmith(pytestconfig):
     # Compile the graph - needs checkpointer for stateful execution during evaluation
     graph_compiled = graph_builder.compile(checkpointer=memory_saver, store=memory_store)
 
-
-    # Define the function to be evaluated for each dataset example
-    async def run_graph_with_attachments(inputs: dict, attachments: dict):
-        projectbrief = attachments["projectbrief"]["presigned_url"]
-        projectbrief_completion = client.chat.completions.create(
-            model="google_genai:gemini-2.0-flash-lite",
-            messages=[
-                {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": inputs["project_question"]},
-                    {
-                    "type": "projectbrief",
-                    "image_url": {
-                        "url": projectbrief,
-                    },
-                    },
-                ],
-                }
-            ],
-        )
-
-        return {
-            "project_answer": projectbrief_completion.choices[0].message.content,
-        }
-
     # Define the function to be evaluated for each dataset example
     async def run_graph_with_config(inputs, attachments):
         # Check if the input is already formatted as 'messages'
@@ -126,16 +100,7 @@ async def test_architect_easy_review_langsmith(pytestconfig):
                     return {
                         "output": "Error: Could not parse messages from dataset example."
                     }
-                test_message = [SystemMessage(content=f"These are the contents of the projectbrief.md file:\n\n{attachments["projectbrief.md"]["reader"].read()}"),
-                                SystemMessage(content=f"These are the contents of the projectRequirements.md file:\n\n{attachments["projectRequirements.md"]["reader"].read()}"),
-                                SystemMessage(content=f"These are the contents of the techContext.md file:\n\n{attachments["techContext.md"]["reader"].read()}"),
-                                SystemMessage(content=f"These are the contents of the featuresContext.md file:\n\n{attachments["featuresContext.md"]["reader"].read()}"),
-                                SystemMessage(content=f"These are the contents of the testingContext.md file:\n\n{attachments["testingContext.md"]["reader"].read()}"),
-                                SystemMessage(content=f"These are the contents of the systemPatterns.md file:\n\n{attachments["systemPatterns.md"]["reader"].read()}"),
-                                SystemMessage(content=f"These are the contents of the securityContext.md file:\n\n{attachments["securityContext.md"]["reader"].read()}")]
-                test_message.extend(graph_input_messages)
-                # logger.info(f"GRAPH INPUT MESSAGES: {test_message}")
-                graph_input = {"messages": test_message}
+                graph_input = {"messages": graph_input_messages}
             except Exception as parse_error:
                 logger.error(
                     "Error parsing messages from example %s: %s",
@@ -173,7 +138,15 @@ async def test_architect_easy_review_langsmith(pytestconfig):
         config = {"configurable": {"thread_id": str(uuid.uuid4())}}
 
         try:
+            test_message = list()
+
             # Invoke the graph
+            for key, attachment in attachments.items():
+                test_message.append(SystemMessage(content=f"These are the contents of the {key} file:\n\n{attachment["reader"].read()}"))
+
+            test_message.extend(graph_input["messages"])
+            graph_input = {"messages": test_message}
+
             result = await graph_compiled.ainvoke(graph_input, config=config)
 
             # Format the output for the evaluator
@@ -209,12 +182,9 @@ async def test_architect_easy_review_langsmith(pytestconfig):
                 invoke_exception,
                 exc_info=True,
             )
-            return f"Error during graph execution: {invoke_exception}"
+            return f"Error during graph execution: {invoke_exception}"   
 
-
-
-    # Generate a unique thread_id for each evaluation run
-    config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+    a = client.list_examples(dataset_name=ARCHITECT_DATASET_NAME, example_ids="b82b1d7d-df41-410b-97e4-a38100295489")
 
     results = await client.aevaluate(
         run_graph_with_config,
