@@ -21,6 +21,9 @@ INTEGRATION_TEST_FILE ?= tests/integration_tests/
 
 test-grumpy:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_grumpy_agent.py
+test-code-reviewer:
+	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_code_reviewer_agent.py
+
 test-requirement-gatherer:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_requirement_gatherer.py	
 test-tester:

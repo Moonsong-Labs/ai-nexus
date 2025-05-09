@@ -32,32 +32,32 @@ def create_async_graph_caller(
             input_content = input_message["content"]
         else:
             input_content = str(input_message)
-            
+
         # Create a proper state with formatted messages
         state = {"messages": [HumanMessage(content=input_content)]}
-        
+
         # Set up config with thread_id and model
         config = {
             "configurable": {
                 "thread_id": str(uuid.uuid4()),
                 "user_id": "test_user",
-                "model": "google_genai:gemini-2.0-flash-lite"
+                "model": "google_genai:gemini-2.0-flash-lite",
             }
         }
-        
+
         # Invoke the graph
         result = await graph.ainvoke(state, config=config)
-        
+
         # Return the last message's content
         if isinstance(result, dict) and "messages" in result and result["messages"]:
             return result["messages"][-1].content
-        
+
         return str(result)
 
     return call_model
 
 
 __all__ = [
-    "get_logger",
-    "create_async_graph_caller",
+    get_logger.__name__,
+    create_async_graph_caller.__name__,
 ]

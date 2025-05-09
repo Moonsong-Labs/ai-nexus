@@ -8,10 +8,23 @@ resolution-markers = [
 ]
 
 [[package]]
+name = "agentevals"
+version = "0.0.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "openevals" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9a/ff/66e2466e3f23393ce1eb054fadf7fb5b1ef71a6daa166a5e12fd9b769a84/agentevals-0.0.7.tar.gz", hash = "sha256:bc6f5508710e4e4d7a6a619745fd7a7261e236218880b22ab43ce6490f283e16", size = 39683, upload-time = "2025-05-03T20:08:15.488Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/71/79/2cfee51531d2bed393d55106abfe3a10f972d1095d480aeb0e661a477d8b/agentevals-0.0.7-py3-none-any.whl", hash = "sha256:7e8204d8396f49de2fee19d09b004110862c2c14bc8528be6cc43df39be0e61e", size = 27039, upload-time = "2025-05-03T20:08:13.95Z" },
+]
+
+[[package]]
 name = "ai-nexus"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "agentevals" },
     { name = "langchain" },
     { name = "langchain-community" },
     { name = "langchain-core" },
@@ -21,6 +34,7 @@ dependencies = [
     { name = "pygithub" },
     { name = "pytest-asyncio" },
     { name = "python-dotenv" },
+    { name = "termcolor" },
 ]
 
 [package.optional-dependencies]
@@ -36,6 +50,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "agentevals", specifier = ">=0.0.7" },
     { name = "langchain", specifier = ">=0.3.8" },
     { name = "langchain-community", specifier = ">=0.3.23" },
     { name = "langchain-core", specifier = ">=0.3.8" },
@@ -52,6 +67,7 @@ requires-dist = [
     { name = "pytest-dotenv", marker = "extra == 'dev'", specifier = ">=0.5.2" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.1" },
+    { name = "termcolor", specifier = ">=3.1.0" },
 ]
 provides-extras = ["dev"]
 
@@ -1135,7 +1151,7 @@ wheels = [
 
 [[package]]
 name = "openevals"
-version = "0.0.19"
+version = "0.0.20"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain" },
@@ -1143,9 +1159,9 @@ dependencies = [
     { name = "langsmith" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b9/96/12a770c32f17d19a3c329d852c0b79425564d7edcb571207318ac6012ff6/openevals-0.0.19.tar.gz", hash = "sha256:fb3b6bcd17042b8fe509c92beeb787bd1defd2359b52464995bd36360f582948", size = 92604, upload-time = "2025-04-21T04:48:05.204Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/73/6f/ba7b3b82427ce68016f194e025932897cfa8236a8f3023bb7e8b8d95db4e/openevals-0.0.20.tar.gz", hash = "sha256:276e28cb8c7b1374442f1433afa55acab293710a562ff946ee6761e4396879a5", size = 93751, upload-time = "2025-05-03T20:00:06.781Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/04/3c/57eb656b8d8d3f754b0246a47f94b068f5cc5b9e397f337a78b57ab81024/openevals-0.0.19-py3-none-any.whl", hash = "sha256:e2973d23c52d99e432a8719a4ce1a5123d001535691916df765096341869898d", size = 61788, upload-time = "2025-04-21T04:48:03.588Z" },
+    { url = "https://files.pythonhosted.org/packages/c2/a6/ef9688f294e106d30e4c3ae5a3773d1c32f6f4e002e8e07ab5aaddfbe04c/openevals-0.0.20-py3-none-any.whl", hash = "sha256:1f85539fdc03d01eed6242c1fcb9060da160abf977b607019bb21a41d5dac38d", size = 62166, upload-time = "2025-05-03T20:00:00.799Z" },
 ]
 
 [[package]]
@@ -1742,6 +1758,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/0a/d4/2b0cd0fe285e14b36db076e78c93766ff1d529d70408bd1d2a5a84f1d929/tenacity-9.1.2.tar.gz", hash = "sha256:1169d376c297e7de388d18b4481760d478b0e99a777cad3a9c86e556f4b697cb", size = 48036, upload-time = "2025-04-02T08:25:09.966Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/30/643397144bfbfec6f6ef821f36f33e57d35946c44a2352d3c9f0ae847619/tenacity-9.1.2-py3-none-any.whl", hash = "sha256:f77bf36710d8b73a50b2dd155c97b870017ad21afe6ab300326b0371b3b05138", size = 28248, upload-time = "2025-04-02T08:25:07.678Z" },
+]
+
+[[package]]
+name = "termcolor"
+version = "3.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/6c/3d75c196ac07ac8749600b60b03f4f6094d54e132c4d94ebac6ee0e0add0/termcolor-3.1.0.tar.gz", hash = "sha256:6a6dd7fbee581909eeec6a756cff1d7f7c376063b14e4a298dc4980309e55970", size = 14324, upload-time = "2025-04-30T11:37:53.791Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4f/bd/de8d508070629b6d84a30d01d57e4a65c69aa7f5abe7560b8fad3b50ea59/termcolor-3.1.0-py3-none-any.whl", hash = "sha256:591dd26b5c2ce03b9e43f391264626557873ce1d379019786f99b0c2bee140aa", size = 7684, upload-time = "2025-04-30T11:37:52.382Z" },
 ]
 
 [[package]]

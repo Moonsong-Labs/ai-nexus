@@ -13,5 +13,14 @@
             "console": "integratedTerminal",
             "justMyCode": false
         }
-    ]
+    ],
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit"
+        }
+    },
+    "ruff.configuration": "pyproject.toml",
+    "ruff.fixAll": true,
+    "ruff.organizeImports": true
 }

@@ -1,7 +1,6 @@
 """Graphs that orchestrates a software project."""
 
 import logging
-import pprint
 from datetime import datetime
 from typing import Literal
 
@@ -47,8 +46,6 @@ async def store_memory(
 
     sys = configurable.system_prompt.format(time=datetime.now().isoformat())
 
-    pprint.pp(state.messages)
-
     msg = await model_orchestrator.bind_tools([tools.Delegate, tools.Memory]).ainvoke(
         [SystemMessage(sys), *state.messages],
         {"configurable": utils.split_model_and_provider(configurable.model)},
@@ -71,7 +68,6 @@ def delegate_to(
 ]:
     """Determine the next step based on the presence of tool calls."""
     message = state.messages[-1]
-    pprint.pp(message)
     if len(message.tool_calls) == 0:
         return END
     else:
