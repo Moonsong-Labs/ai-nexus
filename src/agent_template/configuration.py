@@ -24,6 +24,8 @@ class Configuration:
         },
     )
     system_prompt: str = prompts.SYSTEM_PROMPT
+    use_static_mem: bool = True
+    """Whether to use static memory for pre-loaded knowledge."""
 
     @classmethod
     def from_runnable_config(
