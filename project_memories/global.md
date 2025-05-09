@@ -1,3 +1,13 @@
+Okay, I have reviewed the existing project memory and the PR details.
+
+The PR #36 "Fix Gemini Key name in scripts" primarily updates how the Gemini API key is sourced in three shell scripts (`generate_project_memory.sh`, `update_project_memory_from_pr.sh`, `update_project_readmes.sh`). The environment variable `GEMINI_API_KEY_ENV` has been replaced by `GEMINI_API_KEY` as a fallback if `GOOGLE_API_KEY` is not set. The scripts now use the logic: `GEMINI_API_KEY="${GOOGLE_API_KEY:-${GEMINI_API_KEY:-}}"`.
+
+This affects the "Development Workflow & Tools" section, specifically the part about environment variable configuration in the `.env` file.
+
+Other changes in the PR, such as modifications to the prompt used by `update_project_memory_from_pr.sh` and stripping header/footer lines from its output, are related to the process of maintaining the project memory document itself and do not describe the AI Nexus project's functionality, architecture, or user-facing setup. Therefore, these meta-changes will not be reflected in the condensed memory content.
+
+I will update Section 7 of the project memory.
+
 # AI Nexus Project: Condensed Memory Bank
 
 ## 1. Project Overview & Core Mission
@@ -15,7 +25,6 @@
 6.  **Configuration Management:** Agents have configurable parameters, including LLM models and system prompts, managed via `Configuration` dataclasses.
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
 
----
 
 ## 2. The Memory Bank System (Conceptualized for "Cursor")
 
@@ -134,7 +143,6 @@ The Memory Bank is designed as Cursor's (and potentially other agents') sole sou
     *   **Known Issues:** Tracks identified bugs or problems.
     *   *This file is also expected to be frequently updated.*
 
----
 
 ## 3. Project-Level Standards & Goals (`project_memories/PRD.md`)
 
@@ -168,7 +176,6 @@ This file outlines the overarching standards and technological choices for the A
     *   **`gemini-1.5-flash-latest` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (PRD mentions `gemini-2.0-flash`, current common models are 1.5 series. The intent is a fast model.)
     *   **`gemini-1.5-pro-latest` (or similar pro variants):** Preferred for complex tasks needing reasoning. (PRD mentions `gemini-2.5-pro-preview-03-25`, intent is a powerful model.)
 
----
 
 ## 4. General Agent Architecture (based on `src/agent_template/` and common patterns)
 
@@ -328,7 +335,6 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
         *   Uses `split_model_and_provider` to determine the provider and model.
         *   Supports `google_genai` and `openai` providers.
 
----
 
 ## 5. Specific Agent Details
 
@@ -563,7 +569,6 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
 *   **`tools.py` (`src/grumpy/tools.py`):** Standard `upsert_memory` tool.
 *   **`utils.py` (`src/grumpy/utils.py`):** Standard utilities.
 
----
 
 ## 6. Testing Framework (`tests/`)
 
@@ -635,7 +640,6 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
 *   **`tests/unit_tests/test_configuration.py`:**
     *   `test_configuration_from_none()`: Basic unit test to check if `Configuration.from_runnable_config()` handles a `None` config correctly, falling back to default values.
 
----
 
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`)
 
@@ -655,7 +659,7 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     *   `make test_integration`: Runs integration tests (`uv run -- pytest tests/integration_tests`).
     *   `make test`: Runs both `test_unit` and `test_integration`.
 *   **Configuration:** `.env` file (copied from `.env.example`) for environment variables.
-    *   Required: `GOOGLE_API_KEY`.
+    *   Required for Google AI services: `GOOGLE_API_KEY` (this is the preferred variable). Alternatively, `GEMINI_API_KEY` can be set; scripts will use `GOOGLE_API_KEY` if present, otherwise they will use `GEMINI_API_KEY`.
     *   Optional for Coder agent: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_REPOSITORY`.
     *   Optional for LangSmith: `LANGCHAIN_API_KEY`, `LANGCHAIN_TRACING_V2`, `LANGCHAIN_ENDPOINT`, `LANGCHAIN_PROJECT`.
 *   **CI/CD (GitHub Actions):**
@@ -677,7 +681,6 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     4.  Run `make run` and navigate to the new agent in LangGraph Studio.
 *   **Memory Exploration:** LangGraph Studio UI allows reviewing saved memories (e.g., by clicking a "memory" button if the store is connected and UI supports it).
 
----
 
 ## 8. Overall Project Structure Summary
 
