@@ -26,17 +26,14 @@ def create_async_graph_caller(
     """
 
     async def call_model(inputs: dict):
-        # Prepare inputs - make sure we have a properly formatted message
         input_message = inputs.get("message", "")
         if isinstance(input_message, dict) and "content" in input_message:
             input_content = input_message["content"]
         else:
             input_content = str(input_message)
 
-        # Create a proper state with formatted messages
         state = {"messages": [HumanMessage(content=input_content)]}
 
-        # Set up config with thread_id and model
         config = {
             "configurable": {
                 "thread_id": str(uuid.uuid4()),
@@ -45,10 +42,8 @@ def create_async_graph_caller(
             }
         }
 
-        # Invoke the graph
         result = await graph.ainvoke(state, config=config)
 
-        # Return the last message's content
         if isinstance(result, dict) and "messages" in result and result["messages"]:
             return result["messages"][-1].content
 
