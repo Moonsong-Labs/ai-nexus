@@ -26,7 +26,7 @@ print_usage() {
   echo ""
   echo "Options:"
   echo "  -k <GEMINI_API_KEY> Your Google AI Gemini API Key."
-  echo "                      (Recommended: Set as GOOGLE_API_KEY or GEMINI_API_KEY_ENV environment variable for security)"
+  echo "                      (Recommended: Set as GOOGLE_API_KEY or GEMINI_API_KEY environment variable for security)"
   echo "  -h                  Show this help message."
   echo ""
   echo "Prerequisites:"
@@ -56,7 +56,7 @@ else
 fi
 
 # Try to get API key from environment variables first
-GEMINI_API_KEY="${GOOGLE_API_KEY:-${GEMINI_API_KEY_ENV:-}}" # Uses GOOGLE_API_KEY if set, else GEMINI_API_KEY_ENV
+GEMINI_API_KEY="${GOOGLE_API_KEY:-${GEMINI_API_KEY:-}}" # Uses GOOGLE_API_KEY if set, else GEMINI_API_KEY
 
 while getopts "k:h" opt; do
   case ${opt} in
@@ -81,7 +81,7 @@ elif [ -n "$GEMINI_API_KEY" ]; then # API Key from environment variable
    echo "Using Gemini API Key from environment variable." >&2
 else # No API key provided
   echo "Error: Gemini API Key is required." >&2
-  echo "Provide it with -k option or set GOOGLE_API_KEY/GEMINI_API_KEY_ENV environment variable." >&2
+  echo "Provide it with -k option or set GOOGLE_API_KEY/GEMINI_API_KEY environment variable." >&2
   print_usage >&2
   exit 1
 fi

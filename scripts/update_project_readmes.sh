@@ -24,7 +24,7 @@ print_usage() {
   echo ""
   echo "Options:"
   echo "  -k <GEMINI_API_KEY> Your Google AI Gemini API Key."
-  echo "                      (Recommended: Set as GOOGLE_API_KEY or GEMINI_API_KEY_ENV environment variable)"
+  echo "                      (Recommended: Set as GOOGLE_API_KEY or GEMINI_API_KEY environment variable)"
   echo "  -r <owner/repo>     Repository in 'owner/repo' format."
   echo "  -p <pr_number>      Pull Request number."
   echo "  -u <pr_url>         Full URL of the Pull Request."
@@ -52,7 +52,7 @@ else
   echo "No .env file found at $ENV_FILE. Proceeding without it." >&2
 fi
 
-GEMINI_API_KEY="${GOOGLE_API_KEY:-${GEMINI_API_KEY_ENV:-}}"
+GEMINI_API_KEY="${GOOGLE_API_KEY:-${GEMINI_API_KEY:-}}"
 
 while getopts "k:r:p:u:h" opt; do
   case ${opt} in
@@ -88,7 +88,7 @@ elif [ -n "$GEMINI_API_KEY" ]; then
    echo "Using Gemini API Key from environment variable." >&2
 else
   echo "Error: Gemini API Key is required." >&2
-  echo "Provide it with -k option or set GOOGLE_API_KEY/GEMINI_API_KEY_ENV environment variable." >&2
+  echo "Provide it with -k option or set GOOGLE_API_KEY/GEMINI_API_KEY environment variable." >&2
   print_usage >&2
   exit 1
 fi
