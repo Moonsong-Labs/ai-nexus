@@ -1,0 +1,827 @@
+[
+  {
+    "id": "S01-T01",
+    "title": "Implement Basic Timer Logic",
+    "description": "Implement the core countdown logic for work sessions using tokio.",
+    "status": "pending",
+    "dependencies": [],
+    "priority": "high",
+    "details": "Use tokio::time::interval for the timer. Handle session duration and basic state.",
+    "testStrategy": "Write unit tests for timer start, countdown, and completion.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/1",
+    "pullRequestLink": "https://github.com/org/repo/pull/1",
+    "skillRequirements": ["rust", "tokio"],
+    "acceptanceCriteria": [
+      "Timer counts down correctly",
+      "Session ends after specified duration"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S01-T02",
+    "title": "Implement CLI Presentation",
+    "description": "Add visual elements like progress bars and status display in the terminal.",
+    "status": "pending",
+    "dependencies": ["S01-T01"],
+    "priority": "high",
+    "details": "Use indicatif for progress bars and termion for terminal colors/manipulation. Display remaining time and session type.",
+    "testStrategy": "Manually verify progress bar and status display during session.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/2",
+    "pullRequestLink": "https://github.com/org/repo/pull/2",
+    "skillRequirements": ["rust", "indicatif", "termion"],
+    "acceptanceCriteria": [
+      "Progress bar updates correctly",
+      "Status displays accurate information"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S01-T03",
+    "title": "Implement Notifications & Sound",
+    "description": "Integrate desktop notifications and sound alerts for session events.",
+    "status": "pending",
+    "dependencies": ["S01-T01"],
+    "priority": "high",
+    "details": "Use notify-rust for desktop notifications and rodio for sound playback. Configure alerts for start and end.",
+    "testStrategy": "Verify notifications appear and sounds play on session start/end.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/3",
+    "pullRequestLink": "https://github.com/org/repo/pull/3",
+    "skillRequirements": ["rust", "notify-rust", "rodio"],
+    "acceptanceCriteria": [
+      "Desktop notifications are triggered",
+      "Sound alerts are played"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S01-T04",
+    "title": "Implement Status Command",
+    "description": "Add the `status` command to show current timer state.",
+    "status": "pending",
+    "dependencies": ["S01-T01", "S01-T02"],
+    "priority": "high",
+    "details": "Use clap to define the command. Retrieve and display timer state, progress, type, and daily count.",
+    "testStrategy": "Test the command with active and inactive timers.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/4",
+    "pullRequestLink": "https://github.com/org/repo/pull/4",
+    "skillRequirements": ["rust", "clap"],
+    "acceptanceCriteria": [
+      "Status command shows correct remaining time",
+      "Displays session type and daily count"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S01-T05",
+    "title": "Implement Stop Command",
+    "description": "Add the `stop` command to end sessions early.",
+    "status": "pending",
+    "dependencies": ["S01-T01"],
+    "priority": "high",
+    "details": "Use clap for the command. Implement logic to terminate the timer and optionally record reason/notes.",
+    "testStrategy": "Test stopping at various points in a session.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/5",
+    "pullRequestLink": "https://github.com/org/repo/pull/5",
+    "skillRequirements": ["rust", "clap"],
+    "acceptanceCriteria": [
+      "Stop command terminates the timer",
+      "Optionally records stop reason and notes"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S02-T01",
+    "title": "Implement Pause/Resume Logic",
+    "description": "Add core logic for pausing and resuming the timer.",
+    "status": "pending",
+    "dependencies": ["S01-T01"],
+    "priority": "high",
+    "details": "Handle state changes for pause/resume. Track paused duration.",
+    "testStrategy": "Test pausing and resuming at different times.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/6",
+    "pullRequestLink": "https://github.com/org/repo/pull/6",
+    "skillRequirements": ["rust", "tokio"],
+    "acceptanceCriteria": [
+      "Timer pauses and resumes correctly",
+      "Paused duration is tracked"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S02-T02",
+    "title": "Implement Auto-Pause Detection",
+    "description": "Detect system sleep/lock events to auto-pause the timer.",
+    "status": "pending",
+    "dependencies": ["S02-T01"],
+    "priority": "medium",
+    "details": "Requires platform-specific APIs or libraries to detect system events. Implement logic to trigger pause.",
+    "testStrategy": "Test by putting the system to sleep/locking the screen during a session.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/7",
+    "pullRequestLink": "https://github.com/org/repo/pull/7",
+    "skillRequirements": ["rust", "system-api"],
+    "acceptanceCriteria": [
+      "Timer auto-pauses on system sleep/lock"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S02-T03",
+    "title": "Implement Pause Reason Tracking",
+    "description": "Allow tracking the reason for pausing a session.",
+    "status": "pending",
+    "dependencies": ["S02-T01"],
+    "priority": "medium",
+    "details": "Add input mechanism for pause reason. Store reason with session data.",
+    "testStrategy": "Verify pause reasons are recorded correctly.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/8",
+    "pullRequestLink": "https://github.com/org/repo/pull/8",
+    "skillRequirements": ["rust"],
+    "acceptanceCriteria": [
+      "User can provide a pause reason",
+      "Pause reason is stored"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S02-T04",
+    "title": "Setup Session History Storage",
+    "description": "Set up the directory and file for storing session history.",
+    "status": "pending",
+    "dependencies": [],
+    "priority": "high",
+    "details": "Use the `dirs` crate to find the appropriate location (e.g., .tasktimer/history.log). Create directory if it doesn't exist.",
+    "testStrategy": "Verify directory and file are created on first run.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/9",
+    "pullRequestLink": "https://github.com/org/repo/pull/9",
+    "skillRequirements": ["rust", "dirs"],
+    "acceptanceCriteria": [
+      "Project directory is created",
+      "History file is created"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S02-T05",
+    "title": "Implement Session Saving",
+    "description": "Save completed or stopped session data to the history file.",
+    "status": "pending",
+    "dependencies": ["S01-T01", "S02-T04"],
+    "priority": "high",
+    "details": "Serialize session data (duration, status, timestamps) into JSON format using serde_json. Append to the history file.",
+    "testStrategy": "Verify session data is correctly written to the file.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/10",
+    "pullRequestLink": "https://github.com/org/repo/pull/10",
+    "skillRequirements": ["rust", "serde_json"],
+    "acceptanceCriteria": [
+      "Completed sessions are saved",
+      "Stopped sessions are saved",
+      "Data is in valid JSON format"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S02-T06",
+    "title": "Add Session Metadata, Tags, Categories",
+    "description": "Extend session data structure to include metadata, tags, and categories.",
+    "status": "pending",
+    "dependencies": ["S02-T05"],
+    "priority": "medium",
+    "details": "Update session struct. Add logic to include tags/categories from CLI arguments or input. Update saving logic.",
+    "testStrategy": "Verify tags and categories are saved correctly with session data.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/11",
+    "pullRequestLink": "https://github.com/org/repo/pull/11",
+    "skillRequirements": ["rust", "serde_json"],
+    "acceptanceCriteria": [
+      "Session data includes metadata, tags, and categories"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S03-T01",
+    "title": "Implement Custom Duration Args",
+    "description": "Allow specifying custom work and break durations via CLI arguments.",
+    "status": "pending",
+    "dependencies": ["S01-T01"],
+    "priority": "high",
+    "details": "Use clap to define `--work` and `--break` arguments. Update timer logic to use provided durations.",
+    "testStrategy": "Test starting sessions with different custom durations.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/12",
+    "pullRequestLink": "https://github.com/org/repo/pull/12",
+    "skillRequirements": ["rust", "clap"],
+    "acceptanceCriteria": [
+      "Timer uses custom work duration",
+      "Timer uses custom break duration"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S03-T02",
+    "title": "Implement Custom Break Schedules",
+    "description": "Allow configuring different break durations or patterns after N work sessions.",
+    "status": "pending",
+    "dependencies": ["S01-T01", "S03-T01"],
+    "priority": "medium",
+    "details": "Implement logic to track session count and apply different break rules based on configuration.",
+    "testStrategy": "Configure different break schedules and verify they are applied correctly.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/13",
+    "pullRequestLink": "https://github.com/org/repo/pull/13",
+    "skillRequirements": ["rust"],
+    "acceptanceCriteria": [
+      "Different break durations are applied after specified session counts"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S03-T03",
+    "title": "Implement Per-Project Config",
+    "description": "Allow loading configuration from per-project files.",
+    "status": "pending",
+    "dependencies": ["S03-T01"],
+    "priority": "high",
+    "details": "Use the `config` crate to load settings from a local configuration file (e.g., `.tasktimer.toml`).",
+    "testStrategy": "Create a project config file and verify settings are loaded.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/14",
+    "pullRequestLink": "https://github.com/org/repo/pull/14",
+    "skillRequirements": ["rust", "config"],
+    "acceptanceCriteria": [
+      "Configuration is loaded from a project file",
+      "Project settings override global settings"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S03-T04",
+    "title": "Implement Clear Command Basic",
+    "description": "Add a basic `clear` command to delete session history.",
+    "status": "pending",
+    "dependencies": ["S02-T04"],
+    "priority": "medium",
+    "details": "Use clap for the command. Implement logic to delete the history file.",
+    "testStrategy": "Test clearing the entire history.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/15",
+    "pullRequestLink": "https://github.com/org/repo/pull/15",
+    "skillRequirements": ["rust", "clap"],
+    "acceptanceCriteria": [
+      "Clear command deletes the history file"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S03-T05",
+    "title": "Implement Selective Clearing",
+    "description": "Add options to the `clear` command for deleting history by date range.",
+    "status": "pending",
+    "dependencies": ["S03-T04", "S02-T05"],
+    "priority": "medium",
+    "details": "Use clap for date range arguments. Implement logic to read history, filter by date, and rewrite the file.",
+    "testStrategy": "Test clearing history for specific date ranges.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/16",
+    "pullRequestLink": "https://github.com/org/repo/pull/16",
+    "skillRequirements": ["rust", "clap", "chrono", "serde_json"],
+    "acceptanceCriteria": [
+      "User can specify a date range for clearing",
+      "Only sessions within the date range are deleted"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S03-T06",
+    "title": "Implement Data Export",
+    "description": "Add functionality to export session history in CSV or JSON format.",
+    "status": "pending",
+    "dependencies": ["S02-T05"],
+    "priority": "medium",
+    "details": "Use clap for format options. Implement logic to read history and write to CSV (using `csv`) or JSON (using `serde_json`).",
+    "testStrategy": "Export history in both formats and verify output.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/17",
+    "pullRequestLink": "https://github.com/org/repo/pull/17",
+    "skillRequirements": ["rust", "clap", "csv", "serde_json"],
+    "acceptanceCriteria": [
+      "History can be exported to CSV",
+      "History can be exported to JSON"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S03-T07",
+    "title": "Implement Archive Functionality",
+    "description": "Add an option to archive old session history.",
+    "status": "pending",
+    "dependencies": ["S03-T05"],
+    "priority": "low",
+    "details": "Implement logic to move or compress old history data based on criteria (e.g., date).",
+    "testStrategy": "Test archiving history older than a specific date.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/18",
+    "pullRequestLink": "https://github.com/org/repo/pull/18",
+    "skillRequirements": ["rust", "chrono"],
+    "acceptanceCriteria": [
+      "User can archive old history",
+      "Archived data is moved or compressed"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S04-T01",
+    "title": "Implement Stats Basic",
+    "description": "Add a basic `stats` command to read and display history data.",
+    "status": "pending",
+    "dependencies": ["S02-T05"],
+    "priority": "high",
+    "details": "Use clap for the command. Read session history from the file.",
+    "testStrategy": "Test the command with a history file containing data.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/19",
+    "pullRequestLink": "https://github.com/org/repo/pull/19",
+    "skillRequirements": ["rust", "clap", "serde_json"],
+    "acceptanceCriteria": [
+      "Stats command reads history data"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S04-T02",
+    "title": "Calculate Daily/Weekly/Monthly Summaries",
+    "description": "Add logic to calculate and display productivity summaries.",
+    "status": "pending",
+    "dependencies": ["S04-T01", "chrono"],
+    "priority": "high",
+    "details": "Aggregate session data by day, week, and month. Calculate total work time, break time, etc.",
+    "testStrategy": "Test calculations with various history data sets.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/20",
+    "pullRequestLink": "https://github.com/org/repo/pull/20",
+    "skillRequirements": ["rust", "chrono"],
+    "acceptanceCriteria": [
+      "Daily summaries are calculated correctly",
+      "Weekly summaries are calculated correctly",
+      "Monthly summaries are calculated correctly"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S04-T03",
+    "title": "Calculate Success Rates & Patterns",
+    "description": "Implement analytics for session success rates and common interruption patterns.",
+    "status": "pending",
+    "dependencies": ["S04-T02", "S01-T05", "S02-T03"],
+    "priority": "medium",
+    "details": "Analyze completed vs. stopped sessions. Identify common reasons for stopping or pausing.",
+    "testStrategy": "Test calculations with history data containing stops and pauses.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/21",
+    "pullRequestLink": "https://github.com/org/repo/pull/21",
+    "skillRequirements": ["rust"],
+    "acceptanceCriteria": [
+      "Session success rate is calculated",
+      "Common interruption patterns are identified"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S04-T04",
+    "title": "Implement Report Command",
+    "description": "Add a command to generate productivity reports.",
+    "status": "pending",
+    "dependencies": ["S04-T02"],
+    "priority": "medium",
+    "details": "Use clap for the command and report options (e.g., date range, format).",
+    "testStrategy": "Test the command with basic report generation.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/22",
+    "pullRequestLink": "https://github.com/org/repo/pull/22",
+    "skillRequirements": ["rust", "clap"],
+    "acceptanceCriteria": [
+      "Report command is available"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S04-T05",
+    "title": "Implement Report Export Formats",
+    "description": "Add support for exporting reports in CSV and JSON formats.",
+    "status": "pending",
+    "dependencies": ["S04-T04", "S03-T06"],
+    "priority": "medium",
+    "details": "Reuse or adapt logic from S03-T06 for CSV/JSON formatting.",
+    "testStrategy": "Generate reports in both formats and verify.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/23",
+    "pullRequestLink": "https://github.com/org/repo/pull/23",
+    "skillRequirements": ["rust", "csv", "serde_json"],
+    "acceptanceCriteria": [
+      "Reports can be exported to CSV",
+      "Reports can be exported to JSON"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S04-T06",
+    "title": "Implement Report Templating",
+    "description": "Allow customizable report templates.",
+    "status": "pending",
+    "dependencies": ["S04-T04"],
+    "priority": "low",
+    "details": "Use the `handlebars` crate to process report data with templates.",
+    "testStrategy": "Create a custom template and generate a report using it.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/24",
+    "pullRequestLink": "https://github.com/org/repo/pull/24",
+    "skillRequirements": ["rust", "handlebars"],
+    "acceptanceCriteria": [
+      "User can specify a report template",
+      "Reports are generated using the template"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S04-T07",
+    "title": "Implement Burndown Chart Data",
+    "description": "Generate data required for burndown charts based on session history.",
+    "status": "pending",
+    "dependencies": ["S04-T02"],
+    "priority": "low",
+    "details": "Process session data to calculate cumulative work time or remaining task estimates over time.",
+    "testStrategy": "Verify the generated data structure is suitable for charting.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/25",
+    "pullRequestLink": "https://github.com/org/repo/pull/25",
+    "skillRequirements": ["rust"],
+    "acceptanceCriteria": [
+      "Data for burndown charts is generated correctly"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S05-T01",
+    "title": "Setup SQLite Database",
+    "description": "Set up the local SQLite database for task and session storage.",
+    "status": "pending",
+    "dependencies": ["S02-T04"],
+    "priority": "high",
+    "details": "Use the `rusqlite` crate. Define database schema for tasks and potentially sessions (migrating from JSON file).",
+    "testStrategy": "Verify database file is created and tables exist.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/26",
+    "pullRequestLink": "https://github.com/org/repo/pull/26",
+    "skillRequirements": ["rust", "rusqlite"],
+    "acceptanceCriteria": [
+      "SQLite database is initialized",
+      "Task and session tables are created"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S05-T02",
+    "title": "Implement Task CRUD",
+    "description": "Implement create, read, update, and delete operations for tasks in the database.",
+    "status": "pending",
+    "dependencies": ["S05-T01"],
+    "priority": "high",
+    "details": "Use rusqlite for database interactions. Define CLI commands for task management.",
+    "testStrategy": "Write unit and integration tests for CRUD operations.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/27",
+    "pullRequestLink": "https://github.com/org/repo/pull/27",
+    "skillRequirements": ["rust", "rusqlite", "clap"],
+    "acceptanceCriteria": [
+      "Tasks can be created, read, updated, and deleted"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S05-T03",
+    "title": "Associate Sessions with Tasks",
+    "description": "Link Pomodoro sessions to specific tasks in the database.",
+    "status": "pending",
+    "dependencies": ["S05-T01", "S05-T02", "S02-T05"],
+    "priority": "high",
+    "details": "Update database schema to include a task foreign key in session records. Modify session saving logic.",
+    "testStrategy": "Verify sessions are correctly associated with tasks.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/28",
+    "pullRequestLink": "https://github.com/org/repo/pull/28",
+    "skillRequirements": ["rust", "rusqlite"],
+    "acceptanceCriteria": [
+      "Sessions can be linked to tasks",
+      "Session data includes task association"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S05-T04",
+    "title": "Implement Task Priority/Deadline",
+    "description": "Add priority and deadline fields to tasks.",
+    "status": "pending",
+    "dependencies": ["S05-T02"],
+    "priority": "medium",
+    "details": "Add columns to the tasks table. Update CRUD operations to handle these fields.",
+    "testStrategy": "Verify priority and deadline can be set and retrieved.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/29",
+    "pullRequestLink": "https://github.com/org/repo/pull/29",
+    "skillRequirements": ["rust", "rusqlite"],
+    "acceptanceCriteria": [
+      "Tasks have priority and deadline fields",
+      "Priority and deadline are stored correctly"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S05-T05",
+    "title": "Implement Daily/Weekly Planning",
+    "description": "Add features for planning tasks on a daily/weekly basis.",
+    "status": "pending",
+    "dependencies": ["S05-T02", "S05-T03"],
+    "priority": "medium",
+    "details": "Implement commands to assign tasks to specific days or weeks. Query and display planned tasks.",
+    "testStrategy": "Test assigning and viewing planned tasks.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/30",
+    "pullRequestLink": "https://github.com/org/repo/pull/30",
+    "skillRequirements": ["rust", "rusqlite", "clap"],
+    "acceptanceCriteria": [
+      "User can assign tasks to days/weeks",
+      "Planned tasks can be viewed"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S05-T06",
+    "title": "Implement Estimated Pomodoros",
+    "description": "Add a field to tasks for estimating the number of Pomodoros required.",
+    "status": "pending",
+    "dependencies": ["S05-T02"],
+    "priority": "low",
+    "details": "Add a column to the tasks table. Update CRUD and planning logic.",
+    "testStrategy": "Verify estimated Pomodoros can be set and retrieved.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/31",
+    "pullRequestLink": "https://github.com/org/repo/pull/31",
+    "skillRequirements": ["rust", "rusqlite"],
+    "acceptanceCriteria": [
+      "Tasks have an estimated Pomodoros field",
+      "Estimated Pomodoros are stored correctly"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S05-T07",
+    "title": "Implement Task Dependencies",
+    "description": "Allow defining dependencies between tasks.",
+    "status": "pending",
+    "dependencies": ["S05-T02"],
+    "priority": "medium",
+    "details": "Add a table for task dependencies. Implement logic to check and display dependencies.",
+    "testStrategy": "Test defining and checking task dependencies.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/32",
+    "pullRequestLink": "https://github.com/org/repo/pull/32",
+    "skillRequirements": ["rust", "rusqlite"],
+    "acceptanceCriteria": [
+      "User can define task dependencies",
+      "Dependencies are stored and can be viewed"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S06-T01",
+    "title": "Setup Git Integration",
+    "description": "Set up basic interaction with Git repositories.",
+    "status": "pending",
+    "dependencies": [],
+    "priority": "medium",
+    "details": "Use the `git2` crate to detect if the CLI is run inside a Git repo. Get repo path and current branch.",
+    "testStrategy": "Test detection and info retrieval in a Git repo.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/33",
+    "pullRequestLink": "https://github.com/org/repo/pull/33",
+    "skillRequirements": ["rust", "git2"],
+    "acceptanceCriteria": [
+      "CLI detects if it's in a Git repo",
+      "Can retrieve repo path and current branch"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S06-T02",
+    "title": "Implement Auto-Commit Messages",
+    "description": "Generate and suggest commit messages based on completed Pomodoros.",
+    "status": "pending",
+    "dependencies": ["S06-T01"],
+    "priority": "low",
+    "details": "Use `git2` to interact with the Git staging area/commit process. Format commit messages with session info.",
+    "testStrategy": "Test generating and applying a suggested commit message.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/34",
+    "pullRequestLink": "https://github.com/org/repo/pull/34",
+    "skillRequirements": ["rust", "git2"],
+    "acceptanceCriteria": [
+      "Suggested commit messages include session info"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S06-T03",
+    "title": "Implement Branch Time Tracking",
+    "description": "Associate Pomodoro sessions with specific Git branches.",
+    "status": "pending",
+    "dependencies": ["S06-T01", "S05-T03"],
+    "priority": "low",
+    "details": "Store branch information with session data. Update stats/reporting to filter by branch.",
+    "testStrategy": "Test tracking sessions on different branches and filtering reports.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/35",
+    "pullRequestLink": "https://github.com/org/repo/pull/35",
+    "skillRequirements": ["rust", "git2", "rusqlite"],
+    "acceptanceCriteria": [
+      "Sessions are associated with Git branches",
+      "Reports can be filtered by branch"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S06-T04",
+    "title": "Implement PR/Issue Time Logging",
+    "description": "Allow logging time spent on specific GitHub PRs or Issues.",
+    "status": "pending",
+    "dependencies": ["S06-T03", "reqwest"],
+    "priority": "medium",
+    "details": "Requires user to configure GitHub token. Use `reqwest` to interact with GitHub API. Link sessions to PR/Issue IDs.",
+    "testStrategy": "Test logging time to a test PR/Issue.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/36",
+    "pullRequestLink": "https://github.com/org/repo/pull/36",
+    "skillRequirements": ["rust", "reqwest", "git2", "rusqlite"],
+    "acceptanceCriteria": [
+      "User can link sessions to GitHub PRs/Issues",
+      "Time is logged to the specified PR/Issue"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S06-T05",
+    "title": "Setup Calendar API Client",
+    "description": "Set up the client for interacting with calendar APIs (e.g., Google Calendar).",
+    "status": "pending",
+    "dependencies": ["reqwest", "oauth2"],
+    "priority": "medium",
+    "details": "Use `reqwest` and `oauth2` for authentication flow and API calls. Handle token storage (`keyring`).",
+    "testStrategy": "Test authentication flow and token retrieval.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/37",
+    "pullRequestLink": "https://github.com/org/repo/pull/37",
+    "skillRequirements": ["rust", "reqwest", "oauth2", "keyring"],
+    "acceptanceCriteria": [
+      "Calendar API client is initialized",
+      "Authentication flow is functional",
+      "Tokens are stored securely"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S06-T06",
+    "title": "Implement Google Calendar Sync",
+    "description": "Implement synchronization logic for Google Calendar.",
+    "status": "pending",
+    "dependencies": ["S06-T05", "google-calendar3"],
+    "priority": "medium",
+    "details": "Use `google-calendar3` crate. Implement fetching/listing events and basic sync operations.",
+    "testStrategy": "Test syncing with a test Google Calendar.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/38",
+    "pullRequestLink": "https://github.com/org/repo/pull/38",
+    "skillRequirements": ["rust", "google-calendar3"],
+    "acceptanceCriteria": [
+      "Can fetch events from Google Calendar",
+      "Basic synchronization is functional"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S06-T07",
+    "title": "Implement Block Calendar During Sessions",
+    "description": "Create events in the calendar to block time during work sessions.",
+    "status": "pending",
+    "dependencies": ["S06-T06"],
+    "priority": "low",
+    "details": "Use the calendar API to create events marking the session duration.",
+    "testStrategy": "Test creating a calendar event for a session.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/39",
+    "pullRequestLink": "https://github.com/org/repo/pull/39",
+    "skillRequirements": ["rust", "google-calendar3"],
+    "acceptanceCriteria": [
+      "Calendar events are created for sessions"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S06-T08",
+    "title": "Implement Log Completed Sessions as Events",
+    "description": "Add completed Pomodoro sessions as events to the calendar.",
+    "status": "pending",
+    "dependencies": ["S06-T06", "S02-T05"],
+    "priority": "low",
+    "details": "Use the calendar API to log completed session details as events.",
+    "testStrategy": "Test logging a completed session to the calendar.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/40",
+    "pullRequestLink": "https://github.com/org/repo/pull/40",
+    "skillRequirements": ["rust", "google-calendar3"],
+    "acceptanceCriteria": [
+      "Completed sessions are logged as calendar events"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S06-T09",
+    "title": "Implement REST API Server Setup",
+    "description": "Set up the basic RESTful API server.",
+    "status": "pending",
+    "dependencies": ["tokio", "axum"],
+    "priority": "medium",
+    "details": "Use `axum` to create a simple HTTP server. Define basic routes.",
+    "testStrategy": "Test if the API server starts and responds to a basic health check.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/41",
+    "pullRequestLink": "https://github.com/org/repo/pull/41",
+    "skillRequirements": ["rust", "tokio", "axum"],
+    "acceptanceCriteria": [
+      "REST API server starts successfully",
+      "Basic routes are functional"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S06-T10",
+    "title": "Implement API Endpoints",
+    "description": "Implement API endpoints for status and session data retrieval.",
+    "status": "pending",
+    "dependencies": ["S06-T09", "S01-T01", "S02-T05"],
+    "priority": "medium",
+    "details": "Add endpoints to get current timer status and query session history.",
+    "testStrategy": "Test API endpoints with requests.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/42",
+    "pullRequestLink": "https://github.com/org/repo/pull/42",
+    "skillRequirements": ["rust", "axum", "serde_json", "rusqlite"],
+    "acceptanceCriteria": [
+      "API endpoints for status and session data are functional"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S06-T11",
+    "title": "Implement Webhook Support",
+    "description": "Add support for triggering webhooks on session events.",
+    "status": "pending",
+    "dependencies": ["S06-T09", "reqwest"],
+    "priority": "low",
+    "details": "Implement logic to send HTTP requests to configured webhook URLs on session start/end/pause.",
+    "testStrategy": "Configure a test webhook and verify it receives events.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/43",
+    "pullRequestLink": "https://github.com/org/repo/pull/43",
+    "skillRequirements": ["rust", "reqwest"],
+    "acceptanceCriteria": [
+      "Webhooks are triggered on session events"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S06-T12",
+    "title": "Implement Real-time Updates",
+    "description": "Add support for real-time status updates (e.g., via WebSockets).",
+    "status": "pending",
+    "dependencies": ["S06-T09"],
+    "priority": "low",
+    "details": "Integrate a WebSocket library or similar for real-time communication.",
+    "testStrategy": "Test real-time updates with a client.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/44",
+    "pullRequestLink": "https://github.com/org/repo/pull/44",
+    "skillRequirements": ["rust", "tokio", "axum", "websocket"],
+    "acceptanceCriteria": [
+      "Client can receive real-time status updates"
+    ],
+    "assignee": "Engineer 2"
+  }
+]
