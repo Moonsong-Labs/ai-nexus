@@ -28,7 +28,7 @@ print_usage() {
   echo ""
   echo "Options:"
   echo "  -k <GEMINI_API_KEY> Your Google AI Gemini API Key."
-  echo "                      (Recommended: Set as GOOGLE_API_KEY or GEMINI_API_KEY_ENV environment variable for security)"
+  echo "                      (Recommended: Set as GOOGLE_API_KEY or GEMINI_API_KEY environment variable for security)"
   echo "  -r <owner/repo>     Repository in 'owner/repo' format."
   echo "  -p <pr_number>      Pull Request number."
   echo "  -u <pr_url>         Full URL of the Pull Request."
@@ -64,7 +64,7 @@ else
 fi
 
 # Try to get API key from environment variables first
-GEMINI_API_KEY="${GOOGLE_API_KEY:-${GEMINI_API_KEY_ENV:-}}" # Uses GOOGLE_API_KEY if set, else GEMINI_API_KEY_ENV
+GEMINI_API_KEY="${GOOGLE_API_KEY:-${GEMINI_API_KEY:-}}" # Uses GOOGLE_API_KEY if set, else GEMINI_API_KEY
 
 while getopts "k:r:p:u:h" opt; do
   case ${opt} in
@@ -101,7 +101,7 @@ elif [ -n "$GEMINI_API_KEY" ]; then # API Key from environment variable
    echo "Using Gemini API Key from environment variable." >&2
 else # No API key provided
   echo "Error: Gemini API Key is required." >&2
-  echo "Provide it with -k option or set GOOGLE_API_KEY/GEMINI_API_KEY_ENV environment variable." >&2
+  echo "Provide it with -k option or set GOOGLE_API_KEY/GEMINI_API_KEY environment variable." >&2
   print_usage >&2
   exit 1
 fi
@@ -182,7 +182,6 @@ You role is to:
 2. Understand its purpose, structure, stack, methodology, ...
 3. Read the PR details
 4. Update the project memory according to the PR details
-(If the PR doesn't impact the project memory, just say NO CHANGE)
 
 --- Project Memory ---
 ${GLOBAL_MEMORY_CONTENT}
@@ -193,6 +192,8 @@ ${PR_DETAILS_CONTENT}
 ---
 
 ONLY OUTPUT THE MEMORY AS IS, DO NOT ADD EXPLANATION OR ANYTHING ELSE.
+(If the PR doesn't impact the project memory, just say NO CHANGE)
+ONLY UPDATE THE MEMORY BASED ON THE CHANGES IN THE PR. BE CONSERATIVE
 
 --- Project Memory ---
 "
@@ -257,7 +258,7 @@ if echo "$RESPONSE_JSON" | jq -r '.candidates[0].content.parts[0].text // ""' | 
     echo "Full API response: $RESPONSE_JSON" >&2
     exit 0
 fi
-echo "$RESPONSE_JSON" | jq -r '.candidates[0].content.parts[0].text // ""' > "$GLOBAL_MEMORY_FILE"
+echo "$RESPONSE_JSON" | jq -r '.candidates[0].content.parts[0].text // ""' | egrep -v '^--- Project Memory ---$|^---$' > "$GLOBAL_MEMORY_FILE"
 
 echo ""
 echo "--- Memory from Gemini (${GEMINI_MODEL_NAME}) ---"
