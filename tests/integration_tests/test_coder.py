@@ -114,9 +114,11 @@ Grade this actual trajectory:
 </trajectory>
 
 You should give a score between 0 and 1 and explain your reasoning. If any of the items in <Rubric> are not met, your score should be 0.5 or lower.
+You should justify how the each expectation in <expectations> was met. If you have the slightest doubt about them being met fully then they are not met.
 For example:
- - if the trajectory does not create a branch, your score should be 0.5 or lower even though the code is correct.
- - if the trajectory follows the correct steps but does not exactly comply with <expectations>, your score should be 0.5 or lower. Even if the deviations are minor.
+ - If the trajectory does not create a branch, your score should be 0.5 or lower even though the code is correct.
+ - If the trajectory follows the correct steps but does not exactly comply with <expectations>, your score should be 0.5 or lower. Even if the deviations are minor.
+ - If the app created an endpoint for an api in '/' but the expectations say it should have created a '/entry' endpoint, then expectations are NOT met. Score should be lower than 0.5
 """
 
 
@@ -126,11 +128,17 @@ class Result(TypedDict):
 
 
 class CodeEvaluatorInputs(TypedDict):
-    starting_code: str
+    starting_code: dict
+    user_input: str
 
 
 class CodeEvaluatorReferenceOutputs(TypedDict):
     expectations: str
+
+
+judge_llm = init_chat_model(
+    "google_genai:gemini-2.0-flash", temperature=0
+).with_structured_output(Result)
 
 
 async def evaluate_code_scorer(
@@ -138,10 +146,6 @@ async def evaluate_code_scorer(
     outputs: str,
     reference_outputs: CodeEvaluatorReferenceOutputs,
 ) -> EvaluatorResult:
-    judge_llm = init_chat_model(
-        "google_genai:gemini-2.0-flash", temperature=0
-    ).with_structured_output(Result)
-
     ret = judge_llm.invoke(
         EVAL_PROMPT.format(
             starting_code=inputs["starting_code"],
@@ -172,28 +176,35 @@ async def evaluate_code(
     )
 
 
-@pytest.mark.asyncio
-async def test_coder_creates_rest_api():
+async def invoke_agent(inputs: CodeEvaluatorInputs) -> dict:
     mock_api = MockGithubApi()
     github_tools = get_github_tools(mock_api)
+    mock_api.files = inputs["starting_code"]
 
     # Create and build graph
     graph = graph_builder(github_tools).compile()
 
-    input = "Create a python JSON REST API server with a root entry point"
-
     result = await graph.ainvoke(
-        State(messages=[HumanMessage(content=input)]),
+        State(messages=[HumanMessage(content=inputs["user_input"])]),
         config={
             "configurable": {"thread_id": str(uuid.uuid4())},
         },
     )
 
-    starting_code = mock_api.files
+    return result
+
+
+@pytest.mark.asyncio
+async def test_coder_creates_rest_api():
+    inputs = CodeEvaluatorInputs(
+        user_input="Create a python JSON REST API server with a root entry point",
+        starting_code={},
+    )
     expectations = "The agent should have created a JSON REST API server with a '/hello' entry point. If it added dependencies, it should have added them to the proper dependencies file"
+    result = await invoke_agent(inputs)
 
     eval_result = await evaluate_code(
-        CodeEvaluatorInputs(starting_code=starting_code),
+        inputs,
         result,
         CodeEvaluatorReferenceOutputs(expectations=expectations),
     )
