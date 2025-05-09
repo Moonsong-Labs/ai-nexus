@@ -1,117 +1,97 @@
-import logging
-import uuid
-
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.store.memory import InMemoryStore
 from langsmith import Client
-from openevals.llm import create_llm_as_judge
-from openevals.prompts import CORRECTNESS_PROMPT
+from testing import create_async_graph_caller, get_logger
+from testing.evaluators import LLMJudge
 
-# Stop changing this for graph, we need the builder
-from tester.graph import builder as tester_graph
+from tester.graph import builder as tester_graph_builder
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+# Setup basic logging for the test
+logger = get_logger(__name__)
 
+# Define the LangSmith dataset ID
+LANGSMITH_DATASET_NAME = "tester-agent-test-dataset"
+CORRECTNESS_PROMPT = """You are an expert data labeler evaluating model outputs for correctness.
+Your task is to assign a score from 0.0 to 1.0 based on the following rubric:
 
-def correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict):
-    evaluator = create_llm_as_judge(
-        prompt=CORRECTNESS_PROMPT,
-        model="google_genai:gemini-2.0-flash-lite",
-        feedback_key="correctness",
-    )
+<Rubric>
+  A correct tester agent response:
+  - Properly analyzes requirements and identifies ambiguities
+  - Asks clear, relevant questions when information is missing or unclear
+  - Generates comprehensive tests that verify system behavior according to requirements
+  - Provides proper traceability between tests and requirements
+  - Includes both happy path tests and edge case tests
+  - Does not invent business rules or make assumptions beyond what is stated
+  - Does not define code architecture or suggest design changes
 
-    try:
-        outputs_contents = outputs["output"]
+  When scoring, you should penalize:
+  - Making assumptions about functionality that is not explicitly stated
+  - Inventing business rules or behaviors
+  - Generating tests without proper requirement traceability
+  - Missing important edge cases that should be tested
+  - Failing to ask questions when requirements are ambiguous
+  - Excessive verbosity or unnecessary details
+</Rubric>
 
-        eval_result = evaluator(
-            inputs=inputs,
-            outputs=outputs_contents,
-            reference_outputs=reference_outputs,
-        )
-        return eval_result
-    except Exception as e:
-        pytest.fail(f"Error during evaluation: {e}")
-        return 0
+<Instructions>
+  - Carefully read the input and output
+  - Focus on how well the agent generates questions or tests based on the requirements
+</Instructions>
+
+<Reminder>
+  The goal is to evaluate how well the Test Agent performs its role in generating tests based on requirements.
+</Reminder>
+
+<input>
+{inputs}
+</input>
+
+<output>
+{outputs}
+</output>
+
+Use the reference outputs below to help you evaluate the correctness of the response:
+
+<reference_outputs>
+{reference_outputs}
+</reference_outputs>
+"""
+
+# Create a LLMJudge
+llm_judge = LLMJudge()
 
 
 @pytest.mark.asyncio
-async def test_tester_hello_response():
+async def test_tester_agent_langsmith(pytestconfig):
     """
-    Tests the tester agent responds to a hello message without asking questions.
+    Tests the tester agent graph using langsmith.aevaluate against a LangSmith dataset.
     """
-
     client = Client()
-    # Create both a memory saver for checkpointing and an in-memory store
-    memory_saver = MemorySaver()
-    memory_store = InMemoryStore()
 
-    # Compile the graph with both the checkpointer and store
-    graph_compiled = tester_graph.compile(checkpointer=memory_saver, store=memory_store)
+    if not client.has_dataset(dataset_name=LANGSMITH_DATASET_NAME):
+        logger.error(f"dataset {LANGSMITH_DATASET_NAME} not found")
+        datasets = list(client.list_datasets())
+        logger.error(f"found {len(datasets)} existing datasets")
+        for dataset in datasets:
+            logger.error(f"\tid: {dataset.id}, name: {dataset.name}")
+        pytest.fail(f"dataset {LANGSMITH_DATASET_NAME} not found")
 
-    async def call_tester_agent(input_message: dict):
-        # put all this into a try block
-        try:
-            input_message = input_message["message"]
+    logger.info(f"evaluating dataset: {LANGSMITH_DATASET_NAME}")
 
-            result = await graph_compiled.ainvoke(
-                {"messages": [HumanMessage(content=input_message)]},
-                config={
-                    "configurable": {
-                        "thread_id": str(uuid.uuid4()),
-                        "user_id": "test_user",
-                    }
-                },
+    graph_compiled = tester_graph_builder.compile(checkpointer=MemorySaver())
+
+    results = await client.aevaluate(
+        create_async_graph_caller(graph_compiled),
+        data=LANGSMITH_DATASET_NAME,
+        evaluators=[
+            llm_judge.create_correctness_evaluator(
+                plaintext=False, prompt=CORRECTNESS_PROMPT
             )
-            if isinstance(result, dict) and "messages" in result and result["messages"]:
-                last_message = result["messages"][-1]
-                if isinstance(last_message, AIMessage):
-                    output_content = last_message.content
-                elif hasattr(
-                    last_message, "content"
-                ):  # Handle other message types if needed
-                    output_content = last_message.content
-                else:
-                    logger.warning(
-                        "Last message is not AIMessage or lacks content: %s",
-                        last_message,
-                    )
-                    output_content = str(
-                        last_message
-                    )  # Fallback to string representation
-            else:
-                pytest.fail(f"Unexpected graph output format: {result}")
-                output_content = str(result)  # Fallback
-        except Exception as invoke_exception:
-            logger.error(
-                "Error invoking graph for input %s: %s",
-                input_message,
-                invoke_exception,
-                exc_info=True,
-            )
-            return f"Error during graph execution: {invoke_exception}"
+        ],
+        experiment_prefix="tester-agent-correctness-eval",
+        num_repetitions=3,
+        max_concurrency=2,
+    )
 
-        return output_content
-
-    try:
-        logger.info(
-            "Testing tester agent with input dataset: tester-agent-test-dataset"
-        )
-        results = await client.aevaluate(
-            call_tester_agent,
-            data="tester-agent-test-dataset",
-            evaluators=[correctness_evaluator],
-            experiment_prefix="tester-agent-hello-response",
-            num_repetitions=1,
-        )
-        logger.info(f"LangSmith Evaluation Results: {results}")
-
-        assert results is not None, "LangSmith evaluation did not return results."
-
-    except Exception as e:
-        logger.error(f"Error during test: {e}", exc_info=True)
-        pytest.fail(f"Test failed with error: {e}")
+    # Assert that results were produced
+    assert results is not None, "evaluation did not return results"
