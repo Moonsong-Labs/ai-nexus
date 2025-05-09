@@ -52,7 +52,7 @@ async def analyze_requirements(
 ) -> dict:
     """Analyze requirements and identify ambiguities.
     Will either ask questions if information is missing or generate tests if requirements are clear.
-    """
+    """  # noqa: D205
     try:
         configurable = configuration.Configuration.from_runnable_config(config)
 
@@ -106,7 +106,7 @@ async def generate_tests(
 ) -> dict:
     """Generate tests based on the requirements.
     If more information is needed, will ask questions instead.
-    """
+    """  # noqa: D205
     try:
         configurable = configuration.Configuration.from_runnable_config(config)
 

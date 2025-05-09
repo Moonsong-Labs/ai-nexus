@@ -16,16 +16,11 @@ The Test Agent is a specialized component in our multi-agent software developmen
 ```mermaid
 flowchart TD
     A[Receive Requirements] --> B[Analyze Requirements]
-    B --> C[Identify Ambiguities/Missing Information]
-    C --> D[Send Questions]
-    D --> E[Wait for Answers]
-    E --> F[Group Requirements by Category]
-    F --> G[For Each Category]
-    G --> H[Generate Tests for Category]
-    H --> I[Send Tests with Traceability]
-    I --> J{More Categories?}
-    J -->|Yes| G
-    J -->|No| K[Complete]
+    B --> C{Requirements Clear?}
+    C -->|No| D[Ask Questions]
+    D --> A
+    C -->|Yes| E[Generate Tests]
+    E --> F[Complete]
 ```
 
 ## Operating Principles
