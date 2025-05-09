@@ -37,6 +37,8 @@ jobs:
 
       - name: Determine PR Number to Use
         id: pr_details
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "pr_num=${{ github.event.inputs.pr_number }}" >> $GITHUB_OUTPUT
