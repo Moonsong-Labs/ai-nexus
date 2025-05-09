@@ -11,8 +11,6 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import interrupt
-from langchain_core.messages import AIMessage
-
 from pydantic import BaseModel, Field
 
 from requirement_gatherer import configuration, tools, utils
@@ -63,12 +61,11 @@ def call_evaluator_model(
     sys = configurable.evaluator_system_prompt.format(
         user_info=formatted, time=datetime.now().isoformat()
     )
-    
+
     veredict = evaluator.invoke(
         [{"role": "system", "content": sys}, *state.messages],
         {"configurable": utils.split_model_and_provider(configurable.model)},
     )
-    print(veredict)
     return {"veredict": veredict}
 
 
@@ -166,7 +163,9 @@ builder.add_node(human_feedback)
 builder.add_node(store_memory)
 
 builder.add_edge("__start__", "call_model")
-builder.add_conditional_edges("call_model", route_memory, ["store_memory", "human_feedback"])
+builder.add_conditional_edges(
+    "call_model", route_memory, ["store_memory", "human_feedback"]
+)
 builder.add_edge("store_memory", "call_model")
 builder.add_edge("human_feedback", "call_evaluator_model")
 builder.add_conditional_edges(
