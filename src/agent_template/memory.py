@@ -92,15 +92,7 @@ class SemanticMemory:
     def _initialize(self) -> None:
         """Initialize the memory store with embeddings."""
         if self.store is None:
-            gemini_embeddings = GoogleGenerativeAIEmbeddings(
-                model="models/gemini-embedding-exp-03-07"
-            )
-            self.store = InMemoryStore(
-                index={
-                    "dims": 3072,
-                    "embed": gemini_embeddings,
-                }
-            )
+            self.store = create_memory_store()
 
     def get_tools(self) -> List[Tool]:
         """Get the memory management tools.
@@ -127,11 +119,11 @@ class SemanticMemory:
 
 def create_memory_tools(namespace: str, store: BaseStore) -> List[Tool]:
     """Create memory management and search tools for the agent.
-    
+
     Args:
         namespace: The namespace to use for memory operations
         store: The memory store to use for tool operations
-        
+
     Returns:
         A list of memory-related tools (manage and search)
     """
@@ -144,7 +136,7 @@ def create_memory_tools(namespace: str, store: BaseStore) -> List[Tool]:
 
 def create_memory_store() -> BaseStore:
     """Create a new memory store with Gemini embeddings.
-    
+
     Returns:
         A new InMemoryStore configured with Gemini embeddings
     """
