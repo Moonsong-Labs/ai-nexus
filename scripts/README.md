@@ -42,6 +42,29 @@ This directory contains utility scripts for the project.
 *   **Prerequisites**: `curl`, `jq`, and [`fetch_pr_details.sh`](scripts/fetch_pr_details.sh:1) must be in the same directory and executable.
 *   **Output**: Modifies the [`project_memories/global.md`](project_memories/global.md:1) file (or the file specified by `GLOBAL_MEMORY_FILE` within the script) with the updated memory. If the Gemini model suggests "NO CHANGE", the file is not modified.
 
+### 4. `update_project_readmes.sh`
+
+*   **Purpose**: Updates `README.md` files in directories affected by a Pull Request. It uses [`fetch_pr_details.sh`](scripts/fetch_pr_details.sh:1) to get PR information (specifically the diff of changed files) and then the Gemini 2.5 Pro model to analyze the changes and update the relevant `README.md` files.
+*   **Usage**:
+    ```bash
+    ./update_project_readmes.sh -k <GEMINI_API_KEY> [-r <owner/repo> -p <pr_number> | -u <pr_url>]
+    ```
+    *   `-k <GEMINI_API_KEY>`: Your Google AI Gemini API Key. Can also be set via `GOOGLE_API_KEY` or `GEMINI_API_KEY_ENV` environment variables, or by placing it in a `.env` file in the script's directory.
+    *   `-r <owner/repo> -p <pr_number>`: Specify the repository and PR number.
+    *   `-u <pr_url>`: Alternatively, provide the full URL of the Pull Request.
+*   **Prerequisites**: `curl`, `jq`, `git`, and [`fetch_pr_details.sh`](scripts/fetch_pr_details.sh:1) must be in the same directory and executable.
+ *   **Output**: Modifies `README.md` files in directories affected by the PR if the Gemini model determines an update is necessary. If the Gemini model suggests "NO CHANGE" for a specific README, that file is not modified.
+
+### 5. `new_agent.sh`
+
+*   **Purpose**: Scaffold a new agent from the `agent_template` directory, including updating imports, graph names, and registering in `pyproject.toml` and `langgraph.json`.
+*   **Usage**:
+    ```bash
+    ./new_agent.sh <module_name> "<Human-Readable Agent Name>"
+    ```
+*   **Prerequisites**: `bash`, `sed`, `find`, `xargs`.
+*   **Output**: Creates `src/<module_name>` with updated code, updates the project’s `pyproject.toml` and `langgraph.json` to register the new agent.
+
 ## GitHub Actions Workflow
 
 There is a GitHub Actions workflow located at [`.github/workflows/update_project_memory.yml`](.github/workflows/update_project_memory.yml:1) that utilizes the [`update_project_memory_from_pr.sh`](scripts/update_project_memory_from_pr.sh:1) script. This workflow triggers automatically when a Pull Request is merged to the `main` branch or can be manually triggered. It updates the project memory and creates a new PR if changes are detected.
