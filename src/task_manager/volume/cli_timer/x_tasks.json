@@ -1,0 +1,286 @@
+[
+  {
+    "id": "S01-T01",
+    "title": "Init Repo & Structure",
+    "description": "Create a new Git repository and set up the basic Rust project structure.",
+    "status": "pending",
+    "dependencies": [],
+    "priority": "medium",
+    "details": "Use Cargo to initialize the Rust project. Ensure a basic file structure is in place.",
+    "testStrategy": "Run `cargo build` successfully.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/1",
+    "pullRequestLink": "https://github.com/org/repo/pull/1",
+    "skillRequirements": ["rust", "git"],
+    "acceptanceCriteria": [
+      "Project structure follows team standards",
+      "Basic README.md is in place",
+      "Project builds successfully"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S01-T02",
+    "title": "CLI Parsing (Core Commands)",
+    "description": "Set up command-line argument parsing for `start`, `status`, and `stop` commands using `clap`.",
+    "status": "pending",
+    "dependencies": ["S01-T01"],
+    "priority": "medium",
+    "details": "Define the basic command structure using `clap` attributes.",
+    "testStrategy": "CLI parses core commands without errors.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/2",
+    "pullRequestLink": "https://github.com/org/repo/pull/2",
+    "skillRequirements": ["rust", "clap"],
+    "acceptanceCriteria": [
+      "`start`, `status`, and `stop` commands are defined",
+      "Basic CLI help message is available"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S01-T03",
+    "title": "Timer Core (Basic)",
+    "description": "Implement the core timer logic, including countdown and basic start/stop state management using `tokio` and `chrono`.",
+    "status": "pending",
+    "dependencies": ["S01-T01"],
+    "priority": "high",
+    "details": "Use `tokio::time` for the timer and `chrono` for time handling.",
+    "testStrategy": "Timer counts down and can be stopped programmatically.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/3",
+    "pullRequestLink": "https://github.com/org/repo/pull/3",
+    "skillRequirements": ["rust", "tokio", "chrono"],
+    "acceptanceCriteria": [
+      "Timer counts down from a set duration",
+      "Timer state can be started and stopped"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S01-T04",
+    "title": "Integrate `start` Command",
+    "description": "Connect the `start` CLI command parsing to the timer core initialization logic.",
+    "status": "pending",
+    "dependencies": ["S01-T02", "S01-T03"],
+    "priority": "high",
+    "details": "Handle the `start` subcommand in `main.rs`.",
+    "testStrategy": "Running `tasktimer start` begins the timer countdown.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/4",
+    "pullRequestLink": "https://github.com/org/repo/pull/4",
+    "skillRequirements": ["rust"],
+    "acceptanceCriteria": [
+      "`start` command successfully initializes and runs the timer"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S01-T05",
+    "title": "Integrate `status` Command",
+    "description": "Connect the `status` CLI command parsing to the timer state reading logic.",
+    "status": "pending",
+    "dependencies": ["S01-T02", "S01-T03"],
+    "priority": "medium",
+    "details": "Handle the `status` subcommand in `main.rs`.",
+    "testStrategy": "Running `tasktimer status` displays the remaining time.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/5",
+    "pullRequestLink": "https://github.com/org/repo/pull/5",
+    "skillRequirements": ["rust"],
+    "acceptanceCriteria": [
+      "`status` command displays the current timer state (running/stopped) and remaining time"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S01-T06",
+    "title": "Integrate `stop` Command",
+    "description": "Connect the `stop` CLI command parsing to the timer stop logic.",
+    "status": "pending",
+    "dependencies": ["S01-T02", "S01-T03"],
+    "priority": "high",
+    "details": "Handle the `stop` subcommand in `main.rs`.",
+    "testStrategy": "Running `tasktimer stop` halts the timer.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/6",
+    "pullRequestLink": "https://github.com/org/repo/pull/6",
+    "skillRequirements": ["rust"],
+    "acceptanceCriteria": [
+      "`stop` command successfully terminates the running timer"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S02-T01",
+    "title": "Timer Core (Pause/Resume)",
+    "description": "Add pause and resume functionality and state to the timer core.",
+    "status": "pending",
+    "dependencies": ["S01-T03"],
+    "priority": "high",
+    "details": "Modify timer state and logic to handle paused state and resume countdown.",
+    "testStrategy": "Timer can be paused and resumed accurately.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/7",
+    "pullRequestLink": "https://github.com/org/repo/pull/7",
+    "skillRequirements": ["rust", "tokio", "chrono"],
+    "acceptanceCriteria": [
+      "Timer can be paused and holds its remaining time",
+      "Timer can be resumed from the paused state",
+      "`status` command reflects paused state"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S02-T02",
+    "title": "Integrate `pause`/`resume` Commands",
+    "description": "Connect the `pause` and `resume` CLI command parsing to the timer pause/resume logic.",
+    "status": "pending",
+    "dependencies": ["S01-T02", "S02-T01"],
+    "priority": "high",
+    "details": "Handle the `pause` and `resume` subcommands in `main.rs`.",
+    "testStrategy": "Running `tasktimer pause` and `tasktimer resume` controls the timer state.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/8",
+    "pullRequestLink": "https://github.com/org/repo/pull/8",
+    "skillRequirements": ["rust"],
+    "acceptanceCriteria": [
+      "`pause` command successfully pauses the timer",
+      "`resume` command successfully resumes the timer"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S02-T03",
+    "title": "History File Setup",
+    "description": "Use `dirs` to find the appropriate location for the history file (`.tasktimer/history.log`) and ensure the directory and file can be created.",
+    "status": "pending",
+    "dependencies": ["S01-T01"],
+    "priority": "medium",
+    "details": "Implement logic to get the user's home directory and create the `.tasktimer` directory and `history.log` file if they don't exist.",
+    "testStrategy": "Running setup logic creates the directory and file.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/9",
+    "pullRequestLink": "https://github.com/org/repo/pull/9",
+    "skillRequirements": ["rust", "dirs", "file I/O"],
+    "acceptanceCriteria": [
+      "`.tasktimer` directory is created in the user's home directory if it doesn't exist",
+      "`history.log` file is created inside `.tasktimer` if it doesn't exist"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S02-T04",
+    "title": "Session Tracking Logic",
+    "description": "Implement logic to record details of completed or stopped sessions (start time, end time, duration, status).",
+    "status": "pending",
+    "dependencies": ["S01-T03", "S02-T01"],
+    "priority": "high",
+    "details": "Define a data structure for sessions and capture relevant data points upon session completion or stopping.",
+    "testStrategy": "Session data is correctly captured in memory after a timer runs or is stopped.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/10",
+    "pullRequestLink": "https://github.com/org/repo/pull/10",
+    "skillRequirements": ["rust", "chrono"],
+    "acceptanceCriteria": [
+      "Session data includes start time, end time, duration, and completion status",
+      "Data is captured when a session ends (completed or stopped)"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S02-T05",
+    "title": "Integrate History Writing",
+    "description": "Integrate the session tracking logic with writing session data to the `history.log` file.",
+    "status": "pending",
+    "dependencies": ["S02-T03", "S02-T04"],
+    "priority": "high",
+    "details": "Append session data to the `history.log` file in a simple format (e.g., CSV, JSON lines).",
+    "testStrategy": "Running a timer session results in data being written to the history file.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/11",
+    "pullRequestLink": "https://github.com/org/repo/pull/11",
+    "skillRequirements": ["rust", "file I/O"],
+    "acceptanceCriteria": [
+      "Completed/stopped session data is appended to `history.log`",
+      "Data format in the file is consistent and readable"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S03-T01",
+    "title": "CLI Parsing (Custom Duration)",
+    "description": "Add support for `--work` and `--break` CLI arguments using `clap` to customize session durations.",
+    "status": "pending",
+    "dependencies": ["S01-T02"],
+    "priority": "medium",
+    "details": "Add new arguments to the `start` subcommand.",
+    "testStrategy": "CLI parses `--work` and `--break` arguments correctly.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/12",
+    "pullRequestLink": "https://github.com/org/repo/pull/12",
+    "skillRequirements": ["rust", "clap"],
+    "acceptanceCriteria": [
+      "`--work` and `--break` arguments are defined for the `start` command",
+      "Argument values are accessible in the application logic"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S03-T02",
+    "title": "Integrate Custom Duration",
+    "description": "Modify the timer initialization logic to use custom durations provided via CLI arguments (`--work`, `--break`).",
+    "status": "pending",
+    "dependencies": ["S03-T01", "S01-T03"],
+    "priority": "high",
+    "details": "Pass parsed duration values from CLI handling to the timer core.",
+    "testStrategy": "Timer runs for the duration specified by `--work`.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/13",
+    "pullRequestLink": "https://github.com/org/repo/pull/13",
+    "skillRequirements": ["rust"],
+    "acceptanceCriteria": [
+      "Timer uses the duration specified by `--work` if provided",
+      "Default duration is used if `--work` is not provided"
+    ],
+    "assignee": "Engineer 1"
+  },
+  {
+    "id": "S03-T03",
+    "title": "CLI Parsing (`clear` Command)",
+    "description": "Add command-line argument parsing for the `clear` command using `clap`.",
+    "status": "pending",
+    "dependencies": ["S01-T02"],
+    "priority": "medium",
+    "details": "Define the `clear` subcommand using `clap` attributes.",
+    "testStrategy": "CLI parses the `clear` command without errors.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/14",
+    "pullRequestLink": "https://github.com/org/repo/pull/14",
+    "skillRequirements": ["rust", "clap"],
+    "acceptanceCriteria": [
+      "`clear` command is defined",
+      "Basic CLI help message includes `clear`"
+    ],
+    "assignee": "Engineer 2"
+  },
+  {
+    "id": "S03-T04",
+    "title": "Implement `clear` Command Logic",
+    "description": "Implement the logic to delete the session history file (`history.log`).",
+    "status": "pending",
+    "dependencies": ["S03-T03", "S02-T03"],
+    "priority": "high",
+    "details": "Use Rust's file system APIs to remove the history file.",
+    "testStrategy": "Running `tasktimer clear` removes the history file.",
+    "subtasks": [],
+    "issueLink": "https://github.com/org/repo/issues/15",
+    "pullRequestLink": "https://github.com/org/repo/pull/15",
+    "skillRequirements": ["rust", "file I/O"],
+    "acceptanceCriteria": [
+      "`clear` command deletes the `history.log` file",
+      "Command handles the case where the file does not exist"
+    ],
+    "assignee": "Engineer 2"
+  }
+]
