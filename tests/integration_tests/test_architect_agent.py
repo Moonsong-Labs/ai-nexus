@@ -24,6 +24,7 @@ llm_judge = LLMJudge()
 
 ARCHITECT_DATASET_NAME = "Architect-dataset"
 
+
 @pytest.mark.asyncio
 async def test_architect_write_system_requirements(pytestconfig):
     """
@@ -55,6 +56,7 @@ async def test_architect_write_system_requirements(pytestconfig):
     # Assert that results were produced.
     assert results is not None, "evaluation did not return results"
 
+
 @pytest.mark.asyncio
 async def test_architect_whole_dataset(pytestconfig):
     """
@@ -84,6 +86,7 @@ async def test_architect_whole_dataset(pytestconfig):
     # Assert that results were produced.
     assert results is not None, "evaluation did not return results"
 
+
 # This function loads text files before the human prompt of
 # the experiment to properly give context to the agent
 async def run_graph_with_attachments(inputs: dict, attachments: dict):
@@ -91,7 +94,9 @@ async def run_graph_with_attachments(inputs: dict, attachments: dict):
     memory_store = InMemoryStore()
 
     # Compile the graph - needs checkpointer for stateful execution during evaluation
-    graph_compiled = graph_builder.compile(checkpointer=memory_saver, store=memory_store)
+    graph_compiled = graph_builder.compile(
+        checkpointer=memory_saver, store=memory_store
+    )
     # Check if the input is already formatted as 'messages'
     if "messages" in inputs and isinstance(inputs["messages"], list):
         # Use the messages list directly, converting dicts to BaseMessage objects if needed
@@ -108,9 +113,7 @@ async def run_graph_with_attachments(inputs: dict, attachments: dict):
             ]
             # Ensure we have actual messages after conversion
             if not graph_input_messages:
-                logger.error(
-                    "Failed to parse messages from example: %s", inputs
-                )
+                logger.error("Failed to parse messages from example: %s", inputs)
                 return {
                     "output": "Error: Could not parse messages from dataset example."
                 }
@@ -128,9 +131,7 @@ async def run_graph_with_attachments(inputs: dict, attachments: dict):
         graph_input_messages = [HumanMessage(content=inputs["input"])]
     else:
         # Attempt to find another suitable string input key
-        input_key = next(
-            (k for k in inputs if isinstance(inputs[k], str)), None
-        )
+        input_key = next((k for k in inputs if isinstance(inputs[k], str)), None)
         if input_key:
             logger.warning(
                 "Dataset example missing 'messages' and 'input' keys, using '%s': %s",
@@ -153,7 +154,11 @@ async def run_graph_with_attachments(inputs: dict, attachments: dict):
 
         # Invoke the graph
         for key, attachment in attachments.items():
-            graph_attachments.append(SystemMessage(content=f"These are the contents of the {key} file:\n\n{attachment["reader"].read()}"))
+            graph_attachments.append(
+                SystemMessage(
+                    content=f"These are the contents of the {key} file:\n\n{attachment['reader'].read()}"
+                )
+            )
 
         graph_attachments.extend(graph_input_messages)
         graph_input = {"messages": graph_attachments}
@@ -177,9 +182,7 @@ async def run_graph_with_attachments(inputs: dict, attachments: dict):
                     "Last message is not AIMessage or lacks content: %s",
                     last_message,
                 )
-                output_content = str(
-                    last_message
-                )  # Fallback to string representation
+                output_content = str(last_message)  # Fallback to string representation
         else:
             pytest.fail(f"Unexpected graph output format: {result}")
             output_content = str(result)  # Fallback
@@ -194,6 +197,7 @@ async def run_graph_with_attachments(inputs: dict, attachments: dict):
             exc_info=True,
         )
         return f"Error during graph execution: {invoke_exception}"
+
 
 # Helper function to create message objects with type checking
 def _create_message(msg_dict: dict):
