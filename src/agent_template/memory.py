@@ -83,7 +83,10 @@ class SemanticMemory:
         self.agent_name = agent_name
         self.store = store
         self._tools = None
-        self.namespace = ("memories", self.agent_name,)
+        self.namespace = (
+            "memories",
+            self.agent_name,
+        )
         self._initialize()
 
     def _initialize(self) -> None:
@@ -108,7 +111,7 @@ class SemanticMemory:
         if not self._tools:
             self._tools = create_memory_tools(self.namespace, self.store)
         return self._tools
-    
+
     async def search_memories(self, query: str, user_id: str, limit: int = 5):
         """Search memories based on the query.
 
@@ -119,23 +122,32 @@ class SemanticMemory:
         Returns:
             A list of memory search results.
         """
-        return await self.store.search(
-            self.namespace, query=query, limit=limit
-        )
+        return await self.store.search(self.namespace, query=query, limit=limit)
 
 
 def create_memory_tools(namespace: str, store: BaseStore) -> List[Tool]:
+    """Create memory management and search tools for the agent.
+    
+    Args:
+        namespace: The namespace to use for memory operations
+        store: The memory store to use for tool operations
+        
+    Returns:
+        A list of memory-related tools (manage and search)
+    """
     tools = [
-        create_manage_memory_tool(
-            namespace=namespace, store=store
-        ),
-        create_search_memory_tool(
-            namespace=namespace, store=store
-        ),
-        ]
+        create_manage_memory_tool(namespace=namespace, store=store),
+        create_search_memory_tool(namespace=namespace, store=store),
+    ]
     return tools
 
+
 def create_memory_store() -> BaseStore:
+    """Create a new memory store with Gemini embeddings.
+    
+    Returns:
+        A new InMemoryStore configured with Gemini embeddings
+    """
     gemini_embeddings = GoogleGenerativeAIEmbeddings(
         model="models/gemini-embedding-exp-03-07"
     )
