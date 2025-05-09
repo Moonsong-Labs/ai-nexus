@@ -209,7 +209,7 @@ async def run_graph_with_attachments(inputs: dict, attachments: dict):
     try:
         graph_attachments = list()
 
-        # Invoke the graph
+        # Adds attachments as System Messages before the human message
         for key, attachment in attachments.items():
             graph_attachments.append(
                 SystemMessage(
@@ -220,6 +220,7 @@ async def run_graph_with_attachments(inputs: dict, attachments: dict):
         graph_attachments.extend(graph_input_messages)
         graph_input = {"messages": graph_attachments}
 
+        # Invoke the graph
         result = await graph_compiled.ainvoke(graph_input, config=config)
 
         # Format the output for the evaluator
