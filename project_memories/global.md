@@ -15,7 +15,6 @@
 6.  **Configuration Management:** Agents have configurable parameters, including LLM models and system prompts, managed via `Configuration` dataclasses.
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
 
----
 
 ## 2. The Memory Bank System (Conceptualized for "Cursor")
 
@@ -134,7 +133,6 @@ The Memory Bank is designed as Cursor's (and potentially other agents') sole sou
     *   **Known Issues:** Tracks identified bugs or problems.
     *   *This file is also expected to be frequently updated.*
 
----
 
 ## 3. Project-Level Standards & Goals (`project_memories/PRD.md`)
 
@@ -168,7 +166,6 @@ This file outlines the overarching standards and technological choices for the A
     *   **`gemini-1.5-flash-latest` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (PRD mentions `gemini-2.0-flash`, current common models are 1.5 series. The intent is a fast model.)
     *   **`gemini-1.5-pro-latest` (or similar pro variants):** Preferred for complex tasks needing reasoning. (PRD mentions `gemini-2.5-pro-preview-03-25`, intent is a powerful model.)
 
----
 
 ## 4. General Agent Architecture (based on `src/agent_template/` and common patterns)
 
@@ -328,7 +325,6 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
         *   Uses `split_model_and_provider` to determine the provider and model.
         *   Supports `google_genai` and `openai` providers.
 
----
 
 ## 5. Specific Agent Details
 
@@ -524,10 +520,46 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
 
 *   **Role:** Elicits, clarifies, and refines project goals, needs, and constraints.
 *   **`prompts.py` (`src/requirement_gatherer/prompts.py`):**
-    *   `SYSTEM_PROMPT = """You are an agent responsible for gathering and clarifying requirements."""` (Likely more detailed in a full implementation).
-*   **Structure:** Follows the `agent_template` pattern.
-    *   `configuration.py`, `graph.py`, `state.py`, `tools.py` (with `upsert_memory`), `utils.py` are all standard, similar to `agent_template`.
-    *   Its primary function is to interact and use its memory capabilities (`upsert_memory` tool and retrieval in `call_model`) to build a comprehensive understanding of requirements.
+    *   The `SYSTEM_PROMPT` is a detailed markdown document guiding the agent. Key aspects include:
+        *   **Operating Principles:** First question classification (vision, project type), adaptive inquiry depth (hobby projects focus on Vision and Functional Requirements; full products are comprehensive), prioritization intelligence, product-first mindset, zero-assumption rule, iterative refinement, structured output, proactive clarification, memory utilization.
+        *   **Requirement Bank Structure:** Defines categories like Vision, Goals, User Stories, Functional/Non-Functional Requirements, Constraints, Risks, etc.
+        *   **Interaction Style:** Professional, empathetic, inquisitive, structured.
+        *   **Workflow:**
+            1.  Begin with Project Classification (vision, hobby/full product). For hobby/personal projects, focus only on Vision and Functional Requirements.
+            2.  Intelligent Questioning based on project type and context.
+            3.  Iterative Deep Dive for each relevant section of the Requirement Bank.
+            4.  Memory Update using `upsert_memory` tool.
+            5.  Consolidation and Review.
+            6.  Handling User Feedback.
+        *   **Tool Usage:** `upsert_memory` for storing gathered information.
+*   **Structure:** While based on `agent_template`, its graph has specific modifications.
+    *   `configuration.py`: Standard.
+    *   `graph.py` (`src/requirement_gatherer/graph.py`):
+        *   Nodes: `call_model` (from template), `store_memory` (from template), `call_evaluator_model`, `human_feedback`.
+        *   `call_evaluator_model` node:
+            *   Retrieves `Configuration` from `RunnableConfig`.
+            *   Retrieves recent memories from the `store` based on `user_id` and recent messages.
+            *   Formats these memories for inclusion in the system prompt.
+            *   Uses `configurable.evaluator_system_prompt` (content not specified in this memory, but used by the node) formatted with memories and current time.
+            *   Invokes an `evaluator` (presumably an LLM) with this system prompt and current messages.
+            *   Returns a `veredict`.
+        *   `human_feedback` node:
+            *   Takes the last message content.
+            *   Uses `interrupt({"query": msg})` to pause for user input.
+            *   Returns the user input as new messages.
+        *   Flow:
+            1.  Entry point: `call_model`.
+            2.  `call_model` (conditional edge `route_memory`):
+                *   If tool calls (e.g., `upsert_memory`): to `store_memory`.
+                *   Else: to `human_feedback`.
+            3.  `store_memory` -> `call_model` (allows LLM to respond after memory update).
+            4.  `human_feedback` -> `call_evaluator_model`.
+            5.  `call_evaluator_model` (conditional edge `route_veredict`):
+                *   If veredict indicates further processing: to `call_model`.
+                *   Else: to `END`.
+    *   `state.py`: Standard `State` with `messages`. May include other fields like `veredict` if `call_evaluator_model` updates it directly in the state.
+    *   `tools.py`: Standard `upsert_memory`.
+    *   `utils.py`: Standard.
 
 #### 5.7. Grumpy (`src/grumpy/`)
 
@@ -563,7 +595,6 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
 *   **`tools.py` (`src/grumpy/tools.py`):** Standard `upsert_memory` tool.
 *   **`utils.py` (`src/grumpy/utils.py`):** Standard utilities.
 
----
 
 ## 6. Testing Framework (`tests/`)
 
@@ -635,7 +666,6 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
 *   **`tests/unit_tests/test_configuration.py`:**
     *   `test_configuration_from_none()`: Basic unit test to check if `Configuration.from_runnable_config()` handles a `None` config correctly, falling back to default values.
 
----
 
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`)
 
@@ -655,7 +685,7 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     *   `make test_integration`: Runs integration tests (`uv run -- pytest tests/integration_tests`).
     *   `make test`: Runs both `test_unit` and `test_integration`.
 *   **Configuration:** `.env` file (copied from `.env.example`) for environment variables.
-    *   Required: `GOOGLE_API_KEY`.
+    *   Required for Google AI services: `GOOGLE_API_KEY` (this is the preferred variable). Alternatively, `GEMINI_API_KEY` can be set; scripts will use `GOOGLE_API_KEY` if present, otherwise they will use `GEMINI_API_KEY`.
     *   Optional for Coder agent: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_REPOSITORY`.
     *   Optional for LangSmith: `LANGCHAIN_API_KEY`, `LANGCHAIN_TRACING_V2`, `LANGCHAIN_ENDPOINT`, `LANGCHAIN_PROJECT`.
 *   **CI/CD (GitHub Actions):**
@@ -677,7 +707,6 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     4.  Run `make run` and navigate to the new agent in LangGraph Studio.
 *   **Memory Exploration:** LangGraph Studio UI allows reviewing saved memories (e.g., by clicking a "memory" button if the store is connected and UI supports it).
 
----
 
 ## 8. Overall Project Structure Summary
 

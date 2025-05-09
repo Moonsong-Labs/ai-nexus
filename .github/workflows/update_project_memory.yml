@@ -57,11 +57,11 @@ jobs:
       - name: Run update project memory script
         id: run_script
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           echo "Running script for PR #${{ steps.pr_details.outputs.pr_num }} on repository ${{ github.repository }}."
           bash scripts/update_project_memory_from_pr.sh \
-            -k "${{ env.GEMINI_API_KEY }}" \
             -r "${{ github.repository }}" \
             -p "${{ steps.pr_details.outputs.pr_num }}"
           echo "Script finished for PR #${{ steps.pr_details.outputs.pr_num }}."

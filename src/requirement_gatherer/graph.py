@@ -3,19 +3,70 @@
 import asyncio
 import logging
 from datetime import datetime
+from typing import Literal
 
 from langchain.chat_models import init_chat_model
 from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
+from langgraph.types import interrupt
+from pydantic import BaseModel, Field
 
 from requirement_gatherer import configuration, tools, utils
 from requirement_gatherer.state import State
+
+
+class Veredict(BaseModel):
+    """Feedback to decide if all requirements are meet."""
+
+    veredict: Literal["Completed", "needs_more"] = Field(
+        description="Decide if requirements are complete"
+    )
+
 
 logger = logging.getLogger(__name__)
 
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model()
+evaluator_llm = init_chat_model()
+evaluator = evaluator_llm.with_structured_output(Veredict)
+
+
+def call_evaluator_model(
+    state: State, config: RunnableConfig, *, store: BaseStore
+) -> dict:
+    """Extract the user's state from the conversation and update the memory."""
+    configurable = configuration.Configuration.from_runnable_config(config)
+
+    # Retrieve the most recent memories for context
+    memories = store.search(
+        ("memories", configurable.user_id),
+        query=str([m.content for m in state.messages[-3:]]),
+        limit=10,
+    )
+
+    # Format memories for inclusion in the prompt
+    formatted = "\n".join(
+        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
+    )
+    if formatted:
+        formatted = f"""
+<memories>
+{formatted}
+</memories>"""
+
+    # Prepare the system prompt with user memories and current time
+    # This helps the model understand the context and temporal relevance
+    sys = configurable.evaluator_system_prompt.format(
+        user_info=formatted, time=datetime.now().isoformat()
+    )
+
+    veredict = evaluator.invoke(
+        [{"role": "system", "content": sys}, *state.messages],
+        {"configurable": utils.split_model_and_provider(configurable.model)},
+    )
+    return {"veredict": veredict}
 
 
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
@@ -41,7 +92,7 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
 
     # Prepare the system prompt with user memories and current time
     # This helps the model understand the context and temporal relevance
-    sys = configurable.system_prompt.format(
+    sys = configurable.gatherer_system_prompt.format(
         user_info=formatted, time=datetime.now().isoformat()
     )
 
@@ -80,30 +131,49 @@ async def store_memory(state: State, config: RunnableConfig, *, store: BaseStore
     return {"messages": results}
 
 
-def route_message(state: State):
+def route_memory(state: State):
     """Determine the next step based on the presence of tool calls."""
     msg = state.messages[-1]
     if msg.tool_calls:
-        # If there are tool calls, we need to store memories
         return "store_memory"
-    # Otherwise, finish; user can send the next message
-    return END
+    return "human_feedback"
 
 
-# Create the graph + all nodes
+def route_veredict(state: State):
+    """Determine the nect step based on task completion."""
+    if state.veredict and state.veredict.veredict == "Completed":
+        return END
+    return "call_model"
+
+
+def human_feedback(state: State):
+    msg = state.messages[-1].content
+    user_input = interrupt({"query": msg})
+    return {"messages": user_input}
+
+
+memory = MemorySaver()
+
 builder = StateGraph(State, config_schema=configuration.Configuration)
 
 # Define the flow of the memory extraction process
 builder.add_node(call_model)
-builder.add_edge("__start__", "call_model")
+builder.add_node(call_evaluator_model)
+builder.add_node(human_feedback)
 builder.add_node(store_memory)
-builder.add_conditional_edges("call_model", route_message, ["store_memory", END])
-# Right now, we're returning control to the user after storing a memory
-# Depending on the model, you may want to route back to the model
-# to let it first store memories, then generate a response
+
+builder.add_edge("__start__", "call_model")
+builder.add_conditional_edges(
+    "call_model", route_memory, ["store_memory", "human_feedback"]
+)
 builder.add_edge("store_memory", "call_model")
+builder.add_edge("human_feedback", "call_evaluator_model")
+builder.add_conditional_edges(
+    "call_evaluator_model", route_veredict, ["call_model", END]
+)
+
 graph = builder.compile()
-graph.name = "Agent Template"
+graph.name = "Requirement Gatherer Agent"
 
 
 __all__ = ["graph"]
