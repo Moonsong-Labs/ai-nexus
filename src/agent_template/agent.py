@@ -93,11 +93,3 @@ class Agent:
         
         if self.semantic_memory:
             return self.semantic_memory.get_tools()
-
-
-    def route_message(self, state: State) -> str:
-        """Routes to agent_init if not initialized, otherwise to call_model."""
-        if self.initialized:
-            return "call_model"
-        else:
-            return "agent_init"
