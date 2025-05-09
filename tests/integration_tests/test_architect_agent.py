@@ -24,6 +24,55 @@ llm_judge = LLMJudge()
 
 ARCHITECT_DATASET_NAME = "Architect-dataset"
 
+ARCHITECT_CORRECTNESS_PROMPT = """You are an expert data labeler evaluating model outputs for correctness.
+Your task is to assign a score from 0.0 to 1.0 based on the following rubric:
+
+<Rubric>
+  A correct answer:
+  - Provides review of the user input
+  - Expresses agreement or disagreement with the user input
+  - Contains a clear and concise explanation of the reasoning behind the score. No more than 2 sentences.
+  - Contains no factual errors
+  - Is logically consistent
+  - Uses precise and accurate terminology
+
+  When scoring, you should penalize:
+  - Factual errors or inaccuracies
+  - Missing or unclear score
+  - Incomplete or partial answers
+  - Misleading or ambiguous statements
+  - Incorrect terminology
+  - Logical inconsistencies
+  - Missing key information
+  - Excessive verbosity or unnecessary details
+  - Extra information that is not relevant to a review
+</Rubric>
+
+<Instructions>
+  - Carefully read the input and output
+  - Check for factual accuracy and completeness
+  - Focus on correctness of information rather than style or verbosity
+</Instructions>
+
+<Reminder>
+  The goal is to evaluate factual correctness and completeness of the response.
+</Reminder>
+
+<input>
+{inputs}
+</input>
+
+<output>
+{outputs}
+</output>
+
+Use the reference outputs below to help you evaluate the correctness of the response:
+
+<reference_outputs>
+{reference_outputs}
+</reference_outputs>
+"""
+
 
 @pytest.mark.asyncio
 async def test_architect_write_system_requirements(pytestconfig):
@@ -45,7 +94,11 @@ async def test_architect_write_system_requirements(pytestconfig):
     results = await client.aevaluate(
         run_graph_with_attachments,
         data=[client.read_example(example_id="ecadfbbe-bd5b-4108-aba7-8525cec7012e")],
-        evaluators=[llm_judge.create_correctness_evaluator(continuous=False)],
+                evaluators=[
+                llm_judge.create_correctness_evaluator(
+                plaintext=True, prompt=ARCHITECT_CORRECTNESS_PROMPT
+            )
+        ],
         experiment_prefix="architect-gemini-2.5-correctness-eval",
         num_repetitions=1,
         max_concurrency=4,
@@ -77,7 +130,11 @@ async def test_architect_whole_dataset(pytestconfig):
     results = await client.aevaluate(
         run_graph_with_attachments,
         data=ARCHITECT_DATASET_NAME,
-        evaluators=[llm_judge.create_correctness_evaluator(continuous=False)],
+                evaluators=[
+                llm_judge.create_correctness_evaluator(
+                plaintext=True, prompt=ARCHITECT_CORRECTNESS_PROMPT
+            )
+        ],
         experiment_prefix="architect-gemini-2.5-correctness-eval",
         num_repetitions=1,
         max_concurrency=4,
