@@ -1,3 +1,4 @@
+--- Project Memory ---
 # AI Nexus Project: Condensed Memory Bank
 
 ## 1. Project Overview & Core Mission
@@ -172,7 +173,7 @@ This file outlines the overarching standards and technological choices for the A
 
 ## 4. General Agent Architecture (based on `src/agent_template/` and common patterns)
 
-Most agents in AI Nexus follow a common structural and operational pattern, largely derived from `src/agent_template/`.
+Most agents in AI Nexus follow a common structural and operational pattern, largely derived from `src/agent_template/`. Specialized agents may introduce variations to this pattern.
 
 *   **Typical Agent Directory Structure:**
     *   `__init__.py`: Exposes the agent's graph.
@@ -252,11 +253,13 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
         *   Executes `upsert_memory` tool calls concurrently using `asyncio.gather`. Each call involves `store.aupsert()` with `user_id`, `memory_id`, content, and context.
         *   Formats results of memory storage operations into `ToolMessage`s.
         *   Returns a dictionary to update the graph's state with these `ToolMessage`s: `{"messages": results}`.
+        *   *Note: Some agents, like the Requirement Gatherer, may omit this explicit node from their graph and handle memory tool calls differently or defer them.*
     *   **`route_message` Conditional Edge:**
         *   Signature: `def route_message(state: State)`
         *   Determines the next node based on whether the last AI message (`state.messages[-1]`) contains tool calls.
         *   If tool calls exist (e.g., for `upsert_memory`), routes to the `store_memory` node.
         *   Otherwise, routes to `END`, allowing the user to send the next message.
+        *   *Note: This routing logic can be customized or replaced in specific agents (e.g., Requirement Gatherer uses a different routing structure).*
     *   **Graph Compilation:**
         *   A `StateGraph` instance is created: `builder = StateGraph(State, config_schema=configuration.Configuration)`.
         *   Nodes (`call_model`, `store_memory`) are added using `builder.add_node()`.
@@ -522,12 +525,96 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
 
 #### 5.6. Requirement Gatherer (`src/requirement_gatherer/`)
 
-*   **Role:** Elicits, clarifies, and refines project goals, needs, and constraints.
+*   **Role:** Elicits, clarifies, and refines project goals, needs, and constraints. Incorporates a human-in-the-loop step for feedback and an evaluator to determine if requirements gathering is complete.
 *   **`prompts.py` (`src/requirement_gatherer/prompts.py`):**
-    *   `SYSTEM_PROMPT = """You are an agent responsible for gathering and clarifying requirements."""` (Likely more detailed in a full implementation).
-*   **Structure:** Follows the `agent_template` pattern.
-    *   `configuration.py`, `graph.py`, `state.py`, `tools.py` (with `upsert_memory`), `utils.py` are all standard, similar to `agent_template`.
-    *   Its primary function is to interact and use its memory capabilities (`upsert_memory` tool and retrieval in `call_model`) to build a comprehensive understanding of requirements.
+    *   `SYSTEM_PROMPT` (renamed to `gatherer_system_prompt` in `configuration.py`): Original system prompt for gathering requirements.
+        ```python
+        SYSTEM_PROMPT = """You are an agent responsible for gathering and clarifying requirements.""" # (Likely more detailed in a full implementation as shown in the original memory)
+        # ... (full prompt content from original memory)
+        ```
+    *   `EVALUATOR_SYSTEM_PROMPT`: New prompt for the evaluator node.
+        ```python
+        EVALUATOR_SYSTEM_PROMPT = """
+        # Requirement‑Gathering Evaluator — System Prompt (Compact)
+
+        You judge whether **Product‑requirement_gatherer** has fully met its own rules.
+
+        ---
+
+        ## 1. Goals
+        1. **Completeness** – mandatory files present & filled.  
+        2. **Accuracy** – no contradictions with user answers.  
+        3. **Quality** – smart question flow, risks logged, proper Markdown.  
+
+        ---
+
+        ## 2. You Receive
+        * `conversation_history`  
+        * `repo_state` (Markdown files)  
+        * `project_type` (“hobby” | “full_product”)
+
+        ---
+
+        ## 3. Return ONE YAML Block
+
+        ```
+        verdict: "<Completed | needs_more >"
+        ```
+        --- 
+
+        ### 4. Pass Criteria (Quick)
+
+        - **Hobby** → `productOverview.md`, `functionalReqs.md`
+        - **Full Product** → all Core Files from the Gatherer's spec
+        - Each file has **at least 2 meaningful lines**
+        - **Risks** include both an **owner** and a **due date**
+        - Markdown formatting and `upsert_memory` usage are correct
+        - You **only judge** — do **not** ask the user more questions
+        """
+        ```
+*   **`configuration.py` (`src/requirement_gatherer/configuration.py`):**
+    *   `system_prompt` field is renamed to `gatherer_system_prompt`.
+    *   New field `evaluator_system_prompt: str = prompts.EVALUATOR_SYSTEM_PROMPT` added.
+*   **`state.py` (`src/requirement_gatherer/state.py`):**
+    *   Standard `messages` field.
+    *   New field `veredict: Literal["Completed", "needs_more"] = "needs_more"` added to store the evaluator's decision.
+*   **`graph.py` (`src/requirement_gatherer/graph.py`):**
+    *   Graph name changed to `"Requirement Gatherer Agent"`.
+    *   **Models:**
+        *   `llm`: Standard chat model for the gatherer.
+        *   `evaluator_llm`: A new chat model instance for the evaluator.
+        *   `evaluator`: The `evaluator_llm` configured with structured output for the `Veredict` Pydantic model.
+    *   **Pydantic Model for Evaluator Output:**
+        ```python
+        class Veredict(BaseModel):
+            """Feedback to decide if all requirements are meet."""
+            veredict: Literal["Completed", "needs_more"] = Field(
+                description="Decide if requirements are complete"
+            )
+        ```
+    *   **Nodes:**
+        *   `call_model(state, config, store)`:
+            *   Uses `configurable.gatherer_system_prompt`.
+            *   Retrieves and formats memories as before.
+            *   Binds `tools.upsert_memory` to the LLM.
+        *   `human_feedback(state)`:
+            *   Extracts the content of the last AI message.
+            *   Uses `langgraph.types.interrupt({"query": msg})` to pause the graph and wait for human input.
+            *   Returns the human input to be added to messages.
+        *   `call_evaluator_model(state, config, store)`:
+            *   Invokes the `evaluator` (LLM with structured output) with the last message from the state.
+            *   Returns `{"veredict": veredict_output}`.
+        *   The `store_memory` node function is still defined in the file but is **not** added to the compiled graph, meaning it's not part of the primary execution flow.
+    *   **Edges & Flow:**
+        1.  Entry Point: `__start__` -> `call_model`.
+        2.  `call_model` -> `human_feedback` (The graph always proceeds to human feedback after the gatherer LLM responds).
+        3.  `human_feedback` -> `call_evaluator_model` (After human input, the evaluator is called).
+        4.  `call_evaluator_model` -> `route_veredict` (Conditional edge):
+            *   If `state.veredict.veredict == "Completed"`: Routes to `END`.
+            *   If `state.veredict.veredict == "needs_more"`: Routes back to `call_model` for further requirement gathering.
+    *   The explicit `store_memory` node and the conditional `route_message` edge from the `agent_template` are removed from this agent's graph flow. While `upsert_memory` tool is bound in `call_model`, its execution is not handled by an explicit `store_memory` node in this new flow.
+*   **`tools.py` (`src/requirement_gatherer/tools.py`):** Standard `upsert_memory` tool definition remains.
+*   **`utils.py` (`src/requirement_gatherer/utils.py`):** Standard utilities.
 
 #### 5.7. Grumpy (`src/grumpy/`)
 
@@ -740,3 +827,4 @@ ai-nexus/
     └── unit_tests/               # Unit tests for isolated components
         └── test_configuration.py
 ```
+---
