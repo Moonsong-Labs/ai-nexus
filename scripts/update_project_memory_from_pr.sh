@@ -193,7 +193,7 @@ ${PR_DETAILS_CONTENT}
 
 ONLY OUTPUT THE MEMORY AS IS, DO NOT ADD EXPLANATION OR ANYTHING ELSE.
 (If the PR doesn't impact the project memory, just say NO CHANGE)
-ONLY UPDATE THE MEMORY BASED ON THE CHANGES IN THE PR.
+ONLY UPDATE THE MEMORY BASED ON THE CHANGES IN THE PR. BE CONSERATIVE
 
 --- Project Memory ---
 "
@@ -258,7 +258,7 @@ if echo "$RESPONSE_JSON" | jq -r '.candidates[0].content.parts[0].text // ""' | 
     echo "Full API response: $RESPONSE_JSON" >&2
     exit 0
 fi
-echo "$RESPONSE_JSON" | jq -r '.candidates[0].content.parts[0].text // ""' > "$GLOBAL_MEMORY_FILE"
+echo "$RESPONSE_JSON" | jq -r '.candidates[0].content.parts[0].text // ""' | egrep -v '^--- Project Memory ---$|^---$' > "$GLOBAL_MEMORY_FILE"
 
 echo ""
 echo "--- Memory from Gemini (${GEMINI_MODEL_NAME}) ---"
