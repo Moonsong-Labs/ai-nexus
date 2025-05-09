@@ -3,20 +3,35 @@
 import asyncio
 import logging
 from datetime import datetime
+from typing import List
 
 from langchain.chat_models import init_chat_model
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
+from pydantic import BaseModel, Field
 
 from code_reviewer import configuration, tools, utils
 from code_reviewer.state import State
+
+class DiffHunkFeedback(BaseModel):
+    """Feedback specific to a code modification."""
+
+    change_required: bool = Field(description="Whether or not the feedback necessitates a change")
+    file: str = Field(description="Filepath of the diff that this feedback relates to")
+    offset: int = Field(description="Offset (line number) in the file that this feedback relates to")
+    comment: str = Field(description="Comments about the diff hunk")
+
+class DiffFeedback(BaseModel):
+    """Feedback for an overall diff"""
+    requests_changes: bool = Field(description="Whether or not any changes are requested for the diff")
+    overall_comment: str = Field(description="Comments about the overall diff")
+    feedback: List[DiffHunkFeedback] = Field(description="Individual feedback for subsections of this diff")
 
 logger = logging.getLogger(__name__)
 
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model()
-
 
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
     """Extract the user's state from the conversation and update the memory."""
@@ -47,25 +62,18 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
     # Prepare the system prompt with user memories and current time
     # This helps the model understand the context and temporal relevance
     sys = configurable.system_prompt.format(
-        user_info=formatted,
-        analysis_question="",
-        time=datetime.now().isoformat(),
+        user_info=formatted, time=datetime.now().isoformat(),
     )
-
-    # check if the model supports memory
-    if hasattr(store, "asearch"):
-        memory_tools = [tools.upsert_memory]
-    else:
-        memory_tools = []
-
     # Invoke the language model with the prepared prompt and tools
-    # "bind_tools" gives the LLM the JSON schema for all tools in the list so it knows how
-    # to use them.
-    msg = await llm.bind_tools(memory_tools).ainvoke(
-        [{"role": "system", "content": sys}, *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
+    msg = (
+        await llm.bind_tools([tools.upsert_memory])
+        .with_structured_output(DiffFeedback)
+        .ainvoke(
+            [{"role": "system", "content": sys}, *state.messages],
+            {"configurable": utils.split_model_and_provider(configurable.model)},
+        )
     )
-    return {"messages": [msg]}
+    return {"messages": [{"role": "assistant", "content": str(msg)}]}
 
 
 async def store_memory(state: State, config: RunnableConfig, *, store: BaseStore):
