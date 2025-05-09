@@ -605,9 +605,9 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     *   `MemorySaver()` from `langgraph.checkpoint.memory` for graph checkpointing.
     *   `InMemoryStore()` from `langgraph.stores.memory` for agent memory during tests.
     *   Graphs are typically compiled with a checkpointer and store: `graph_compiled = graph_builder.compile(checkpointer=memory_saver, store=memory_store)`.
-    *   A wrapper function (e.g., `run_graph_with_config` or `call_tester_agent`) is often created to:
+    *   A wrapper function (e.g., `run_graph_with_config` or `call_tester_agent`, or using `create_async_graph_caller`) is often created/used to:
         *   Take a dataset example as input.
-        *   Format the input for the graph (e.g., converting to `HumanMessage` lists).
+        *   Format the input for the graph.
         *   Generate a unique `thread_id` (using `uuid.uuid4()`) for state isolation in `RunnableConfig`.
         *   Invoke the compiled graph: `await graph_compiled.ainvoke(graph_input, config=config)`.
         *   Extract and format the output for evaluation.
@@ -627,12 +627,12 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   Checks if memories are saved in `InMemoryStore` under the correct `user_id` and namespace `("memories", user_id)`.
         *   Verifies that memories are not found under an incorrect namespace.
     *   **`test_requirement_gatherer.py`:**
-        *   Tests the requirement gatherer agent against `REQUIREMENT_GATHERER_DATASET_NAME`.
-        *   Uses a `correctness_evaluator` (LLM as judge, see `tests/testing/evaluators.py`) to compare graph output against reference output from the dataset.
-        *   `run_graph_with_config` function handles input formatting:
-            *   If input example has a `messages` key, it converts the list of dicts to `BaseMessage` objects (HumanMessage, AIMessage, etc.).
-            *   Otherwise, it takes `input_example["input"]` and wraps it in a `HumanMessage`.
-        *   The output for evaluation is the content of the last AI message from the graph.
+        *   Tests the requirement gatherer agent against the `REQUIREMENT_GATHERER_DATASET_NAME` LangSmith dataset.
+        *   Uses `create_async_graph_caller` from `tests.testing` to wrap the agent's graph for evaluation runs.
+        *   Employs `LLMJudge` from `tests.testing.evaluators`. It calls the `create_correctness_evaluator` method of `LLMJudge` with `plaintext=True` and a custom, detailed prompt (`REQUIREMENT_GATHERER_CORRECTNESS_PROMPT` defined within the test file) to assess the agent's output against reference data.
+        *   The test invokes `client.aevaluate()` with the graph caller, dataset, the configured evaluator, and an updated `experiment_prefix` (e.g., `"requirement-gatherer-gemini-2.5-correctness-eval-plain"`).
+        *   Uses `print_evaluation` from `testing.formatter` to display evaluation results, with configurable `Verbosity`.
+        *   The previous complex input formatting logic (formerly in a local `run_graph_with_config` function) has been refactored, likely simplified by the use of `create_async_graph_caller`.
     *   **`test_tester_agent.py`:**
         *   `test_tester_hello_response`: Tests the tester agent's response to a simple "hello" message.
         *   Uses `client.aevaluate()` with a dataset named `TESTER_AGENT_DATASET_NAME = "tester-agent-hello-dataset"`.
@@ -645,8 +645,8 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
 
 *   **`tests/testing/__init__.py`:**
     *   `get_logger()`: Utility to create a Python logger with a default format.
-    *   `create_graph_caller(graph, process_inputs_fn=None, process_outputs_fn=None)`:
-        *   A generic function to create a caller for `graph.ainvoke`.
+    *   `create_async_graph_caller(graph, process_inputs_fn=None, process_outputs_fn=None)`: (Note: name updated from `create_graph_caller`)
+        *   A generic function to create an asynchronous caller for `graph.ainvoke`.
         *   Handles creating a unique `thread_id` for each call.
         *   Optionally processes inputs and outputs using provided functions.
         *   Returns the last message from the graph's output.
@@ -658,10 +658,17 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   `create_llm_as_judge(prompt: str, input_keys: List[str], output_key: str, reference_output_key: str, continuous: bool = True)`:
             *   Creates an evaluator chain using an LLM.
             *   Takes a prompt template, keys for input, output, reference, and a flag for continuous feedback.
+        *   `create_correctness_evaluator(plaintext: bool, prompt: str)`: (Method usage seen in PRs)
+            *   A specialized method to create a correctness evaluator, likely taking a prompt and a flag for plaintext comparison.
     *   `CORRECTNESS_PROMPT`: A prompt template for an LLM to judge if the `prediction` matches the `reference` output given an `input`.
     *   `correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict)`:
-        *   A specific evaluator instance created using `LLMJudge().create_llm_as_judge` with `CORRECTNESS_PROMPT`.
+        *   A specific evaluator instance created using `LLMJudge().create_llm_as_judge` (or potentially `LLMJudge().create_correctness_evaluator`) with `CORRECTNESS_PROMPT`.
         *   Compares `outputs['output']` (actual agent response) with `reference_outputs['message']['content']` (expected response from dataset).
+
+*   **`tests/testing/formatter.py` (Implied by PR usage):**
+    *   Provides utility functions for formatting and printing evaluation results.
+    *   Includes `print_evaluation(results, client, verbosity)` for displaying detailed evaluation outcomes.
+    *   May include enums like `Verbosity` to control output detail.
 
 *   **`tests/unit_tests/test_configuration.py`:**
     *   `test_configuration_from_none()`: Basic unit test to check if `Configuration.from_runnable_config()` handles a `None` config correctly, falling back to default values.
@@ -765,7 +772,8 @@ ai-nexus/
     │   ├── test_requirement_gatherer.py
     │   └── test_tester_agent.py
     ├── testing/                  # Test utilities, evaluators
-    │   └── evaluators.py         # LLM-based evaluators (e.g., LLMJudge)
+    │   ├── evaluators.py         # LLM-based evaluators (e.g., LLMJudge)
+    │   └── formatter.py          # Utilities for formatting/printing evaluation results
     └── unit_tests/               # Unit tests for isolated components
         └── test_configuration.py
 ```
