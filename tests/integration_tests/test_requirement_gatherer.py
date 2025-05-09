@@ -1,4 +1,5 @@
 import pytest
+from datasets.requirement_gatherer_dataset import REQUIREMENT_GATHERER_DATASET_NAME
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.memory import InMemoryStore
 from langsmith import Client
@@ -7,7 +8,6 @@ from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
 from requirement_gatherer.graph import builder as graph_builder
-from datasets.requirement_gatherer_dataset import REQUIREMENT_GATHERER_DATASET_NAME
 
 ## Setup basic logging for the test
 logger = get_logger(__name__)
@@ -67,13 +67,14 @@ Use the reference outputs below to help you evaluate the correctness of the resp
 </reference_outputs>
 """
 
+
 @pytest.mark.asyncio
 async def test_requirement_gatherer_langsmith(pytestconfig):
     """
     Tests the requirement gatherer agent graph using langsmith.aevaluate against a LangSmith dataset.
     """
-    client = Client() 
-    
+    client = Client()
+
     if not client.has_dataset(dataset_name=REQUIREMENT_GATHERER_DATASET_NAME):
         logger.error(
             "Dataset %s not found in LangSmith!", REQUIREMENT_GATHERER_DATASET_NAME
@@ -92,7 +93,9 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
     memory_store = InMemoryStore()
 
     # Compile the graph - needs checkpointer for stateful execution during evaluation
-    graph_compiled = graph_builder.compile(checkpointer=memory_saver, store=memory_store)
+    graph_compiled = graph_builder.compile(
+        checkpointer=memory_saver, store=memory_store
+    )
 
     # Define the function to be evaluated for each dataset example
     results = await client.aevaluate(
