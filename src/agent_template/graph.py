@@ -8,61 +8,116 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
+from langchain_core.messages import SystemMessage
+from langchain_core.tools import Tool
+from typing import List, Optional
 
-from agent_template import configuration, utils
+from agent_template import configuration, utils, prompts
 from agent_template.state import State
+from agent_template.configuration import Configuration
+from agent_template.memory import create_memory_tools, create_memory_store, SemanticMemory, load_static_memories
 
 logger = logging.getLogger(__name__)
 
 
-async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
-    """Extract the user's state from the conversation and update the memory."""
-    # Get configuration
-    configurable = configuration.Configuration.from_runnable_config(config)
+class Agent:
+    def __init__(self, config: Configuration):
+        self.llm = init_chat_model(config.model)
+        self.tools = []
+        self.semantic_memory: Optional[SemanticMemory] = None
+        self.initialized = False
+        self.name = configuration.AGENT_NAME
 
-    # Prepare the system prompt with memories and current time
-    sys = configurable.system_prompt.format(time=datetime.now().isoformat())
+    def initialize_memories(self, config: Configuration) -> None:
+        """Initialize agent's memory systems based on configuration.
 
-    # Invoke the language model with the prepared prompt and tools
-    state.initialize_memories(configurable)
-    memory_tools = state.semantic_memory.get_tools()
-    msg = await llm.bind_tools(memory_tools).ainvoke(
-        [{"role": "system", "content": sys}, *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
-    )
-    return {"messages": [msg]}
+        Args:
+            config: Configuration object with memory enablement flags.
+        """
+        # Initialize semantic memory if not already initialized
+        if not self.semantic_memory:
+            self.semantic_memory = SemanticMemory(agent_name=config.user_id)
+            if config.use_static_mem:
+                load_static_memories(self.semantic_memory.store, config.user_id)
+            logger.info(f"Agent memory initialized for user {config.user_id}")
+
+    def initialize(self, config: RunnableConfig):
+        """Initialize the agent's memories"""
+
+        # Initialize semantic memory
+        self.initialize_memories(config)
+
+        # Bind memory tools to the LLM
+        self.tools = self.semantic_memory.get_tools()
+        self.llm = self.llm.bind_tools(self.tools)
+        self.initialized = True
+        logger.info(f"Agent initialized")
 
 
-def route_message(state: State):
-    return END
+    async def __call__(self, state: State, config: RunnableConfig) -> dict:
+        if not self.initialized:
+            raise Exception("Agent not initialized")
+
+        system_msg = SystemMessage(content=prompts.SYSTEM_PROMPT)
+        messages = [system_msg] + state.messages
+        messages_after_invoke = await self.llm.ainvoke(
+            messages
+        )
+
+        # Debug logs
+        logger.debug(f"Semantic Memory: {self.semantic_memory}")
+        
+        return {"messages": messages_after_invoke}
+    
+    def get_tools(self) -> List[Tool]:
+        if self.semantic_memory:
+            return self.semantic_memory.get_tools()
+        else:
+            # Fallback if called before semantic_memory is initialized
+            store = create_memory_store()
+            return create_memory_tools("memo", store)
+    
+
+    def route_message(self, state: State) -> str:
+        """Routes to agent_init if not initialized, otherwise to call_model."""
+        if self.initialized:
+            return "call_model"
+        else:
+            return "agent_init"
 
 
-config = configuration.Configuration()
+def graph_builder() -> StateGraph:
+    # Create the graph + all nodes
+    builder = StateGraph(State)
 
-# Initialize a default state to configure initial memories
-initial_state = State(user_id=config.user_id)
-initial_state.initialize_memories(config)
+    # Create the configuration instance
+    config = Configuration()
+    config.use_static_mem = True
+    
+    # Create the agent instance
+    agent = Agent(config)
+    agent.initialize(config)
 
-# Create the graph + all nodes
-builder = StateGraph(State)
+    # Add nodes to the graph
+    builder.add_node("call_model", agent.__call__)
+    
+    tool_node = ToolNode(agent.get_tools())
+    builder.add_node("tools", tool_node)
 
-# Initialize the language model to be used for memory extraction
-llm = init_chat_model()
+    # Define the flow
+    builder.add_edge("__start__", "call_model")
+    #builder.add_conditional_edges("__start__", agent.route_message, ["agent_init", "call_model"])
+    builder.add_conditional_edges("call_model", tools_condition)
+    #builder.add_edge("agent_init", "call_model") 
+    builder.add_edge("tools", "call_model")
+    builder.add_edge("call_model", END)
 
-# Create memory tools node with the State's memories
-memory_tools = initial_state.semantic_memory.get_tools()
-memory_tools_node = ToolNode(tools=memory_tools)
+    return builder
 
-# Define the flow of the memory extraction process
-builder.add_node(call_model)
-builder.add_node("tools", memory_tools_node)
 
-builder.add_edge("__start__", "call_model")
-builder.add_conditional_edges("call_model", tools_condition)
-builder.add_edge("tools", "call_model")
-
-graph = builder.compile()
+graph = graph_builder().compile()
 graph.name = "Agent Template"
 
 
 __all__ = ["graph"]
+

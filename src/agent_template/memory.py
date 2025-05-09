@@ -73,16 +73,17 @@ def load_static_memories(store: BaseStore, user_id: str = "default") -> int:
 class SemanticMemory:
     """Encapsulates semantic memory functionality for an agent."""
 
-    def __init__(self, user_id: str = "default", store: Optional[BaseStore] = None):
+    def __init__(self, agent_name: str = "default", store: Optional[BaseStore] = None):
         """Initialize the semantic memory.
 
         Args:
-            user_id: The user ID to use for memory namespace.
+            agent_name: The agent name to use for memory namespace.
             store: Optional BaseStore to use. If None, a new one will be created.
         """
-        self.user_id = user_id
+        self.agent_name = agent_name
         self.store = store
         self._tools = None
+        self.namespace = ("memories", self.agent_name,)
         self._initialize()
 
     def _initialize(self) -> None:
@@ -105,17 +106,10 @@ class SemanticMemory:
             A list of memory tools for the agent.
         """
         if not self._tools:
-            self._tools = [
-                create_manage_memory_tool(
-                    namespace=("memories", self.user_id), store=self.store
-                ),
-                create_search_memory_tool(
-                    namespace=("memories", self.user_id), store=self.store
-                ),
-            ]
+            self._tools = create_memory_tools(self.namespace, self.store)
         return self._tools
-
-    async def search_memories(self, query: str, limit: int = 5):
+    
+    async def search_memories(self, query: str, user_id: str, limit: int = 5):
         """Search memories based on the query.
 
         Args:
@@ -125,6 +119,29 @@ class SemanticMemory:
         Returns:
             A list of memory search results.
         """
-        return await self.store.asearch(
-            ("memories", self.user_id), query=query, limit=limit
+        return await self.store.search(
+            self.namespace, query=query, limit=limit
         )
+
+
+def create_memory_tools(namespace: str, store: BaseStore) -> List[Tool]:
+    tools = [
+        create_manage_memory_tool(
+            namespace=namespace, store=store
+        ),
+        create_search_memory_tool(
+            namespace=namespace, store=store
+        ),
+        ]
+    return tools
+
+def create_memory_store() -> BaseStore:
+    gemini_embeddings = GoogleGenerativeAIEmbeddings(
+        model="models/gemini-embedding-exp-03-07"
+    )
+    return InMemoryStore(
+        index={
+            "dims": 3072,
+            "embed": gemini_embeddings,
+        }
+    )

@@ -9,12 +9,14 @@ from typing_extensions import Annotated
 
 from agent_template import prompts
 
+AGENT_NAME = "base_agent"
+
 
 @dataclass(kw_only=True)
 class Configuration:
     """Main configuration class for the memory graph system."""
 
-    user_id: str = "default"
+    user_id: str = "default_user"
     """The ID of the user to remember in the conversation."""
     model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
         default="google_genai:gemini-2.5-flash-preview-04-17",
