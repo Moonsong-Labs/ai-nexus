@@ -1,25 +1,42 @@
-"""Missing docs."""
+"""Memory management for the agent template.
+
+This module provides functionality for managing semantic memories for agents.
+It includes tools for loading static memories from files, searching memories,
+and managing memory storage with proper namespacing for different users.
+"""
 
 import json
 import logging
+import os
 from pathlib import Path
+from typing import List, Optional
 
+from langchain_core.tools import Tool
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langgraph.store.base import BaseStore
+from langgraph.store.memory import InMemoryStore
+from langmem import create_manage_memory_tool, create_search_memory_tool
 
 logger = logging.getLogger(__name__)
 
-# Define the directory where static memory files are stored
-STATIC_MEMORIES_DIR = Path(".langgraph/static_memories/")
+REPO_ROOT = Path(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+STATIC_MEMORIES_DIR = REPO_ROOT / ".langgraph/static_memories/"
 
 
-async def _load_memories_from_directory(directory_path: Path, store: BaseStore):
-    """Load memories from all JSON files in the specified directory into the store."""
-    if not directory_path.is_dir():
-        logger.warning(f"Static memories directory not found at {directory_path}")
-        return
+def load_static_memories(store: BaseStore, user_id: str = "default") -> int:
+    """Load static memories directly from the static memories directory into the store.
 
+    Args:
+        store: The memory store to load memories into
+        user_id: The user ID to use for memory namespace
+
+    Returns:
+        Total number of memories loaded
+    """
     total_memories_loaded = 0
-    for json_file_path in directory_path.glob("*.json"):
+    for json_file_path in STATIC_MEMORIES_DIR.glob("*.json"):
         try:
             with open(json_file_path) as f:
                 memories = json.load(f)
@@ -30,15 +47,14 @@ async def _load_memories_from_directory(directory_path: Path, store: BaseStore):
                 )
                 continue
 
-            # Add each memory from the current file to the store
             for i, memory in enumerate(memories):
-                # Use a unique key combining filename and index
                 file_name = json_file_path.stem
                 memory_key = f"{file_name}_{i}"
-                # Use positional arguments for aput
-                await store.aput(("static_memories", "global"), memory_key, memory)
-            logger.info(f"Loaded {len(memories)} memories from {json_file_path.name}")
+                # Using synchronous put method
+                store.put(("memories", "static", user_id), memory_key, memory)
+
             total_memories_loaded += len(memories)
+            logger.info(f"Loaded {len(memories)} memories from {json_file_path.name}")
         except json.JSONDecodeError:
             logger.error(f"Error decoding JSON from {json_file_path}")
         except Exception as e:
@@ -46,29 +62,90 @@ async def _load_memories_from_directory(directory_path: Path, store: BaseStore):
 
     if total_memories_loaded > 0:
         logger.info(
-            f"Finished loading static memories. Total loaded: {total_memories_loaded}"
+            f"Loaded {total_memories_loaded} static memories for user {user_id}"
         )
     else:
-        logger.info("No static memories found or loaded from the directory.")
+        logger.info(f"No static memories found or loaded from {STATIC_MEMORIES_DIR}")
+
+    return total_memories_loaded
 
 
-async def ensure_static_memories(store: BaseStore):
-    """Ensure static memories are loaded in the store by checking existence and loading if necessary."""
-    # Check if any static memories exist
-    try:
-        # Try passing only namespace positionally, rest as keywords
-        static_memories = await store.asearch(
-            ("static_memories", "global"), query="", limit=1
+class SemanticMemory:
+    """Encapsulates semantic memory functionality for an agent."""
+
+    def __init__(self, agent_name: str = "default", store: Optional[BaseStore] = None):
+        """Initialize the semantic memory.
+
+        Args:
+            agent_name: The agent name to use for memory namespace.
+            store: Optional BaseStore to use. If None, a new one will be created.
+        """
+        self.agent_name = agent_name
+        self.store = store
+        self._tools = None
+        self.namespace = (
+            "memories",
+            self.agent_name,
         )
-        if static_memories:
-            logger.debug("Static memories already exist in store, skipping load.")
-            return
-    except Exception as e:
-        # Log the error but proceed, as the store might be empty or have issues
-        logger.warning(
-            f"Could not check for existing static memories, proceeding to load: {e}"
-        )
+        self._initialize()
 
-    # Define the directory and load memories
-    logger.info("Attempting to load static memories into store.")
-    await _load_memories_from_directory(STATIC_MEMORIES_DIR, store)
+    def _initialize(self) -> None:
+        """Initialize the memory store with embeddings."""
+        if self.store is None:
+            self.store = create_memory_store()
+
+    def get_tools(self) -> List[Tool]:
+        """Get the memory management tools.
+
+        Returns:
+            A list of memory tools for the agent.
+        """
+        if not self._tools:
+            self._tools = create_memory_tools(self.namespace, self.store)
+        return self._tools
+
+    async def search_memories(self, query: str, user_id: str, limit: int = 5):
+        """Search memories based on the query.
+
+        Args:
+            query: The search query.
+            limit: Maximum number of results to return.
+
+        Returns:
+            A list of memory search results.
+        """
+        return await self.store.search(self.namespace, query=query, limit=limit)
+
+
+def create_memory_tools(namespace: str, store: BaseStore) -> List[Tool]:
+    """Create memory management and search tools for the agent.
+
+    Args:
+        namespace: The namespace to use for memory operations
+        store: The memory store to use for tool operations
+
+    Returns:
+        A list of memory-related tools (manage and search)
+    """
+    tools = [
+        create_manage_memory_tool(namespace=namespace, store=store),
+        create_search_memory_tool(namespace=namespace, store=store),
+    ]
+    return tools
+
+
+def create_memory_store() -> BaseStore:
+    """Create a new memory store with Gemini embeddings.
+
+    Returns:
+        A new InMemoryStore configured with Gemini embeddings
+    """
+    gemini_embeddings = GoogleGenerativeAIEmbeddings(
+        model="models/gemini-embedding-exp-03-07"
+    )
+    return InMemoryStore(
+        index={
+            "dims": 3072,
+            "embed": gemini_embeddings,
+        }
+    )
