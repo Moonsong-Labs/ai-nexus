@@ -22,7 +22,7 @@ class State:
     messages: Annotated[list[AnyMessage], add_messages] = field(default_factory=list)
     """The messages in the conversation."""
     
-    semantic_memory: Optional[SemanticMemory] = None
+    semantic_memory: SemanticMemory = None
     """The semantic memory used by the agent for personalized memories."""
         
     user_id: str = "default"
