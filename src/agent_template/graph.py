@@ -19,10 +19,9 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
     """Extract the user's state from the conversation and update the memory."""
     # Get configuration
     configurable = configuration.Configuration.from_runnable_config(config)
-    
+
     # Prepare the system prompt with memories and current time
-    sys = configurable.system_prompt.format(time=datetime.now().isoformat()
-    )
+    sys = configurable.system_prompt.format(time=datetime.now().isoformat())
 
     # Invoke the language model with the prepared prompt and tools
     state.initialize_memories(configurable)
