@@ -8,6 +8,7 @@ from typing import List
 from langchain.chat_models import init_chat_model
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
+from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
 from pydantic import BaseModel, Field
 
@@ -110,15 +111,30 @@ def route_message(state: State):
     # Otherwise, finish; user can send the next message
     return END
 
+async def call_tools(state: State) -> dict:
+    """Check if the last message contains tool calls and call them."""
+
+    system_msg = SystemMessage(content=SYSTEM_PROMPT)
+    messages = [system_msg] + state["messages"]
+    messages_after_invoke = await llm.bind_tools(self.github_tools).ainvoke(
+        messages
+    )
+
+    return {"messages": messages_after_invoke}
+
 
 # Create the graph + all nodes
 builder = StateGraph(State, config_schema=configuration.Configuration)
 
 # Define the flow of the memory extraction process
 builder.add_node(call_model)
-builder.add_edge("__start__", "call_model")
 builder.add_node(store_memory)
+builder.add_node("tools", call_tools)
+
+builder.add_edge("__start__", "call_model")
+builder.add_conditional_edges("call_model", tools_condition)
 builder.add_conditional_edges("call_model", route_message, ["store_memory", END])
+builder.add_edge("tools", "call_model")
 # Right now, we're returning control to the user after storing a memory
 # Depending on the model, you may want to route back to the model
 # to let it first store memories, then generate a response

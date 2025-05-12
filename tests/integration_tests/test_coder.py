@@ -16,7 +16,7 @@ from openevals.utils import _arun_evaluator
 from coder.graph import graph_builder
 from coder.mocks import MockGithubApi
 from coder.state import State
-from coder.tools import get_github_tools
+from common.components.github_tools import get_github_tools
 
 
 @pytest.mark.asyncio(loop_scope="session")
