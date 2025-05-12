@@ -16,6 +16,7 @@ dependencies = [
     "langchain-community>=0.3.23",
     "langmem>=0.0.25",
     "termcolor>=3.1.0",
+    "agentevals>=0.0.7",
 ]
 optional-dependencies.dev = [
     "mypy>=1.11.1",
@@ -33,7 +34,7 @@ build-backend = "setuptools.build_meta"
 
 # Add new agents here: #1
 [tool.setuptools]
-packages = ["common", "agent_template", "code_reviewer", "orchestrator", "grumpy", "architect", "coder", "tester", "requirement_gatherer"]
+packages = ["common", "agent_template", "code_reviewer", "orchestrator", "grumpy", "architect", "coder", "tester", "requirement_gatherer", "task_manager"]
 [tool.setuptools.package-dir]
 "common" = "src/common"
 "agent_template" = "src/agent_template"
@@ -49,6 +50,8 @@ packages = ["common", "agent_template", "code_reviewer", "orchestrator", "grumpy
 "langgraph.templates.requirement_gatherer" = "src/requirement_gatherer"
 "coder" = "src/coder"
 "langgraph.templates.coder" = "src/coder"
+"task_manager" = "src/task_manager"
+"langgraph.templates.task_manager" = "src/task_manager"
 
 
 [tool.ruff]
