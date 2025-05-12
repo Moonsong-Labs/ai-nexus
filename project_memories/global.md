@@ -630,6 +630,14 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   Creates a LangSmith dataset using `client.create_dataset()`.
         *   Adds examples (input-output pairs) to the dataset using `client.create_examples()`. Inputs are simple strings, outputs are expected agent responses.
 
+*   **`tests/datasets/coder_dataset.py`:**
+    *   Defines `CODER_DATASET_NAME = "coder-test-dataset"`.
+    *   Defines input (`CodeEvaluatorInputs`) and reference output (`CodeEvaluatorReferenceOutputs`) structures for Coder evaluation.
+    *   `create_dataset()` function:
+        *   Initializes `Client()`.
+        *   Creates the LangSmith dataset.
+        *   Adds examples (input-output pairs) to the dataset.
+
 *   **`tests/integration_tests/`:**
     *   **`test_graph.py`:**
         *   `test_memory_storage`: Basic test for the `agent_template` graph's memory storage.
@@ -652,6 +660,11 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   Tests the grumpy agent against a LangSmith dataset (e.g., `LANGSMITH_DATASET_NAME = "grumpy-failed-questions"`).
         *   Uses `LLMJudge` from `tests.testing.evaluators` to create a `correctness_evaluator` with a specific prompt for judging Grumpy's output.
         *   The `create_graph_caller` utility is used to wrap the Grumpy agent's graph for evaluation.
+    *   **`test_coder.py`:**
+        *   Defines a custom evaluator `evaluate_code` using an LLM judge (`judge_llm`) and a specific prompt (`EVAL_PROMPT`) to score and comment on the Coder agent's output based on the input code state, user request, and expected outcomes.
+        *   The `evaluate_code_scorer` helper function returns a `(score, comment)` tuple.
+        *   Defines an `invoke_agent` function to run the Coder agent (using mocked GitHub tools) with inputs structured according to `CodeEvaluatorInputs`.
+        *   Includes a test `test_coder_run_eval_dataset` that uses `langsmith.aevaluate` to run the `invoke_agent` function against the `CODER_DATASET_NAME` LangSmith dataset, using the custom `evaluate_code` evaluator.
 
 *   **`tests/testing/__init__.py`:**
     *   `get_logger()`: Utility to create a Python logger with a default format.
@@ -763,7 +776,7 @@ ai-nexus/
 │   │   └── stubs/                # Stub implementations for delegated agent calls (for testing/dev)
 │   ├── requirement_gatherer/     # Requirement Gatherer agent: elicits and clarifies requirements
 │   └── tester/                   # Tester agent: generates tests based on requirements
-│       ├── README.md             # NEW: Goal, responsibilities, workflow diagram for Tester
+│       ├── README.md             # Goal, responsibilities, workflow diagram for Tester
 │       ├── configuration.py      # Default model changed to gemini-2.0-flash-lite
 │       ├── graph.py              # REVISED: Uses structured output, multi-stage workflow (analyze/generate), no memory store interaction
 │       ├── output.py             # Pydantic models for Tester's structured output
@@ -776,8 +789,10 @@ ai-nexus/
 │       └── utils.py              # Standard utils
 └── tests/                        # Automated tests
     ├── datasets/                 # Scripts for creating LangSmith datasets
+    │   ├── coder_dataset.py      # NEW: Defines LangSmith dataset for Coder agent evaluation
     │   └── requirement_gatherer_dataset.py
     ├── integration_tests/        # Integration tests for agents and full graph functionality
+    │   ├── test_coder.py         # REVISED: Uses LangSmith dataset and custom evaluator for Coder agent
     │   ├── test_graph.py         # Tests agent_template memory
     │   ├── test_grumpy_agent.py
     │   ├── test_requirement_gatherer.py
