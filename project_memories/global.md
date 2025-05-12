@@ -160,16 +160,16 @@ This file outlines the overarching standards and technological choices for the A
     *   **Ruff:** Performs code linting and formatting.
     *   **Mypy:** Conducts static type checking (currently not enforced in CI/default linting pass).
     *   **codespell:** Checks for spelling mistakes.
-    *   **openevals:** Suggests involvement in evaluating language models.
+    *   **openevals:** Used for custom evaluation logic, particularly for the Coder agent.
 *   **Version Control:** Git.
 *   **LLM Models:**
-    *   **`gemini-1.5-flash-latest` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (PRD mentions `gemini-2.0-flash`, current common models are 1.5 series. The intent is a fast model.)
+    *   **`gemini-1.5-flash-latest` (or similar flash variants like `gemini-2.0-flash-lite`):** Preferred for simple tasks, quick evaluations. (PRD mentions `gemini-2.0-flash`, current common models are 1.5 series. The intent is a fast model.)
     *   **`gemini-1.5-pro-latest` (or similar pro variants):** Preferred for complex tasks needing reasoning. (PRD mentions `gemini-2.5-pro-preview-03-25`, intent is a powerful model.)
 
 
 ## 4. General Agent Architecture (based on `src/agent_template/` and common patterns)
 
-Most agents in AI Nexus follow a common structural and operational pattern, largely derived from `src/agent_template/`.
+Most agents in AI Nexus follow a common structural and operational pattern, largely derived from `src/agent_template/`. *Note: Some agents, like the Tester agent, may deviate significantly from this template's graph logic.*
 
 *   **Typical Agent Directory Structure:**
     *   `__init__.py`: Exposes the agent's graph.
@@ -461,7 +461,7 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
             *   Else: to `END`.
         *   Edge from `execute_tools` back to `call_model` (to allow the LLM to respond after tool execution).
 *   **`state.py` (`src/coder/state.py`):**
-    *   `class State(TypedDict): messages: Annotated[list, add_messages]`
+    *   `class State(TypedDict): messages: Annotated[list[AnyMessage], add_messages]` (Uses `AnyMessage` for type hinting).
 *   **`README.md` (`src/coder/README.md`):**
     *   Instructions for setting up a GitHub App with necessary permissions (Contents R/W, Pull requests R/W, Commit statuses R, Issues R/W, Metadata R) and environment variables (`GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_REPOSITORY`).
 
@@ -491,25 +491,24 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
 #### 5.5. Tester (`src/tester/`)
 
 *   **Role:** Generates tests for the codebase based on business requirements (from Product Agent) and code architecture/interfaces (from Architecture Agent).
+*   **`README.md` (`src/tester/README.md`):** Summarizes the agent's goal, responsibilities, and includes a Mermaid diagram of its simplified workflow (Analyze -> Ask Questions (if needed) -> Generate Tests).
 *   **`test-agent-system-prompt.md` (`src/tester/test-agent-system-prompt.md`):**
     *   **Objective:** Sole responsibility is to generate tests.
     *   **Must Not:** Invent rules/behaviors, make assumptions, define architecture, suggest design changes.
     *   **How You Operate:** Follow requirements/interfaces strictly. Generate comprehensive behavior tests. Propose edge case tests; if handling undefined, ask for clarification.
-    *   **Workflow (Strict & Iterative):**
+    *   **Workflow (Simplified):**
         1.  Analyze requirements, identify ambiguities/missing info.
-        2.  Always begin by sending a "questions" message with ALL questions.
+        2.  Always begin by sending "questions" (each specific, separate, traceable) if needed.
         3.  Wait for answers.
         4.  Group requirements by category/functionality.
         5.  For EACH category:
             a.  Generate tests for that category ONLY.
             b.  Send a single "tests" message with all tests for that category (traceability included).
-            c.  STOP, wait for explicit user feedback on each test.
-            d.  Handle rejected tests (skip if not needed, regenerate if feedback given).
-            e.  Proceed to next category ONLY after ALL tests in current category are approved.
-        6.  Continue until all categories covered.
-    *   **Rules:** Only generate tests for explicit definitions. Identify gaps, ask questions. Traceable tests.
-    *   **Mindset:** Methodical, precise, transparent, rigorous QA engineer.
-    *   **User Feedback Format (JSON):** Defines schema for user feedback on tests, including `testId`, `approved`, `rejectionReason`, and `allTestsApproved` flag. Details how to handle feedback.
+        6.  Continue until all categories covered. (Note: The strict wait-for-feedback loop between categories has been removed).
+    *   **Rules:** Only generate tests for explicit definitions. Identify gaps, ask specific questions. Traceable tests.
+    *   **Mindset:** Methodical, precise, rigorous QA engineer. Verify completeness, ask for clarification.
+    *   **Question Guidelines:** Emphasizes creating specific, separate, traceable questions.
+    *   **User Feedback:** Focuses on handling feedback to questions. (The previous JSON schema for test feedback has been removed).
 *   **`prompts.py` (`src/tester/prompts.py`):**
     *   Reads `src/tester/test-agent-system-prompt.md`.
     *   Escapes curly braces (`{`, `}`) for `format` compatibility, then injects `user_info` and `time`.
@@ -517,12 +516,22 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
     *   `TesterAgentTestOutput(BaseModel)`: `id`, `name`, `description`, `code`, `requirement_id`.
     *   `TesterAgentQuestionOutput(BaseModel)`: `id`, `question`, `context`.
     *   `TesterAgentFinalOutput(BaseModel)`: `questions: List[TesterAgentQuestionOutput]`, `tests: List[TesterAgentTestOutput]`. The LLM is expected to produce output conforming to this model.
-*   **`test-prompts/web-api.md` (`src/tester/test-prompts/web-api.md`):** Example requirements for a Todo List Web API (business requirements, endpoints) that the Tester agent might consume as input.
-*   **Structure:** Follows the `agent_template` pattern.
-    *   `configuration.py`: Standard.
-    *   `graph.py`: Standard `call_model`, `store_memory`, `route_message` flow. Uses `tools.upsert_memory`. The `call_model` is expected to bind the `TesterAgentFinalOutput` as a tool or parse its structured output. The current `graph.py` for tester is standard agent_template, so it doesn't explicitly show parsing of `TesterAgentFinalOutput` but would need adaptation.
-    *   `state.py`: Standard.
-    *   `tools.py`: Standard `upsert_memory`.
+*   **`test-prompts/web-api.md` (`src/tester/test-prompts/web-api.md`):** Example requirements for a Todo List Web API.
+*   **`test-prompts/web-api-simple.md` (`src/tester/test-prompts/web-api-simple.md`):** A simpler example requirements file for a Todo List Web API.
+*   **Structure:** Deviates significantly from the `agent_template` graph logic.
+    *   `configuration.py`: Standard, but default model is `google_genai:gemini-2.0-flash-lite`.
+    *   `graph.py`:
+        *   Does NOT use `upsert_memory` tool or `store_memory` node.
+        *   Does NOT retrieve or format memories from the store within its nodes.
+        *   Initializes LLM with `google_genai:gemini-2.0-flash-lite`.
+        *   Uses `WorkflowStage` enum (`ANALYZE_REQUIREMENTS`, `GENERATE_TESTS`).
+        *   Nodes: `analyze_requirements`, `generate_tests`. Both nodes:
+            *   Dynamically update the system prompt based on the current task.
+            *   Use `llm.with_structured_output(TesterAgentFinalOutput)` to parse the response.
+            *   Update `workflow_stage` in the state based on whether questions were generated.
+        *   Flow: Simplified. Uses `route_based_on_workflow_stage` from `__start__`. Edges lead from `analyze_requirements` and `generate_tests` directly to `END`. No explicit looping or waiting for feedback within the graph structure.
+    *   `state.py`: Standard `State` with `messages`. The `graph.py` updates a `workflow_stage` field in the returned dictionary, implying it might be added to the state or used transiently.
+    *   `tools.py`: Defines the standard `upsert_memory` tool, but it is **not used** by the current Tester agent graph.
     *   `utils.py`: Standard.
 
 #### 5.6. Requirement Gatherer (`src/requirement_gatherer/`)
@@ -614,12 +623,13 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     *   `MemorySaver()` from `langgraph.checkpoint.memory` for graph checkpointing.
     *   `InMemoryStore()` from `langgraph.stores.memory` for agent memory during tests.
     *   Graphs are typically compiled with a checkpointer and store: `graph_compiled = graph_builder.compile(checkpointer=memory_saver, store=memory_store)`.
-    *   A wrapper function (e.g., `run_graph_with_config`, `call_tester_agent`, `run_graph_with_attachments`) is often created to:
-        *   Take a dataset example (and potentially attachments) as input.
+    *   A wrapper function (e.g., `run_graph_with_config` or `call_tester_agent`) is often created to:
+        *   TTake a dataset example (and potentially attachments) as input.
         *   Format the input for the graph (e.g., converting to `HumanMessage` lists, injecting attachments as `SystemMessage`s).
         *   Generate a unique `thread_id` (using `uuid.uuid4()`) for state isolation in `RunnableConfig`.
+        *   Set necessary configuration like `user_id` and `model`.
         *   Invoke the compiled graph: `await graph_compiled.ainvoke(graph_input, config=config)`.
-        *   Extract and format the output for evaluation.
+        *   Extract and format the output (often the content of the last message) for evaluation.
     *   `client.aevaluate()` is used to run evaluations against LangSmith datasets, passing the wrapper function and dataset name/examples.
 
 *   **`tests/datasets/requirement_gatherer_dataset.py`:**
@@ -629,6 +639,14 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   Creates a LangSmith dataset using `client.create_dataset()`.
         *   Adds examples (input-output pairs) to the dataset using `client.create_examples()`. Inputs are simple strings, outputs are expected agent responses.
 
+*   **`tests/datasets/coder_dataset.py`:**
+    *   Defines `CODER_DATASET_NAME = "coder-test-dataset"`.
+    *   Defines input (`CodeEvaluatorInputs`) and reference output (`CodeEvaluatorReferenceOutputs`) structures for Coder evaluation.
+    *   `create_dataset()` function:
+        *   Initializes `Client()`.
+        *   Creates the LangSmith dataset.
+        *   Adds examples (input-output pairs) to the dataset.
+
 *   **`tests/integration_tests/`:**
     *   **`test_graph.py`:**
         *   `test_memory_storage`: Basic test for the `agent_template` graph's memory storage.
@@ -636,37 +654,38 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   Checks if memories are saved in `InMemoryStore` under the correct `user_id` and namespace `("memories", user_id)`.
         *   Verifies that memories are not found under an incorrect namespace.
     *   **`test_requirement_gatherer.py`:**
-        *   Tests the requirement gatherer agent against `REQUIREMENT_GATHERER_DATASET_NAME`.
-        *   Uses a `correctness_evaluator` (LLM as judge, see `tests/testing/evaluators.py`) to compare graph output against reference output from the dataset.
-        *   `run_graph_with_config` function handles input formatting:
-            *   If input example has a `messages` key, it converts the list of dicts to `BaseMessage` objects (HumanMessage, AIMessage, etc.).
-            *   Otherwise, it takes `input_example["input"]` and wraps it in a `HumanMessage`.
-        *   The output for evaluation is the content of the last AI message from the graph.
+        *   Tests the requirement gatherer agent against the `REQUIREMENT_GATHERER_DATASET_NAME` LangSmith dataset.
+        *   Uses `create_async_graph_caller` from `tests.testing` to wrap the agent's graph for evaluation runs.
+        *   Employs `LLMJudge` from `tests.testing.evaluators`. It calls the `create_correctness_evaluator` method of `LLMJudge` with `plaintext=True` and a custom, detailed prompt (`REQUIREMENT_GATHERER_CORRECTNESS_PROMPT` defined within the test file) to assess the agent's output against reference data.
+        *   The test invokes `client.aevaluate()` with the graph caller, dataset, the configured evaluator, and an updated `experiment_prefix` (e.g., `"requirement-gatherer-gemini-2.5-correctness-eval-plain"`).
+        *   Uses `print_evaluation` from `testing.formatter` to display evaluation results, with configurable `Verbosity`.
+        *   The previous complex input formatting logic (formerly in a local `run_graph_with_config` function) has been refactored, likely simplified by the use of `create_async_graph_caller`.
     *   **`test_tester_agent.py`:**
-        *   `test_tester_hello_response`: Tests the tester agent's response to a simple "hello" message.
-        *   Uses `client.aevaluate()` with a dataset named `TESTER_AGENT_DATASET_NAME = "tester-agent-hello-dataset"`.
-        *   Also uses the `correctness_evaluator`.
-        *   `call_tester_agent` function prepares input and extracts output similarly to other integration tests.
+        *   Tests the tester agent against `LANGSMITH_DATASET_NAME = "tester-agent-test-dataset"`.
+        *   Uses `LLMJudge` from `tests.testing.evaluators` with a custom `CORRECTNESS_PROMPT` (defined in the test file) tailored for evaluating the Tester agent's output (analyzing requirements, asking questions, generating tests).
+        *   Uses the `create_async_graph_caller` utility from `tests/testing` to wrap the Tester agent's graph for evaluation.
+        *   Runs the evaluation multiple times (`num_repetitions=3`).
     *   **`test_grumpy_agent.py`:**
         *   Tests the grumpy agent against a LangSmith dataset (e.g., `LANGSMITH_DATASET_NAME = "grumpy-failed-questions"`).
         *   Uses `LLMJudge` from `tests.testing.evaluators` to create a `correctness_evaluator` with a specific prompt for judging Grumpy's output.
         *   The `create_graph_caller` utility is used to wrap the Grumpy agent's graph for evaluation.
-    *   **`test_architect_agent.py`:**
-        *   Tests the architect agent against `ARCHITECT_DATASET_NAME = "Architect-dataset"`.
-        *   Uses `LLMJudge` to create a `correctness_evaluator` with a custom `ARCHITECT_CORRECTNESS_PROMPT`.
-        *   Uses `run_graph_with_attachments` function:
-            *   Takes `inputs` (user prompt/messages) and `attachments` (dict of file-like objects).
-            *   Reads content from `attachments` and injects them as `SystemMessage`s before the user input messages. This simulates the Architect reading project files.
-            *   Invokes the compiled Architect graph.
-            *   Extracts the last AI message content for evaluation.
+    *   **`test_coder.py`:**
+        *   Contains tests for the Coder agent's GitHub interactions using `MockGithubApi`.
+        *   Introduces a custom evaluation framework for the Coder agent using `openevals`.
+        *   Defines `CodeEvaluatorInputs`, `CodeEvaluatorReferenceOutputs`, and `Result` TypedDicts for structuring evaluation data.
+        *   Uses a specific `EVAL_PROMPT` and an LLM (`gemini-2.0-flash`) configured for structured output (`Result`) to act as a judge.
+        *   The `evaluate_code` function orchestrates the evaluation using `openevals.utils._arun_evaluator`.
+        *   The `invoke_agent` function runs the Coder graph with mocked GitHub tools and specific starting code state.
+        *   The `test_coder_creates_rest_api` test demonstrates this custom evaluation flow.
 
 *   **`tests/testing/__init__.py`:**
     *   `get_logger()`: Utility to create a Python logger with a default format.
-    *   `create_graph_caller(graph, process_inputs_fn=None, process_outputs_fn=None)`:
-        *   A generic function to create a caller for `graph.ainvoke`.
+    *   `create_async_graph_caller(graph, process_inputs_fn=None, process_outputs_fn=None)`:
+        *   A generic async function to create a caller for `graph.ainvoke`.
         *   Handles creating a unique `thread_id` for each call.
-        *   Optionally processes inputs and outputs using provided functions.
-        *   Returns the last message from the graph's output.
+        *   Sets default `user_id` and `model` in the config.
+        *   Processes input messages (extracting content, wrapping in `HumanMessage`).
+        *   Returns the content of the last message from the graph's output.
 
 *   **`tests/testing/evaluators.py`:**
     *   `LLMJudge` class:
@@ -675,11 +694,20 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   `create_llm_as_judge(prompt: str, input_keys: List[str], output_key: str, reference_output_key: str, continuous: bool = True)`:
             *   Creates an evaluator chain using an LLM.
             *   Takes a prompt template, keys for input, output, reference, and a flag for continuous feedback.
-        *   `create_correctness_evaluator(...)`: Helper method to create a specific correctness evaluator using `create_llm_as_judge`.
+        *   `create_correctness_evaluator(plaintext: bool, prompt: str)`: (Method usage seen in PRs)
+            *   A specialized method to create a correctness evaluator, likely taking a prompt and a flag for plaintext comparison.
     *   `CORRECTNESS_PROMPT`: A prompt template for an LLM to judge if the `prediction` matches the `reference` output given an `input`.
     *   `correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict)`:
-        *   A specific evaluator instance created using `LLMJudge().create_correctness_evaluator` with `CORRECTNESS_PROMPT`.
+        *   A specific evaluator instance created using `LLMJudge().create_llm_as_judge` (or potentially `LLMJudge().create_correctness_evaluator`) with `CORRECTNESS_PROMPT`.
         *   Compares `outputs['output']` (actual agent response) with `reference_outputs['message']['content']` (expected response from dataset).
+
+*   **Evaluation Approaches:**
+    *   **LangSmith Datasets + LLM Judge:** Used for Requirement Gatherer, Tester (simple case), Grumpy. Relies on `client.aevaluate()` and evaluators defined in `tests/testing/evaluators.py`.
+    *   **Custom `openevals` Framework:** Implemented in `tests/integration_tests/test_coder.py` for the Coder agent. Involves custom prompts, input/output structures, and direct use of `openevals` utilities with an LLM judge defined within the test file.
+*   **`tests/testing/formatter.py` (Implied by PR usage):**
+    *   Provides utility functions for formatting and printing evaluation results.
+    *   Includes `print_evaluation(results, client, verbosity)` for displaying detailed evaluation outcomes.
+    *   May include enums like `Verbosity` to control output detail.
 
 *   **`tests/unit_tests/test_configuration.py`:**
     *   `test_configuration_from_none()`: Basic unit test to check if `Configuration.from_runnable_config()` handles a `None` config correctly, falling back to default values.
@@ -740,6 +768,7 @@ ai-nexus/
 ├── .github/
 │   └── workflows/
 │       └── checks.yml            # GitHub Actions CI workflow (lint, spell check, unit tests)
+├── Makefile                      # Task runner (lint, test, run, etc.) - Added test-tester target
 ├── README.md                     # Project overview, setup, usage, and contribution guidelines
 ├── agent_memories/               # Agent-specific, static, long-term memory files (prompts, roles)
 │   └── grumpy/
@@ -755,7 +784,7 @@ ai-nexus/
 │   ├── agent_template/           # Base template for creating new agents
 │   │   ├── __init__.py
 │   │   ├── configuration.py      # Dataclass for agent configuration
-│   │   ├── graph.py              # LangGraph definition using State, tools, LLM
+│   │   ├── graph.py              # LangGraph definition using State, tools, LLM, memory store
 │   │   ├── memory.py             # Logic for loading static memories from JSON
 │   │   ├── prompts.py            # Default system prompts
 │   │   ├── state.py              # Dataclass for agent's graph state
@@ -777,20 +806,32 @@ ai-nexus/
 │   │   └── stubs/                # Stub implementations for delegated agent calls (for testing/dev)
 │   ├── requirement_gatherer/     # Requirement Gatherer agent: elicits and clarifies requirements
 │   └── tester/                   # Tester agent: generates tests based on requirements
+│       ├── README.md             # Goal, responsibilities, workflow diagram for Tester
+│       ├── configuration.py      # Default model changed to gemini-2.0-flash-lite
+│       ├── graph.py              # REVISED: Uses structured output, multi-stage workflow (analyze/generate), no memory store interaction
 │       ├── output.py             # Pydantic models for Tester's structured output
-│       ├── test-agent-system-prompt.md # Detailed system prompt for Tester
-│       └── test-prompts/         # Example requirements for Tester (e.g., web-api.md)
+│       ├── state.py              # Standard state (messages)
+│       ├── test-agent-system-prompt.md # REVISED: Simplified workflow, new question guidelines, removed test feedback schema
+│       ├── test-prompts/         # Example requirements for Tester
+│       │   ├── web-api-simple.md # NEW: Simpler web API example
+│       │   └── web-api.md
+│       ├── tools.py              # Defines upsert_memory, but NOT used by current graph.py
+│       └── utils.py              # Standard utils
 └── tests/                        # Automated tests
     ├── datasets/                 # Scripts for creating LangSmith datasets
+    │   ├── coder_dataset.py      # NEW: Defines LangSmith dataset for Coder agent evaluation
     │   └── requirement_gatherer_dataset.py
     ├── integration_tests/        # Integration tests for agents and full graph functionality
     │   ├── test_architect_agent.py # Tests for Architect agent
+    │   ├── test_coder.py         # REVISED: Uses LangSmith dataset and custom evaluator for Coder agent
     │   ├── test_graph.py         # Tests agent_template memory
     │   ├── test_grumpy_agent.py
     │   ├── test_requirement_gatherer.py
-    │   └── test_tester_agent.py
-    ├── testing/                  # Test utilities, evaluators
-    │   └── evaluators.py         # LLM-based evaluators (e.g., LLMJudge)
+    │   └── test_tester_agent.py  # REWRITTEN: Uses create_async_graph_caller, LLMJudge, custom prompt, specific dataset
+    ├── testing/                  # Test utilities, 
+    │   ├── __init__.py           # REVISED: create_async_graph_caller updated
+    │   ├── evaluators.py         # LLM-based evaluators (e.g., LLMJudge)
+    │   └── formatter.py          # Utilities for formatting/printing evaluation results
     └── unit_tests/               # Unit tests for isolated components
         └── test_configuration.py
 ```
