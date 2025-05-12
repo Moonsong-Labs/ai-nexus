@@ -8,6 +8,41 @@ This repo provides a simple ReAct-style agent with a tool to save memories. This
 
 ![Memory Diagram](./static/memory_graph.png)
 
+## Using Memory in Your Agent
+
+To add semantic memory capability to your existing agent:
+
+1. Import SemanticMemory from the components module:
+```python
+from src.common.components.memory import SemanticMemory
+```
+
+2. Initialize the memory with your agent's configuration:
+```python
+# Create configuration with memory settings
+config = Configuration(
+    use_static_mem=True,  # Load static memories if available
+    user_id="user123"     # Set user ID for memory namespace
+)
+
+# Initialize semantic memory
+semantic_memory = SemanticMemory(
+    agent_name="my_agent",  # Used for namespace
+    config=config
+)
+```
+
+3. Get memory tools and bind them to your LLM:
+```python
+# Get memory management tools
+memory_tools = semantic_memory.get_tools()
+
+# Bind memory tools to your LLM
+llm = llm.bind_tools(memory_tools)
+```
+
+That's it! Your agent can now create, search, and manage semantic memories.
+
 ## Running Locally
 
 ### Update `.env`
