@@ -27,14 +27,12 @@ def graph_builder() -> StateGraph:
     # Add nodes to the graph
     builder.add_node("call_model", agent.__call__)
 
-    tool_node = ToolNode(agent.get_tools())
+    tool_node = ToolNode(agent.get_tools(), name="tools")
     builder.add_node("tools", tool_node)
 
     # Define the flow
     builder.add_edge("__start__", "call_model")
-    # builder.add_conditional_edges("__start__", agent.route_message, ["agent_init", "call_model"])
     builder.add_conditional_edges("call_model", tools_condition)
-    # builder.add_edge("agent_init", "call_model")
     builder.add_edge("tools", "call_model")
     builder.add_edge("call_model", END)
 

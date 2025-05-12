@@ -10,16 +10,16 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from langchain_core.tools import Tool
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langgraph.store.base import BaseStore
 from langgraph.store.memory import InMemoryStore
 from langmem import create_manage_memory_tool, create_search_memory_tool
+from pydantic import BaseModel, Field
 
 from agent_template.configuration import Configuration
-from agent_template.tools import create_file_dump_tool
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,13 @@ REPO_ROOT = Path(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 STATIC_MEMORIES_DIR = REPO_ROOT / ".langgraph/static_memories/"
+
+# Define valid memory categories
+MEMORY_CATEGORIES = [
+    "knowledge",  # Facts and information
+    "rule",  # Rules, preferences, or constraints
+    "procedure",  # How-to knowledge or procedures
+]
 
 
 def load_static_memories(store: BaseStore, user_id: str = "default") -> int:
@@ -74,10 +81,23 @@ def load_static_memories(store: BaseStore, user_id: str = "default") -> int:
     return total_memories_loaded
 
 
+class CategoryMemory(BaseModel):
+    """Categorized memory with a specific type."""
+
+    content: str
+    category: Literal["knowledge", "rule", "procedure"]
+    timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
+
+
 class SemanticMemory:
     """Encapsulates semantic memory functionality for an agent."""
 
-    def __init__(self, agent_name: str = "default", store: Optional[BaseStore] = None, config: Optional[Configuration] = None):
+    def __init__(
+        self,
+        agent_name: str = "default",
+        store: Optional[BaseStore] = None,
+        config: Optional[Configuration] = None,
+    ):
         """Initialize the semantic memory.
 
         Args:
@@ -90,7 +110,7 @@ class SemanticMemory:
         self._tools = None
         self.namespace = (
             "memories",
-            self.agent_name,
+            "semantic",
         )
         self.initialize(config)
 
@@ -103,7 +123,7 @@ class SemanticMemory:
         # Initialize the memory store with embeddings
         if self.store is None:
             self.store = create_memory_store()
-            
+
         # Load static memories if configured
         if config and config.use_static_mem:
             load_static_memories(self.store, config.user_id)
@@ -119,30 +139,6 @@ class SemanticMemory:
             self._tools = create_memory_tools(self.namespace, self.store)
         return self._tools
 
-    async def search_memories(self, query: str, user_id: str, limit: int = 5):
-        """Search memories based on the query.
-
-        Args:
-            query: The search query.
-            user_id: The user ID to search memories for.
-            limit: Maximum number of results to return.
-
-        Returns:
-            A list of memory search results.
-        """
-        # Create a namespace with the provided user_id
-        search_namespace = list(self.namespace)
-        
-        # Replace the user_id placeholder if it exists
-        if "{user_id}" in self.namespace:
-            idx = self.namespace.index("{user_id}")
-            search_namespace[idx] = user_id
-        
-        # Convert back to tuple
-        search_namespace = tuple(search_namespace)
-        
-        return await self.store.search(search_namespace, query=query, limit=limit)
-
 
 def create_memory_tools(namespace: str, store: BaseStore) -> List[Tool]:
     """Create memory management and search tools for the agent.
@@ -154,48 +150,72 @@ def create_memory_tools(namespace: str, store: BaseStore) -> List[Tool]:
     Returns:
         A list of memory-related tools (manage and search)
     """
-    # Create the file dumping tool
-    file_dump_tool = create_file_dump_tool()
-    
+
+    # Create memory dump tool
     def memory_dump(output_dir: str = "./agent_memories") -> str:
         """Dump all semantic memories associated with the agent to a file.
-        
+
         Args:
             output_dir: Directory path where the memory dump will be saved
-                        
+
         Returns:
             str: A message indicating the result of the operation
         """
-        search_prefix = (namespace[0], namespace[1])
-        memories = [{**m.value, "key": m.key, "namespace": m.namespace} for m in store.search(search_prefix, query=None, limit=10000)]
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Use fixed filename for the agent
-        file_path = Path(output_dir) / f"memory_dump_{namespace[1]}.json"
-        
-        # Check if file exists and has the same content
-        if file_path.exists():
-            try:
-                with open(file_path, 'r') as f:
-                    existing_memories = json.load(f)
-                if existing_memories == memories:
-                    return f"Memory content unchanged. No update needed for {file_path}"
-            except (json.JSONDecodeError, FileNotFoundError):
-                pass  # Proceed with writing if file is invalid
-                
-        # Write the file only if content changed or file didn't exist
-        with open(file_path, 'w') as f:
-            json.dump(memories, f, indent=2)
-        return f"Successfully dumped {len(memories)} memories to {file_path}"
+        try:
+            memories = []
 
+            # Simply search the current namespace
+            try:
+                results = store.search(("memories"), query=None, limit=10000)
+                memories = [
+                    {**m.value, "key": m.key, "namespace": m.namespace} for m in results
+                ]
+                logger.info(f"Found {len(memories)} memories in namespace {namespace}")
+            except Exception as e:
+                logger.warning(f"Error searching namespace {namespace}: {str(e)}")
+
+            # Create the output directory
+            output_path = Path(output_dir)
+            if not output_path.is_absolute():
+                output_path = Path.cwd() / output_path
+
+            output_path.mkdir(parents=True, exist_ok=True)
+
+            # Use a simple filename based on the agent name or 'default'
+            agent_name = "default"
+            if len(namespace) > 1:
+                agent_name = namespace[1]
+
+            file_path = output_path / f"memory_dump_{agent_name}.json"
+
+            # Write the file
+            with open(file_path, "w") as f:
+                json.dump(memories, f, indent=2)
+
+            if len(memories) == 0:
+                return f"No memories found. Created empty dump file at {file_path}"
+            else:
+                return f"Successfully dumped {len(memories)} memories to {file_path}"
+
+        except Exception as e:
+            error_msg = f"Error dumping memories: {str(e)}"
+            logger.error(error_msg)
+            return error_msg
+
+    # Use LangMem's built-in tools with our category schema
     tools = [
-        create_manage_memory_tool(namespace=namespace, store=store),
+        # Tool for storing categorized memories
+        create_manage_memory_tool(
+            namespace=namespace, store=store, schema=CategoryMemory
+        ),
+        # Tool for searching memories
         create_search_memory_tool(namespace=namespace, store=store),
+        # Custom tool for dumping memories to file
         Tool(
             name="memory_dump",
             description="Dump the agent's semantic memory to a file. If no output directory is specified, uses the default './agent_memories'",
-            func=memory_dump
-        )
+            func=memory_dump,
+        ),
     ]
     return tools
 
