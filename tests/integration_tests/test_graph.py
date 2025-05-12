@@ -1,15 +1,15 @@
-from typing import List
 import logging
+from typing import List
 
-import langsmith as ls
 import pytest
-from agent_template.configuration import Configuration
 
+from agent_template.configuration import Configuration
 from agent_template.graph import graph_builder
 
 # Get the logger
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
@@ -34,7 +34,7 @@ logger.setLevel(logging.DEBUG)
 async def test_memory_storage(conversation: List[str]):
     config = Configuration()
     graph = graph_builder(config).compile()
-    
+
     manage_memory_calls_found = False
 
     for content in conversation:
@@ -42,26 +42,27 @@ async def test_memory_storage(conversation: List[str]):
             {"messages": [("user", content)]},
             {"thread_id": "thread"},
         )
-        
+
         # Extract AI messages from the response
-        if "messages" in response:            
+        if "messages" in response:
             for message in response["messages"]:
                 # Check if it's an AIMessage with tool calls
                 if hasattr(message, "tool_calls") and message.tool_calls:
-                    logger.info(f"AI message with tool calls:")
+                    logger.info("AI message with tool calls:")
                     logger.info("Tool calls:")
                     for tool_call in message.tool_calls:
                         logger.info(f"  - Name: {tool_call['name']}")
                         logger.info(f"    Args: {tool_call['args']}")
                         # Check if manage_memory is being called
-                        if tool_call['name'] == 'manage_memory':
+                        if tool_call["name"] == "manage_memory":
                             manage_memory_calls_found = True
-                            
+
                     logger.info("-" * 50)
         else:
             logger.warning("No 'messages' key found in response")
             logger.info(f"Response keys: {list(response.keys())}")
-    
-    # Assert that we found at least one manage_memory call
-    assert manage_memory_calls_found, "No 'manage_memory' tool calls found in any of the responses"
 
+    # Assert that we found at least one manage_memory call
+    assert manage_memory_calls_found, (
+        "No 'manage_memory' tool calls found in any of the responses"
+    )

@@ -35,7 +35,7 @@ def graph_builder(config: Configuration) -> StateGraph:
     return builder
 
 
-default_config = Configuration()    
+default_config = Configuration()
 default_config.use_static_mem = True
 
 graph = graph_builder(default_config).compile()

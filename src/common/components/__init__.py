@@ -1,1 +1,1 @@
-"""Common components for agents.""" 
+"""Common components for agents."""

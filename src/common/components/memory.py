@@ -22,7 +22,9 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    )
 )
 STATIC_MEMORIES_DIR = REPO_ROOT / ".langgraph/static_memories/"
 
@@ -36,7 +38,7 @@ MEMORY_CATEGORIES = [
 
 class ConfigurationProtocol(Protocol):
     """Protocol defining the minimum configuration interface required."""
-    
+
     use_static_mem: bool
     user_id: str
 
@@ -130,8 +132,8 @@ class SemanticMemory:
             self.store = create_memory_store()
 
         # Load static memories if configured
-        if config and hasattr(config, 'use_static_mem') and config.use_static_mem:
-            user_id = getattr(config, 'user_id', 'default')
+        if config and hasattr(config, "use_static_mem") and config.use_static_mem:
+            user_id = getattr(config, "user_id", "default")
             load_static_memories(self.store, user_id)
             logger.info(f"Loaded static memories for user {user_id}")
 
@@ -174,11 +176,12 @@ def create_memory_tools(namespace: tuple, store: BaseStore) -> List[Tool]:
             try:
                 all_namespaces = store.list_namespaces(prefix=("memories",))
                 logger.info(f"Found {len(all_namespaces)} memory namespaces")
-                
+
                 for ns in all_namespaces:
                     ns_results = store.search(ns, query=None, limit=10000)
                     ns_memories = [
-                        {**m.value, "key": m.key, "namespace": m.namespace} for m in ns_results
+                        {**m.value, "key": m.key, "namespace": m.namespace}
+                        for m in ns_results
                     ]
                     memories.extend(ns_memories)
                     logger.info(f"Found {len(ns_memories)} memories in namespace {ns}")
@@ -197,7 +200,10 @@ def create_memory_tools(namespace: tuple, store: BaseStore) -> List[Tool]:
             if len(namespace) > 1:
                 agent_name = namespace[1]
 
-            file_path = output_path / f"memory_dump_{agent_name}_{datetime.now().strftime('%Y-%m-%d')}.json"
+            file_path = (
+                output_path
+                / f"memory_dump_{agent_name}_{datetime.now().strftime('%Y-%m-%d')}.json"
+            )
 
             # Write the file
             with open(file_path, "w") as f:
@@ -245,4 +251,4 @@ def create_memory_store() -> BaseStore:
             "dims": 3072,
             "embed": gemini_embeddings,
         }
-    ) 
+    )
