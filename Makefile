@@ -25,9 +25,17 @@ test-code-reviewer:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_code_reviewer_agent.py
 
 test-requirement-gatherer:
-	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_requirement_gatherer.py	
+	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_requirement_gatherer.py
+
+test-memory-graph:
+	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_graph.py
+
 test-tester:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_tester_agent.py
+
+test-architect:
+	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_architect_agent.py
+
 test_watch:
 	uv run --env-file .env -- python -m ptw --snapshot-update --now . -- -vv tests/unit_tests
 
