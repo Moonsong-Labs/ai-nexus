@@ -160,7 +160,7 @@ This file outlines the overarching standards and technological choices for the A
     *   **Ruff:** Performs code linting and formatting.
     *   **Mypy:** Conducts static type checking (currently not enforced in CI/default linting pass).
     *   **codespell:** Checks for spelling mistakes.
-    *   **openevals:** Suggests involvement in evaluating language models.
+    *   **openevals:** Used for custom evaluation logic, particularly for the Coder agent.
 *   **Version Control:** Git.
 *   **LLM Models:**
     *   **`gemini-1.5-flash-latest` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (PRD mentions `gemini-2.0-flash`, current common models are 1.5 series. The intent is a fast model.)
@@ -452,7 +452,7 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
             *   Else: to `END`.
         *   Edge from `execute_tools` back to `call_model` (to allow the LLM to respond after tool execution).
 *   **`state.py` (`src/coder/state.py`):**
-    *   `class State(TypedDict): messages: Annotated[list, add_messages]`
+    *   `class State(TypedDict): messages: Annotated[list[AnyMessage], add_messages]` (Uses `AnyMessage` for type hinting).
 *   **`README.md` (`src/coder/README.md`):**
     *   Instructions for setting up a GitHub App with necessary permissions (Contents R/W, Pull requests R/W, Commit statuses R, Issues R/W, Metadata R) and environment variables (`GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_REPOSITORY`).
 
@@ -606,7 +606,7 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     *   `InMemoryStore()` from `langgraph.stores.memory` for agent memory during tests.
     *   Graphs are typically compiled with a checkpointer and store: `graph_compiled = graph_builder.compile(checkpointer=memory_saver, store=memory_store)`.
     *   A wrapper function (e.g., `run_graph_with_config` or `call_tester_agent`) is often created to:
-        *   Take a dataset example as input.
+        *   Take a dataset example or test input.
         *   Format the input for the graph (e.g., converting to `HumanMessage` lists).
         *   Generate a unique `thread_id` (using `uuid.uuid4()`) for state isolation in `RunnableConfig`.
         *   Invoke the compiled graph: `await graph_compiled.ainvoke(graph_input, config=config)`.
@@ -642,6 +642,14 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   Tests the grumpy agent against a LangSmith dataset (e.g., `LANGSMITH_DATASET_NAME = "grumpy-failed-questions"`).
         *   Uses `LLMJudge` from `tests.testing.evaluators` to create a `correctness_evaluator` with a specific prompt for judging Grumpy's output.
         *   The `create_graph_caller` utility is used to wrap the Grumpy agent's graph for evaluation.
+    *   **`test_coder.py`:**
+        *   Contains tests for the Coder agent's GitHub interactions using `MockGithubApi`.
+        *   Introduces a custom evaluation framework for the Coder agent using `openevals`.
+        *   Defines `CodeEvaluatorInputs`, `CodeEvaluatorReferenceOutputs`, and `Result` TypedDicts for structuring evaluation data.
+        *   Uses a specific `EVAL_PROMPT` and an LLM (`gemini-2.0-flash`) configured for structured output (`Result`) to act as a judge.
+        *   The `evaluate_code` function orchestrates the evaluation using `openevals.utils._arun_evaluator`.
+        *   The `invoke_agent` function runs the Coder graph with mocked GitHub tools and specific starting code state.
+        *   The `test_coder_creates_rest_api` test demonstrates this custom evaluation flow.
 
 *   **`tests/testing/__init__.py`:**
     *   `get_logger()`: Utility to create a Python logger with a default format.
@@ -663,8 +671,9 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   A specific evaluator instance created using `LLMJudge().create_llm_as_judge` with `CORRECTNESS_PROMPT`.
         *   Compares `outputs['output']` (actual agent response) with `reference_outputs['message']['content']` (expected response from dataset).
 
-*   **`tests/unit_tests/test_configuration.py`:**
-    *   `test_configuration_from_none()`: Basic unit test to check if `Configuration.from_runnable_config()` handles a `None` config correctly, falling back to default values.
+*   **Evaluation Approaches:**
+    *   **LangSmith Datasets + LLM Judge:** Used for Requirement Gatherer, Tester (simple case), Grumpy. Relies on `client.aevaluate()` and evaluators defined in `tests/testing/evaluators.py`.
+    *   **Custom `openevals` Framework:** Implemented in `tests/integration_tests/test_coder.py` for the Coder agent. Involves custom prompts, input/output structures, and direct use of `openevals` utilities with an LLM judge defined within the test file.
 
 
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`)
@@ -760,12 +769,13 @@ ai-nexus/
     ├── datasets/                 # Scripts for creating LangSmith datasets
     │   └── requirement_gatherer_dataset.py
     ├── integration_tests/        # Integration tests for agents and full graph functionality
+    │   ├── test_coder.py         # Tests Coder agent, includes custom openevals framework
     │   ├── test_graph.py         # Tests agent_template memory
     │   ├── test_grumpy_agent.py
     │   ├── test_requirement_gatherer.py
     │   └── test_tester_agent.py
     ├── testing/                  # Test utilities, evaluators
-    │   └── evaluators.py         # LLM-based evaluators (e.g., LLMJudge)
+    │   └── evaluators.py         # LLM-based evaluators (e.g., LLMJudge) for LangSmith datasets
     └── unit_tests/               # Unit tests for isolated components
         └── test_configuration.py
 ```
