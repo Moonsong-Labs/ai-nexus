@@ -1,43 +1,57 @@
-"""Define he agent's tools."""
+"""Generic utility tools for the agent."""
 
-import uuid
-from typing import Annotated, Optional
+import logging
+import os
+from pathlib import Path
+from typing import Optional
 
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg
-from langgraph.store.base import BaseStore
+from langchain_core.tools import Tool
 
-from agent_template.configuration import Configuration
+logger = logging.getLogger(__name__)
 
 
-async def upsert_memory(
-    content: str,
-    context: str,
-    *,
-    memory_id: Optional[uuid.UUID] = None,
-    # Hide these arguments from the model.
-    config: Annotated[RunnableConfig, InjectedToolArg],
-    store: Annotated[BaseStore, InjectedToolArg],
-):
-    """Upsert a memory in the database.
+def create_file_dump_tool() -> Tool:
+    """Create a tool that dumps any arbitrary text to a file.
 
-    If a memory conflicts with an existing one, then just UPDATE the
-    existing one by passing in memory_id - don't create two memories
-    that are the same. If the user corrects a memory, UPDATE it.
-
-    Args:
-        content: The main content of the memory. For example:
-            "User expressed interest in learning about French."
-        context: Additional context for the memory. For example:
-            "This was mentioned while discussing career options in Europe."
-        memory_id: ONLY PROVIDE IF UPDATING AN EXISTING MEMORY.
-        The memory to overwrite.
+    Returns:
+        Tool: A tool that writes content to a file
     """
-    mem_id = memory_id or uuid.uuid4()
-    user_id = Configuration.from_runnable_config(config).user_id
-    await store.aput(
-        ("memories", user_id),
-        key=str(mem_id),
-        value={"content": content, "context": context},
+
+    def file_dump(
+        content: str, output_path: str, filename: Optional[str] = None
+    ) -> bool:
+        """Write content to a file in the specified directory.
+
+        Args:
+            content: The text content to write to the file
+            output_path: Directory path where the file will be saved
+            filename: Optional filename (if None, a default name will be used)
+
+        Returns:
+            bool: True if successful, False if failed
+        """
+        try:
+            # Create the output directory if it doesn't exist
+            dir_path = Path(output_path)
+            os.makedirs(dir_path, exist_ok=True)
+
+            # Use provided filename or create a default one
+            if not filename:
+                filename = "file_dump.txt"
+
+            file_path = dir_path / filename
+
+            # Write content to file
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(content)
+
+            return True
+        except Exception as e:
+            logger.error(f"Error writing to file: {str(e)}")
+            return False
+
+    return Tool(
+        name="file_dump",
+        description="Write content to a file in the specified directory",
+        func=file_dump,
     )
-    return f"Stored memory {mem_id}"
