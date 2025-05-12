@@ -8,130 +8,26 @@
 
 **Key Concepts:**
 1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy) working collaboratively.
-2.  **Externalized Memory (Memory Bank):** A core principle, especially for the "Cursor" concept, where agents rely on structured external files (primarily Markdown) for persistent knowledge, project state, and context. This addresses context loss in AI agents.
+2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is now `langmem`, providing semantic search capabilities over stored memories, replacing the previous conceptual Markdown-based "Memory Bank" and direct `upsert_memory` tool usage for agents based on the template.
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
-4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory.
+4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools or custom tools like `file_dump`).
 5.  **System Prompts:** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols.
-6.  **Configuration Management:** Agents have configurable parameters, including LLM models and system prompts, managed via `Configuration` dataclasses.
+6.  **Configuration Management:** Agents have configurable parameters, including LLM models, system prompts, and memory settings (e.g., `use_static_mem`), managed via `Configuration` dataclasses.
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
+8.  **`langmem` Integration:** Provides semantic memory capabilities (storage, search) for agents, typically managed via the `Agent` class and `SemanticMemory` component.
 
 
-## 2. The Memory Bank System (Conceptualized for "Cursor")
+## 2. The Memory Bank System (Shift from Conceptual to `langmem`)
 
-The Memory Bank is designed as Cursor's (and potentially other agents') sole source of project knowledge, ensuring continuity despite internal memory resets. It consists of structured Markdown files.
+The original "Memory Bank" concept described a system of structured Markdown files (`memory-bank/`) for agent knowledge persistence, particularly for the "Cursor" idea. This concept, detailed in `project_memories/global.md`, served as the initial design principle for externalized memory.
 
-**Location:** `memory-bank/` (This directory is conceptualized and its contents are described in `project_memories/global.md` but not present as actual files in the provided codebase snapshot, except for `project_memories/global.md` itself which describes it).
+**Current Implementation (`langmem`):** The project has integrated the `langmem` library to provide a more robust and queryable semantic memory system. Agents based on the `agent_template` now utilize `langmem` tools for storing and retrieving memories.
 
-**Core Files & Purpose (as defined in `project_memories/global.md`):**
-
-*   **`projectbrief.md`**:
-    *   **Project Name:** AI Nexus
-    *   **Core Requirements & Goals:**
-        *   Develop a system for managing AI agents, initially "Cursor".
-        *   Cursor's memory resets completely between sessions.
-        *   Create a "Memory Bank" for Cursor to understand the project and continue work.
-        *   Memory Bank must be perfect, meticulously maintained documentation.
-    *   **Scope:**
-        *   Initial: Establish Memory Bank structure, populate core files, define Cursor-Memory Bank interaction.
-        *   Future: Develop Cursor and other AI agents.
-    *   **Stakeholders:** Primary user/developer interacting with Cursor.
-
-*   **`productContext.md`**:
-    *   **Why This Project Exists:** To implement a novel approach to AI agent operation, addressing memory persistence challenges (e.g., Cursor's session-based memory reset).
-    *   **Problems It Solves:**
-        *   Context loss in AI agents.
-        *   Maintaining project continuity.
-        *   Ensuring accurate AI task execution via comprehensive memory.
-        *   Facilitating complex AI collaboration.
-    *   **How It Should Work:**
-        *   Cursor's internal memory resets post-session.
-        *   Cursor MUST read ALL Memory Bank files at new session start.
-        *   Memory Bank is the sole source of project knowledge (structured Markdown).
-        *   Cursor updates Memory Bank with new info, decisions, progress.
-        *   Hierarchical structure for layered context.
-    *   **User Experience Goals:**
-        *   Seamless interaction (feels like persistent memory).
-        *   Reliable AI performance.
-        *   Transparent operation (reliance on Memory Bank is clear).
-        *   High-quality, understandable documentation in the Memory Bank.
-
-*   **`activeContext.md`**:
-    *   **Current Work Focus:** Tracks the immediate tasks and objectives.
-    *   **Recent Changes:** Logs significant updates and accomplishments.
-    *   **Next Steps:** Outlines upcoming tasks.
-    *   **Active Decisions and Considerations:** Records ongoing decision-making processes and important factors being considered.
-    *   *This file is expected to be frequently updated by the agent.*
-
-*   **`systemPatterns.md`**:
-    *   **System Architecture:**
-        *   Core Agent (e.g., Cursor): AI with memory reset.
-        *   External Memory (Memory Bank): Markdown files in `memory-bank/`.
-        *   Interaction Model:
-            1.  Session Start: Agent reads ALL Memory Bank files.
-            2.  Task Execution: Agent performs tasks based on Memory Bank and user requests.
-            3.  Memory Update: Agent updates Memory Bank (esp. `activeContext.md`, `progress.md`, `.cursorrules`).
-            4.  Session End: Agent's internal state lost.
-    *   **Key Technical Decisions:**
-        *   Memory Externalization.
-        *   Markdown for Memory Bank (human-readable, AI-parsable, versionable).
-        *   Hierarchical file structure.
-        *   Mandatory Full Read of Memory Bank at session start.
-    *   **Design Patterns in Use:**
-        *   State Externalization.
-        *   Observer Pattern (Implicit): Agent observes Memory Bank; future self observes changes.
-        *   Single Source of Truth: Memory Bank for project information.
-    *   **Component Relationships (Mermaid Diagram):**
-        ```mermaid
-        graph TD
-            User --> CursorAgent[Cursor Agent]
-            CursorAgent -- Reads/Writes --> MemoryBank[Memory Bank Files]
-            MemoryBank -- Contains --> ProjectBrief[projectbrief.md]
-            MemoryBank -- Contains --> ProductContext[productContext.md]
-            MemoryBank -- Contains --> ActiveContext[activeContext.md]
-            MemoryBank -- Contains --> SystemPatternsDoc[systemPatterns.md]
-            MemoryBank -- Contains --> TechContextDoc[techContext.md]
-            MemoryBank -- Contains --> ProgressDoc[progress.md]
-            MemoryBank -- May Contain --> AdditionalContext[Additional Context Files/Folders]
-            CursorAgent -- Reads/Writes --> CursorRules[.cursorrules]
-
-            ProjectBrief --> ProductContext
-            ProjectBrief --> SystemPatternsDoc
-            ProjectBrief --> TechContextDoc
-
-            ProductContext --> ActiveContext
-            SystemPatternsDoc --> ActiveContext
-            TechContextDoc --> ActiveContext
-
-            ActiveContext --> ProgressDoc
-        ```
-
-*   **`techContext.md`**:
-    *   **Technologies Used:**
-        *   Memory Bank Storage: Markdown files (`.md`).
-        *   Cursor Agent (Conceptual): AI model capable of R/W Markdown, user interaction, tool use.
-        *   Environment: VS Code, Linux.
-        *   Version Control: Git (assumed).
-    *   **Development Setup:**
-        *   Workspace: `/home/crystalin/projects/ai-nexus` (example).
-        *   Memory Bank Location: `memory-bank/` subdirectory.
-        *   Core Files: (listed above).
-        *   Project Intelligence File: `.cursorrules` in workspace root.
-    *   **Technical Constraints:**
-        *   Memory Reset (primary constraint for Cursor).
-        *   Reliance on documentation (all knowledge from Memory Bank).
-        *   Markdown parsing and generation proficiency.
-        *   Adherence to tool use protocols (e.g., XML-style tags).
-    *   **Dependencies:**
-        *   File System Access tools.
-        *   User Interface.
-        *   Tooling Environment (access to defined tools like `read_file`, `write_to_file`).
-
-*   **`progress.md`**:
-    *   **What Works:** Lists completed features and milestones.
-    *   **What's Left to Build:** Identifies pending tasks and development areas.
-    *   **Current Status:** Overall project status (e.g., documentation phase, development phase).
-    *   **Known Issues:** Tracks identified bugs or problems.
-    *   *This file is also expected to be frequently updated.*
+*   **Storage:** Memories are stored in a `BaseStore` (e.g., `InMemoryStore` configured with embeddings like `GoogleGenerativeAIEmbeddings`).
+*   **Namespace:** Memories are typically namespaced by `("memories", "semantic", user_id)` or `("memories", "static", user_id)`.
+*   **Tools:** Agents use `langmem`-provided tools (`manage_memory`, `search_memory`) for interaction, often wrapped within the `SemanticMemory` component (`src/common/components/memory.py`). A custom `memory_dump` tool is also available.
+*   **Static Memories:** The concept of static, pre-loaded knowledge persists. JSON files in `.langgraph/static_memories/` can be loaded into the `BaseStore` under a static namespace if `use_static_mem` is enabled in the agent's configuration.
+*   **Shift:** The shift moves from human-readable Markdown files as the primary memory source to a database/store queried semantically via tools. The core principle of externalized memory remains, but the implementation mechanism has evolved. The specific file structure (`projectbrief.md`, `productContext.md`, etc.) described previously is not directly implemented by the `langmem` system, although the *types* of information they represent might be stored as individual memories.
 
 
 ## 3. Project-Level Standards & Goals (`project_memories/PRD.md`)
@@ -143,6 +39,7 @@ This file outlines the overarching standards and technological choices for the A
 *   **Core Technologies & Frameworks:**
     *   **Python:** >= 3.12 (Primary programming language).
     *   **LangGraph:** Core framework for building AI agents.
+    *   **`langmem`:** >= 0.0.25 (Provides semantic memory capabilities).
 *   **Operation Details:**
     *   **OS:** Linux/Mac.
     *   **Provider:** Google Cloud (for deployment).
@@ -163,234 +60,118 @@ This file outlines the overarching standards and technological choices for the A
     *   **openevals:** Used for custom evaluation logic, particularly for the Coder agent.
 *   **Version Control:** Git.
 *   **LLM Models:**
-    *   **`gemini-1.5-flash-latest` (or similar flash variants like `gemini-2.0-flash-lite`):** Preferred for simple tasks, quick evaluations. (PRD mentions `gemini-2.0-flash`, current common models are 1.5 series. The intent is a fast model.)
-    *   **`gemini-1.5-pro-latest` (or similar pro variants):** Preferred for complex tasks needing reasoning. (PRD mentions `gemini-2.5-pro-preview-03-25`, intent is a powerful model.)
+    *   **`gemini-1.5-flash-latest` / `gemini-2.5-flash-preview-04-17` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (`agent_template` default updated to `gemini-2.5-flash-preview-04-17`).
+    *   **`gemini-1.5-pro-latest` (or similar pro variants):** Preferred for complex tasks needing reasoning.
 
 
 ## 4. General Agent Architecture (based on `src/agent_template/` and common patterns)
 
-Most agents in AI Nexus follow a common structural and operational pattern, largely derived from `src/agent_template/`. *Note: Some agents, like the Tester agent, may deviate significantly from this template's graph logic.*
+Most agents in AI Nexus follow a common structural and operational pattern, largely derived from `src/agent_template/`. *Note: Some agents, like the Tester or Coder, may deviate significantly from this template's graph logic or tool usage.*
 
 *   **Typical Agent Directory Structure:**
     *   `__init__.py`: Exposes the agent's graph.
+    *   `agent.py`: **NEW:** Contains the `Agent` class handling LLM interaction and memory integration.
     *   `configuration.py`: Defines agent-specific configurable parameters.
-    *   `graph.py`: Contains the LangGraph `StateGraph` definition.
-    *   `memory.py` (in `agent_template`): Handles loading of static memories.
+    *   `graph.py`: Contains the LangGraph `StateGraph` definition, typically using the `Agent` class.
     *   `prompts.py`: Stores default system prompts and potentially other prompts.
     *   `state.py`: Defines the `State` dataclass for the agent's graph.
-    *   `tools.py`: Defines tools available to the agent.
-    *   `utils.py`: Utility functions, often including `init_chat_model` and `split_model_and_provider`.
+    *   `tools.py`: Defines utility tools (e.g., `file_dump`). Memory tools are now managed by the `Agent` class via `SemanticMemory`.
+    *   `utils.py`: Utility functions (often moved to `src/common/utils/`).
 
 *   **`configuration.py` (Typical Structure - `src/agent_template/configuration.py`):**
     ```python
     from dataclasses import dataclass, field
     from typing import Annotated, Any
     from langchain_core.runnables import RunnableConfig
-    from . import prompts # Or specific prompts module for other agents
+    from . import prompts
+
+    AGENT_NAME = "base_agent" # Example agent name
 
     @dataclass(kw_only=True)
     class Configuration:
         """Main configuration class for the memory graph system."""
-        user_id: str = "default"
-        """The ID of the user to remember in the conversation."""
+        user_id: str = "default_user" # Default user ID
         model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-            default="google_genai:gemini-1.5-flash-latest" # Example, actual default may vary
+            default="google_genai:gemini-2.5-flash-preview-04-17" # Updated default model
         )
-        system_prompt: str = prompts.SYSTEM_PROMPT # Default system prompt from agent's prompts.py
+        system_prompt: str = prompts.SYSTEM_PROMPT
+        use_static_mem: bool = True # NEW: Flag to control static memory loading
 
         # Other agent-specific configurations might be added here
-        # e.g., question_prompt: str for Grumpy agent
 
         @classmethod
         def from_runnable_config(cls, config: RunnableConfig) -> "Configuration":
-            """Create a Configuration instance from a RunnableConfig."""
-            configurable = (
-                config.get("configurable")
-                if config.get("configurable") is not None
-                else {}
-            )
-            values: dict[str, Any] = {
-                k: configurable.get(k, getattr(cls, k)) for k in cls.__annotations__
-            }
-            return cls(**values)
+            # ... (implementation remains similar)
+            ...
     ```
 
 *   **`state.py` (Typical Structure - `src/agent_template/state.py`):**
     ```python
-    from dataclasses import dataclass
-    from typing import Annotated, Any
+    import logging
+    from dataclasses import dataclass, field
+    from typing import Annotated, List
     from langgraph.graph.message import AnyMessage, add_messages
+
+    logger = logging.getLogger(__name__)
 
     @dataclass(kw_only=True)
     class State:
         """Main graph state."""
-        messages: Annotated[list[AnyMessage], add_messages]
-        """The messages in the conversation."""
-        # Other agent-specific state variables might be added here
-        # e.g., analysis_question: str = "" for Grumpy agent
+        messages: Annotated[List[AnyMessage], add_messages] = field(default_factory=list)
+        user_id: str = "default" # NEW: User ID for memory management
     ```
 
-*   **`graph.py` (Core Logic - Simplified General Flow from `src/agent_template/graph.py`):**
-    *   **Initialization:**
-        *   Logger setup (`logging.getLogger(__name__)`).
-        *   Language Model (LLM) initialization using `init_chat_model()` (from `utils.py`).
-    *   **`call_model` Node:**
-        *   Signature: `async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict`
-        *   Retrieves `Configuration` from `RunnableConfig`.
-        *   Ensures static memories are loaded using `ensure_static_memories(store)` (from `memory.py`).
-        *   Retrieves recent dynamic memories from `store.asearch()` based on `user_id` and a query derived from recent messages.
-        *   Formats dynamic and static memories for inclusion in the prompt. Static memories are loaded from JSON files in `.langgraph/static_memories/` and have a specific format in the prompt.
-        *   Constructs the system prompt using `configurable.system_prompt.format(...)`, injecting current time, user info, and retrieved memories.
-        *   Invokes the LLM (`llm.bind_tools([tools.upsert_memory]).ainvoke(...)`) with the conversation history (`state.messages`) and the constructed system prompt. The `upsert_memory` tool is bound to the LLM.
-        *   Returns a dictionary to update the graph's state, typically `{"messages": [msg]}` where `msg` is the LLM's response.
-    *   **`store_memory` Node:**
-        *   Signature: `async def store_memory(state: State, config: RunnableConfig, *, store: BaseStore)`
-        *   Extracts tool calls (specifically for `upsert_memory`) from the last AI message in `state.messages`.
-        *   Executes `upsert_memory` tool calls concurrently using `asyncio.gather`. Each call involves `store.aupsert()` with `user_id`, `memory_id`, content, and context.
-        *   Formats results of memory storage operations into `ToolMessage`s.
-        *   Returns a dictionary to update the graph's state with these `ToolMessage`s: `{"messages": results}`.
-    *   **`route_message` Conditional Edge:**
-        *   Signature: `def route_message(state: State)`
-        *   Determines the next node based on whether the last AI message (`state.messages[-1]`) contains tool calls.
-        *   If tool calls exist (e.g., for `upsert_memory`), routes to the `store_memory` node.
-        *   Otherwise, routes to `END`, allowing the user to send the next message.
-    *   **Graph Compilation:**
-        *   A `StateGraph` instance is created: `builder = StateGraph(State, config_schema=configuration.Configuration)`.
-        *   Nodes (`call_model`, `store_memory`) are added using `builder.add_node()`.
-        *   The entry point is set to `call_model`: `builder.set_entry_point("call_model")`.
-        *   Edges are added:
-            *   `builder.add_conditional_edges("call_model", route_message, {"store_memory": "store_memory", "__end__": "__end__"})`
-            *   `builder.add_edge("store_memory", "__end__")` (or back to `call_model` if further response is needed after memory storage).
-        *   The graph is compiled: `graph = builder.compile()`.
-        *   For testing/evaluation, the graph is compiled with a checkpointer (e.g., `MemorySaver()`) and a store (e.g., `InMemoryStore()`).
+*   **`agent.py` (NEW - `src/agent_template/agent.py`):**
+    *   Defines an `Agent` class responsible for LLM interaction and memory management.
+    *   `__init__(config: Configuration)`: Initializes the LLM based on `config.model`. Sets up tool dictionary. Initializes `SemanticMemory` if needed. Sets `user_id`.
+    *   `initialize(config: Configuration)`: Initializes `SemanticMemory` (from `src/common/components/memory.py`) using `agent_name` and `config`. Gets memory tools (`manage_memory`, `search_memory`) and utility tools (`file_dump`). Binds all tools to the LLM.
+    *   `__call__(state: State, config: RunnableConfig)`: The main method called by the graph node. Ensures the agent is initialized. Ensures `user_id` is present in `config["configurable"]` for `langmem` tools. Constructs messages (including system prompt). Invokes the LLM with messages and tools. Returns updated messages.
+    *   `get_tools() -> List[Tool]`: Returns all bound tools (memory + utility).
 
-*   **`tools.py` (Typical `upsert_memory` Tool - `src/agent_template/tools.py`):**
-    ```python
-    import uuid
-    from langchain_core.runnables import RunnableConfig
-    from langchain_core.tools import tool
-    from .configuration import Configuration # Agent's config
-    # from langgraph.prebuilt import ToolNode # Not directly used for upsert_memory's definition
-    # from ..services.store import BaseStore # Interaction is handled by store_memory node
+*   **`graph.py` (Core Logic - Revised Flow from `src/agent_template/graph.py`):**
+    *   **`graph_builder(config: Configuration) -> StateGraph`:**
+        *   Creates a `StateGraph(State)`.
+        *   Instantiates the `Agent` class: `agent = Agent(config)`.
+        *   Initializes the agent: `agent.initialize(config)`.
+        *   Adds the main agent node: `builder.add_node("call_model", agent.__call__)`.
+        *   Adds a `ToolNode` to execute tool calls: `tool_node = ToolNode(agent.get_tools(), name="tools")`, `builder.add_node("tools", tool_node)`.
+        *   Sets the entry point: `builder.add_edge("__start__", "call_model")`.
+        *   Adds conditional routing based on tool calls: `builder.add_conditional_edges("call_model", tools_condition)`. `tools_condition` is a LangGraph helper that checks for tool calls in the last message.
+        *   Routes tool execution back to the model: `builder.add_edge("tools", "call_model")`.
+        *   Routes non-tool responses to the end: `builder.add_edge("call_model", END)`.
+    *   **Compilation:**
+        *   A default graph instance is compiled using the builder: `graph = graph_builder(default_config).compile()`.
+        *   The old logic involving manual memory retrieval (`store.asearch`), formatting memories into the prompt, and the separate `store_memory` node is **removed** and replaced by the `Agent` class logic using `langmem` tools and the `ToolNode`.
 
-    @tool
-    async def upsert_memory(
-        content: str, context: str, memory_id: str | None = None, *, config: RunnableConfig
-    ) -> str:
-        """Upsert a memory in the database.
+*   **`tools.py` (Utility Tools - `src/agent_template/tools.py`):**
+    *   **`create_file_dump_tool() -> Tool`:**
+        *   Defines and returns a `Tool` named `file_dump`.
+        *   Function signature: `file_dump(content: str, output_path: str, filename: Optional[str] = None) -> bool`.
+        *   Purpose: Writes arbitrary `content` string to a specified `filename` within the `output_path` directory. Creates the directory if needed. Returns `True` on success, `False` on failure.
+    *   **`upsert_memory` tool is REMOVED.** Memory operations are handled by `langmem` tools (`manage_memory`, `search_memory`) provided via `SemanticMemory`.
 
-        If a memory conflicts with an existing one, then just UPDATE the
-        existing one by passing in memory_id - don't create two memories
-        that are the same. If the user corrects a memory, UPDATE it.
+*   **`memory.py` (`src/agent_template/memory.py`):**
+    *   This file has been **DELETED**. Static memory loading logic is now part of `src/common/components/memory.py`.
 
-        Args:
-            content: The main content of the memory. For example:
-                "User expressed interest in learning about French."
-            context: Additional context for the memory. For example:
-                "This was mentioned while discussing career options in Europe."
-            memory_id: ONLY PROVIDE IF UPDATING AN EXISTING MEMORY.
-            The memory to overwrite.
-        """
-        # This tool definition provides the schema for the LLM.
-        # The actual storage logic is handled by the `store_memory` node in the graph,
-        # which calls `store.aupsert()`.
-        # The `user_id` is retrieved from `Configuration.from_runnable_config(config).user_id`
-        # within the `store_memory` node before calling `store.aupsert()`.
-        # The `mem_id` (if None) is generated using `uuid.uuid4()` in the `store_memory` node.
+*   **`src/common/components/memory.py` (NEW):**
+    *   **`SemanticMemory` Class:**
+        *   Encapsulates `langmem` functionality.
+        *   `__init__(agent_name, store, config)`: Initializes with agent name (for namespacing), an optional `BaseStore`, and configuration.
+        *   `initialize(config)`: Creates a `BaseStore` (using `create_memory_store`) if not provided. Loads static memories using `load_static_memories` if `config.use_static_mem` is true.
+        *   `get_tools()`: Returns a list of `langmem` tools (`manage_memory`, `search_memory`) and a custom `memory_dump` tool, configured for the agent's namespace and store.
+    *   **`load_static_memories(store, user_id)`:** Loads memories from JSON files in `.langgraph/static_memories/` into the provided `store` under the namespace `("memories", "static", user_id)`.
+    *   **`create_memory_tools(namespace, store)`:** Creates the list of memory tools (`manage_memory`, `search_memory`, `memory_dump`). `manage_memory` uses `CategoryMemory` schema (`content`, `category`, `timestamp`). `memory_dump` writes all memories across namespaces to a JSON file.
+    *   **`create_memory_store()`:** Creates an `InMemoryStore` configured with `GoogleGenerativeAIEmbeddings`.
+    *   **`CategoryMemory(BaseModel)`:** Pydantic model defining the structure for memories stored via `manage_memory` tool (`content: str`, `category: Literal["knowledge", "rule", "procedure"]`, `timestamp: str`).
 
-        # The return string here is for the LLM to know the format of a successful call.
-        # The actual ToolMessage content will be generated by the `store_memory` node.
-        effective_mem_id = memory_id or "newly_generated_uuid"
-        return f"Memory {effective_mem_id} upserted with content: '{content}' and context: '{context}'."
-    ```
-
-*   **`memory.py` (Static Memory Loading - `src/agent_template/memory.py`):**
-    *   `STATIC_MEMORIES_DIR = Path(".langgraph/static_memories/")`: Defines the directory for static memory JSON files.
-    *   `async def _load_memories_from_directory(directory_path: Path, store: BaseStore)`:
-        *   Iterates through JSON files in `directory_path`.
-        *   For each file, loads memories (expected to be a list of dicts, each with `content` and `context`).
-        *   Stores each memory in the `store` using `store.aput()` with a key like `filename_index` and namespace `("static_memories", "global")`.
-    *   `async def ensure_static_memories(store: BaseStore)`:
-        *   Checks if any static memories (namespace `("static_memories", "global")`) already exist in the `store` using `store.asearch()`.
-        *   If not found (or on error), calls `_load_memories_from_directory` to load them.
-        *   This function is typically called at the beginning of the `call_model` node in agents that use static memories.
-
-*   **`utils.py` (Common Utilities - `src/agent_template/utils.py` or `src/common/utils/__init__.py`):**
-    *   `def split_model_and_provider(fully_specified_name: str) -> dict`:
-        *   Splits a model name string like "provider:model_name" into `{"provider": "provider", "model": "model_name"}`.
-        *   If no provider is specified (no ":"), assumes Google GenAI (`google_genai`).
-    *   `def init_chat_model(model_name: str = None, config_class = None)`:
-        *   Initializes and returns a chat model instance (e.g., `ChatGoogleGenerativeAI`, `ChatOpenAI`).
-        *   If `model_name` is not provided, it might use a default from `config_class.model` or a hardcoded default.
-        *   Uses `split_model_and_provider` to determine the provider and model.
-        *   Supports `google_genai` and `openai` providers.
+*   **`prompts.py` (`src/agent_template/prompts.py`):**
+    *   `SYSTEM_PROMPT` updated to instruct the agent to inform the user when memories are retrieved: `"When using the memory tools for search, always tell the user that those memories were retrieved from my semantic memory store like saying 'I retrieved the following memories from my semantic memory store: {memories}'"`
 
 
 ## 5. Specific Agent Details
 
 #### 5.1. Orchestrator (`src/orchestrator/`)
-
-*   **Role:** Manages a team of expert AI agents. Analyzes input, determines the appropriate team member for a task, and delegates to them using tools. It does NOT perform tasks directly.
-*   **Key Memory Files (Guiding its behavior, loaded into system prompt via `prompts.get_prompt()`):**
-    *   `src/orchestrator/memory/absolute.md`:
-        *   Core rules: NEVER break rules, HAS memory (updates ONLY when explicitly asked), HAS a team, MUST perform tasks via team using tools, MUST reply professionally, MUST NOT ask clarifying questions.
-    *   `src/orchestrator/memory/process.md`:
-        *   Workflow: Analyze input -> Reason team member -> Perform task via tool -> Check pending steps.
-    *   `src/orchestrator/memory/project_states.md`:
-        *   Project stages: Gather requirements, Architect, Code, Test, Review.
-        *   Steps can be invoked from any stage; code, test, review can cycle.
-        *   Memory update only when explicitly asked.
-    *   `src/orchestrator/memory/team.md`: Defines team members and delegation tools:
-        *   **Memorizer:** Uses `store_memory` tool (renamed to `Memory` tool in `tools.py`). `origin` field tracks requester. Use ONLY when explicitly asked to remember/memorize.
-        *   **Requirements Gatherer:** Uses `Delegate` tool with `to="requirements"`.
-        *   **Architect:** Uses `Delegate` tool with `to="architect"`.
-        *   **Coder:** Uses `Delegate` tool with `to="coder"`.
-        *   **Tester:** Uses `Delegate` tool with `to="tester"`.
-        *   **Code Reviewer:** Uses `Delegate` tool with `to="reviewer"`.
-        *   MUST use `Delegate` or `store_memory` (Memory) tools.
-*   **`prompts.py` (`src/orchestrator/prompts.py`):**
-    *   `_read_memory_bank(type: str)`: Reads content from the specified markdown file in `src/orchestrator/memory/`.
-    *   `get_prompt()`: Constructs the full system prompt by concatenating contents from `absolute.md`, `process.md`, `project_states.md`, `team.md`, and a base `ORCHESTRATOR_SYSTEM_PROMPT`.
-    *   `ORCHESTRATOR_SYSTEM_PROMPT`: Base prompt: "You are an orchestrator of a professional engineering team. You will never perform any direct actions."
-*   **`tools.py` (`src/orchestrator/tools.py`):**
-    *   `Delegate` Dataclass/Tool:
-        ```python
-        from dataclasses import dataclass
-        from typing import Literal
-
-        @dataclass
-        class Delegate:
-            """Decision on where to delegate a task. ..."""
-            to: Literal[
-                "requirements", "architect", "coder", "tester", "reviewer"
-            ]
-            # task_description: str # Implied, passed in user message
-        ```
-    *   `Memory` Dataclass/Tool (for `store_memory` functionality):
-        ```python
-        @dataclass
-        class Memory:
-            """Tool to update memory."""
-            origin: Literal["user", "requirements", "architect", "coder", "tester", "reviewer"]
-            content: str
-        ```
-*   **`graph.py` (`src/orchestrator/graph.py`):**
-    *   `call_orchestrator` node:
-        *   Uses `model_orchestrator` (initialized via `init_chat_model`).
-        *   System prompt is formatted with current time.
-        *   Binds `tools.Delegate` and `tools.Memory` (as `store_memory`) to the LLM.
-    *   `route_tools` conditional edge:
-        *   Checks `tool_call["name"]`.
-        *   If "Delegate", routes to the corresponding stub function in `src/orchestrator/stubs/` (e.g., `stubs.requirements`, `stubs.architect`).
-        *   If "store_memory" (or "Memory"), routes to `stubs.memorizer`.
-    *   Stub functions (`src/orchestrator/stubs/__init__.py`):
-        *   These are placeholders (e.g., `requirements`, `architect`, `coder`, `tester`, `reviewer`, `memorizer`).
-        *   They simulate agent responses by returning `ToolMessage` with predefined or cycled content.
-        *   `memorizer` stub: Constructs a `ToolMessage` like `"[MEMORIZE] for {origin}: {content}"`.
-        *   Other stubs use a `MessageWheel` to cycle through predefined responses.
-*   **`configuration.py` (`src/orchestrator/configuration.py`):**
-    *   Uses `prompts.get_prompt()` for `system_prompt` default.
-*   **`state.py` (`src/orchestrator/state.py`):** Standard `State` with `messages`.
+*   (No changes mentioned in PR - likely still uses its custom `Delegate` and `Memory` tools and stubs, not directly affected by `langmem` integration in the template).
 
 #### 5.2. Architect (`src/architect/`)
 
@@ -466,157 +247,43 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
     *   Instructions for setting up a GitHub App with necessary permissions (Contents R/W, Pull requests R/W, Commit statuses R, Issues R/W, Metadata R) and environment variables (`GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_REPOSITORY`).
 
 #### 5.4. Code Reviewer (`src/code_reviewer/`)
-
 *   **Role:** Expert code reviewer, makes suggestions to maintain a high-quality codebase. Does NOT modify code/assets directly.
-*   **`system_prompt.md` (`src/code_reviewer/system_prompt.md`):**
-    *   **Agent Role:** Expert code reviewer in a multi-agent framework.
-    *   **Goal:** Review code/assets, make suggestions for high quality, covering:
-        *   Best programming practices, idiomatic conventions, patterns.
-        *   Concise, clear code.
-        *   Well-defined inputs, graceful error handling.
-        *   Test coverage.
-        *   Security against malicious input/state manipulation.
-        *   Bug-free, considers corner cases, maintainable logic.
-    *   **Interaction:** Makes suggestions, does not modify. Other agents incorporate suggestions.
-    *   **Feedback Style:** Clear, concise, unambiguous, with context.
-*   **`prompts.py` (`src/code_reviewer/prompts.py`):**
-    *   Reads `src/code_reviewer/system_prompt.md`.
-    *   Formats it by injecting `user_info` and current `time`.
+*   **`system_prompt.md` (`src/code_reviewer/system_prompt.md`):** (Remains the same).
 *   **Structure:** Follows the `agent_template` pattern.
-    *   `configuration.py`: Standard, uses `prompts.SYSTEM_PROMPT`.
-    *   `graph.py`: Standard `call_model`, `store_memory`, `route_message` flow. Uses `tools.upsert_memory`. Does not use static memories from `agent_template/memory.py` explicitly in its `call_model` but inherits the structure.
-    *   `state.py`: Standard `State` with `messages`.
-    *   `tools.py`: Defines the standard `upsert_memory` tool.
+    *   `configuration.py`: Standard, uses `prompts.SYSTEM_PROMPT`. Default model likely updated. Includes `use_static_mem`.
+    *   `graph.py`: Now uses the `Agent` class, `ToolNode`, and `tools_condition` flow. Relies on `langmem` tools and `file_dump` provided by the `Agent` class, replacing `upsert_memory`.
+    *   `state.py`: Standard `State` with `messages` and `user_id`.
+    *   `tools.py`: Defines utility tools like `file_dump`. `upsert_memory` is removed. Memory tools come from `Agent`.
+    *   `agent.py`: Contains the `Agent` class instance for this agent.
 
 #### 5.5. Tester (`src/tester/`)
-
-*   **Role:** Generates tests for the codebase based on business requirements (from Product Agent) and code architecture/interfaces (from Architecture Agent).
-*   **`README.md` (`src/tester/README.md`):** Summarizes the agent's goal, responsibilities, and includes a Mermaid diagram of its simplified workflow (Analyze -> Ask Questions (if needed) -> Generate Tests).
-*   **`test-agent-system-prompt.md` (`src/tester/test-agent-system-prompt.md`):**
-    *   **Objective:** Sole responsibility is to generate tests.
-    *   **Must Not:** Invent rules/behaviors, make assumptions, define architecture, suggest design changes.
-    *   **How You Operate:** Follow requirements/interfaces strictly. Generate comprehensive behavior tests. Propose edge case tests; if handling undefined, ask for clarification.
-    *   **Workflow (Simplified):**
-        1.  Analyze requirements, identify ambiguities/missing info.
-        2.  Always begin by sending "questions" (each specific, separate, traceable) if needed.
-        3.  Wait for answers.
-        4.  Group requirements by category/functionality.
-        5.  For EACH category:
-            a.  Generate tests for that category ONLY.
-            b.  Send a single "tests" message with all tests for that category (traceability included).
-        6.  Continue until all categories covered. (Note: The strict wait-for-feedback loop between categories has been removed).
-    *   **Rules:** Only generate tests for explicit definitions. Identify gaps, ask specific questions. Traceable tests.
-    *   **Mindset:** Methodical, precise, rigorous QA engineer. Verify completeness, ask for clarification.
-    *   **Question Guidelines:** Emphasizes creating specific, separate, traceable questions.
-    *   **User Feedback:** Focuses on handling feedback to questions. (The previous JSON schema for test feedback has been removed).
-*   **`prompts.py` (`src/tester/prompts.py`):**
-    *   Reads `src/tester/test-agent-system-prompt.md`.
-    *   Escapes curly braces (`{`, `}`) for `format` compatibility, then injects `user_info` and `time`.
-*   **`output.py` (`src/tester/output.py`):** Defines Pydantic models for structured LLM output:
-    *   `TesterAgentTestOutput(BaseModel)`: `id`, `name`, `description`, `code`, `requirement_id`.
-    *   `TesterAgentQuestionOutput(BaseModel)`: `id`, `question`, `context`.
-    *   `TesterAgentFinalOutput(BaseModel)`: `questions: List[TesterAgentQuestionOutput]`, `tests: List[TesterAgentTestOutput]`. The LLM is expected to produce output conforming to this model.
-*   **`test-prompts/web-api.md` (`src/tester/test-prompts/web-api.md`):** Example requirements for a Todo List Web API.
-*   **`test-prompts/web-api-simple.md` (`src/tester/test-prompts/web-api-simple.md`):** A simpler example requirements file for a Todo List Web API.
-*   **Structure:** Deviates significantly from the `agent_template` graph logic.
-    *   `configuration.py`: Standard, but default model is `google_genai:gemini-2.0-flash-lite`.
-    *   `graph.py`:
-        *   Does NOT use `upsert_memory` tool or `store_memory` node.
-        *   Does NOT retrieve or format memories from the store within its nodes.
-        *   Initializes LLM with `google_genai:gemini-2.0-flash-lite`.
-        *   Uses `WorkflowStage` enum (`ANALYZE_REQUIREMENTS`, `GENERATE_TESTS`).
-        *   Nodes: `analyze_requirements`, `generate_tests`. Both nodes:
-            *   Dynamically update the system prompt based on the current task.
-            *   Use `llm.with_structured_output(TesterAgentFinalOutput)` to parse the response.
-            *   Update `workflow_stage` in the state based on whether questions were generated.
-        *   Flow: Simplified. Uses `route_based_on_workflow_stage` from `__start__`. Edges lead from `analyze_requirements` and `generate_tests` directly to `END`. No explicit looping or waiting for feedback within the graph structure.
-    *   `state.py`: Standard `State` with `messages`. The `graph.py` updates a `workflow_stage` field in the returned dictionary, implying it might be added to the state or used transiently.
-    *   `tools.py`: Defines the standard `upsert_memory` tool, but it is **not used** by the current Tester agent graph.
-    *   `utils.py`: Standard.
+*   (No changes mentioned in PR - uses structured output, no memory tools. Unaffected by `langmem` integration).
 
 #### 5.6. Requirement Gatherer (`src/requirement_gatherer/`)
-
 *   **Role:** Elicits, clarifies, and refines project goals, needs, and constraints.
-*   **`prompts.py` (`src/requirement_gatherer/prompts.py`):**
-    *   The `SYSTEM_PROMPT` is a detailed markdown document guiding the agent. Key aspects include:
-        *   **Operating Principles:** First question classification (vision, project type), adaptive inquiry depth (hobby projects focus on Vision and Functional Requirements; full products are comprehensive), prioritization intelligence, product-first mindset, zero-assumption rule, iterative refinement, structured output, proactive clarification, memory utilization.
-        *   **Requirement Bank Structure:** Defines categories like Vision, Goals, User Stories, Functional/Non-Functional Requirements, Constraints, Risks, etc.
-        *   **Interaction Style:** Professional, empathetic, inquisitive, structured.
-        *   **Workflow:**
-            1.  Begin with Project Classification (vision, hobby/full product). For hobby/personal projects, focus only on Vision and Functional Requirements.
-            2.  Intelligent Questioning based on project type and context.
-            3.  Iterative Deep Dive for each relevant section of the Requirement Bank.
-            4.  Memory Update using `upsert_memory` tool.
-            5.  Consolidation and Review.
-            6.  Handling User Feedback.
-        *   **Tool Usage:** `upsert_memory` for storing gathered information.
-*   **Structure:** While based on `agent_template`, its graph has specific modifications.
-    *   `configuration.py`: Standard.
-    *   `graph.py` (`src/requirement_gatherer/graph.py`):
-        *   Nodes: `call_model` (from template), `store_memory` (from template), `call_evaluator_model`, `human_feedback`.
-        *   `call_evaluator_model` node:
-            *   Retrieves `Configuration` from `RunnableConfig`.
-            *   Retrieves recent memories from the `store` based on `user_id` and recent messages.
-            *   Formats these memories for inclusion in the system prompt.
-            *   Uses `configurable.evaluator_system_prompt` (content not specified in this memory, but used by the node) formatted with memories and current time.
-            *   Invokes an `evaluator` (presumably an LLM) with this system prompt and current messages.
-            *   Returns a `veredict`.
-        *   `human_feedback` node:
-            *   Takes the last message content.
-            *   Uses `interrupt({"query": msg})` to pause for user input.
-            *   Returns the user input as new messages.
-        *   Flow:
-            1.  Entry point: `call_model`.
-            2.  `call_model` (conditional edge `route_memory`):
-                *   If tool calls (e.g., `upsert_memory`): to `store_memory`.
-                *   Else: to `human_feedback`.
-            3.  `store_memory` -> `call_model` (allows LLM to respond after memory update).
-            4.  `human_feedback` -> `call_evaluator_model`.
-            5.  `call_evaluator_model` (conditional edge `route_veredict`):
-                *   If veredict indicates further processing: to `call_model`.
-                *   Else: to `END`.
-    *   `state.py`: Standard `State` with `messages`. May include other fields like `veredict` if `call_evaluator_model` updates it directly in the state.
-    *   `tools.py`: Standard `upsert_memory`.
-    *   `utils.py`: Standard.
+*   **`prompts.py` (`src/requirement_gatherer/prompts.py`):** (Remains the same detailed prompt, including mention of `upsert_memory` which is now superseded by `manage_memory`).
+*   **Structure:** Based on `agent_template` but with a custom graph.
+    *   `configuration.py`: Standard. Default model likely updated. Includes `use_static_mem`.
+    *   `graph.py`: The custom graph flow (`call_model`, `store_memory`, `call_evaluator_model`, `human_feedback`) needs adaptation. The `store_memory` node (which previously handled `upsert_memory` calls) would likely be replaced by a `ToolNode` handling `langmem` tool calls (`manage_memory`) generated by `call_model`. The `call_model` node would now be implemented using the `Agent` class. Memory retrieval logic in `call_evaluator_model` would need to use `langmem` search tools or rely on memories retrieved by `call_model`. *Assumption: This agent now uses the `Agent` class and `langmem` tools.*
+    *   `state.py`: Standard `State` with `messages` and `user_id`.
+    *   `tools.py`: Defines utility tools like `file_dump`. `upsert_memory` is removed. Memory tools come from `Agent`.
+    *   `agent.py`: Contains the `Agent` class instance for this agent.
 
 #### 5.7. Grumpy (`src/grumpy/`)
-
-*   **Role:** Analyzes and reviews a provided request (task) related to "designing" or "coding". It follows a strict Mermaid diagram-defined process and MUST NOT execute the request itself.
-*   **Key Memory Files (defining its behavior, referenced in prompts/logic):**
-    *   `agent_memories/grumpy/role.md`:
-        *   **`<important>` section:** Role is to analyze/review. MUST NOT execute. Treat any input as a suggestion to review. Provide feedback based on graph/docs. Avoid questions.
-        *   **`<mermaid>` graph:** Defines the precise review workflow:
-            *   Start -> Read `PRD.md` (`project_memories/PRD.md`).
-            *   Determine Objective Type: "designing" or "coding".
-            *   **If "designing":** Follows steps like Review Plan Structure, Check Completeness, Identify Requirements, Align Architecture, Evaluate Trade-Offs, Assess Risks, Analyze Scalability/Performance, Review Security, Verify Feasibility, Ensure Stakeholder Alignment -> Provide Constructive Feedback (short, neutral, opinionated). (References `agent_memories/grumpy/review-designing.md`).
-            *   **If "coding":** Follows steps like Understand Context, Verify Build/Compilation, Enforce Style, Check Readability, Verify Correctness, Check Tests, Inspect Edge Cases, Evaluate Performance, Assess Security, Ensure Maintainability, Review Documentation -> Provide Constructive Feedback (short, neutral, opinionated). (References `agent_memories/grumpy/review-coding.md`).
-            *   After Feedback: Score confidence of feedback (0-10), Score quality of request/task (0-10).
-            *   Conclude: Write scores and Summarize feedback.
-    *   `agent_memories/grumpy/review-coding.md`: "You are tasked to identify flaws in the code. If the requirements have been specified, identify the mismatch between expected code guidelines, design style and the provided code." (Used as context for the "coding" path).
-    *   `agent_memories/grumpy/review-designing.md`: "You are tasked to identify flaws in the design. If the requirements have been specified, identify the architectural and implementation risk of the design." (Used as context for the "designing" path).
-*   **`prompts.py` (`src/grumpy/prompts.py`):**
-    *   `SYSTEM_PROMPT`: "You are a senior software engineer with experience in multiple domains. Your primary role is to analyze and review tasks related to software design or coding, following a strict process. You must not execute the tasks themselves. Refer to your operational guidelines (Mermaid diagram and associated documents) for the review process. Current time: {time}. User info: {user_info}." (The `role.md` content is implicitly part of its operational guidelines).
-    *   `QUESTION_PROMPT`: "You are a naive philosopher engineer. You are given a task to reflect on. Current time: {time}. User info: {user_info}." (Potentially for a different mode or sub-task, or if it needs to generate clarifying questions despite the main directive to avoid them).
-*   **`configuration.py` (`src/grumpy/configuration.py`):**
-    *   Includes `system_prompt: str = prompts.SYSTEM_PROMPT` and `question_prompt: str = prompts.QUESTION_PROMPT`.
-*   **`state.py` (`src/grumpy/state.py`):**
-    *   Includes `analysis_question: str = ""` in its state, in addition to `messages`.
-*   **`graph.py` (`src/grumpy/graph.py`):**
-    *   The `call_model` node:
-        *   Retrieves configuration, including `system_prompt` and `question_prompt`.
-        *   Checks if the model supports memory (based on `configurable.model` name, e.g., if it's not "ollama"). If so, it retrieves memories and formats them.
-        *   Constructs the system prompt using `configurable.system_prompt.format(...)`.
-        *   Binds `tools.upsert_memory` if memory is supported.
-        *   Invokes the LLM.
-        *   If the LLM response is empty and `analysis_question` is empty, it formats the `question_prompt` and invokes the LLM again with this prompt to generate a question (this part seems to be for a specific scenario, possibly when the initial review yields no output).
-    *   Provides two compiled graphs: `graph` (with memory tools and logic) and `graph_no_memory` (a simpler version without memory interaction in `call_model` and no `store_memory` node).
-*   **`tools.py` (`src/grumpy/tools.py`):** Standard `upsert_memory` tool.
-*   **`utils.py` (`src/grumpy/utils.py`):** Standard utilities.
+*   **Role:** Analyzes and reviews a provided request (task) related to "designing" or "coding".
+*   **Key Memory Files:** (Remain the same).
+*   **Structure:** Based on `agent_template`.
+    *   `configuration.py`: Includes `system_prompt`, `question_prompt`. Default model likely updated. Includes `use_static_mem`.
+    *   `graph.py`: Now uses the `Agent` class, `ToolNode`, and `tools_condition` flow. Relies on `langmem` tools and `file_dump` provided by the `Agent` class, replacing `upsert_memory`. The memory retrieval logic within its `call_model` is replaced by `langmem` search capabilities invoked via tool calls. The `graph_no_memory` variant might still exist or be adapted.
+    *   `state.py`: Includes `analysis_question`, `messages`, and `user_id`.
+    *   `tools.py`: Defines utility tools like `file_dump`. `upsert_memory` is removed. Memory tools come from `Agent`.
+    *   `agent.py`: Contains the `Agent` class instance for this agent.
 
 
 ## 6. Testing Framework (`tests/`)
 
 The project uses `pytest` for testing and integrates with LangSmith for evaluation and dataset management.
+
 
 *   **Common Test Setup:**
     *   `Client()` from `langsmith` for LangSmith interactions.
@@ -713,7 +380,9 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     *   `test_configuration_from_none()`: Basic unit test to check if `Configuration.from_runnable_config()` handles a `None` config correctly, falling back to default values.
 
 
+
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`)
+
 
 *   **Environment Management:** `uv` (from Astral) is used for creating virtual environments and installing Python packages.
     *   Run commands within `uv` environment: `uv run -- <CMD>`.
@@ -763,14 +432,14 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
 
 ```
 ai-nexus/
-├── .env.example                  # Example environment variables
-├── .gitignore                    # Specifies intentionally untracked files
+├── .env.example
+├── .gitignore
 ├── .github/
 │   └── workflows/
-│       └── checks.yml            # GitHub Actions CI workflow (lint, spell check, unit tests)
-├── Makefile                      # Task runner (lint, test, run, etc.) - Added test-tester target
-├── README.md                     # Project overview, setup, usage, and contribution guidelines
-├── agent_memories/               # Agent-specific, static, long-term memory files (prompts, roles)
+│       └── checks.yml
+├── Makefile                      # Task runner (Added test-memory-graph target)
+├── README.md                     # Includes NEW section on using semantic memory
+├── agent_memories/               # Agent-specific static memories (e.g., for Grumpy)
 │   └── grumpy/
 │       ├── review-coding.md      # Context for Grumpy's code review
 │       ├── review-designing.md   # Context for Grumpy's design review
@@ -783,13 +452,14 @@ ai-nexus/
 ├── src/                          # Source code for all agents and common utilities
 │   ├── agent_template/           # Base template for creating new agents
 │   │   ├── __init__.py
-│   │   ├── configuration.py      # Dataclass for agent configuration
-│   │   ├── graph.py              # LangGraph definition using State, tools, LLM, memory store
-│   │   ├── memory.py             # Logic for loading static memories from JSON
-│   │   ├── prompts.py            # Default system prompts
-│   │   ├── state.py              # Dataclass for agent's graph state
-│   │   ├── tools.py              # Agent tools (e.g., upsert_memory)
-│   │   └── utils.py              # Utility functions (e.g., init_chat_model)
+│   │   ├── agent.py              # NEW: Agent class handling LLM/memory interaction
+│   │   ├── configuration.py      # UPDATED: Added use_static_mem, new default model
+│   │   ├── graph.py              # REVISED: Uses Agent class, ToolNode, tools_condition
+│   │   ├── memory.py             # DELETED
+│   │   ├── prompts.py            # UPDATED: Instructs agent to mention memory retrieval
+│   │   ├── state.py              # UPDATED: Added user_id field
+│   │   ├── tools.py              # REVISED: Defines file_dump tool, upsert_memory removed
+│   │   └── utils.py              # (May be moved/refactored to common)
 │   ├── architect/                # Architect agent: manages project design and documentation
 │   │   ├── output.py             # Pydantic models for Architect's structured output
 │   │   └── prompts/v0.1.md       # Detailed system prompt for Architect (v0.1)
