@@ -1,10 +1,13 @@
 """Generic utility tools for the agent."""
 
+import logging
 import os
 from pathlib import Path
 from typing import Optional
 
 from langchain_core.tools import Tool
+
+logger = logging.getLogger(__name__)
 
 
 def create_file_dump_tool() -> Tool:
@@ -44,7 +47,7 @@ def create_file_dump_tool() -> Tool:
 
             return True
         except Exception as e:
-            print(f"Error writing to file: {str(e)}")
+            logger.error(f"Error writing to file: {str(e)}")
             return False
 
     return Tool(
