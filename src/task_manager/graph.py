@@ -79,4 +79,4 @@ graph = builder.compile()
 graph.name = "Task Manager"
 
 
-__all__ = ["graph"]
+__all__ = ["graph", "builder"]
