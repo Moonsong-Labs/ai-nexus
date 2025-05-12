@@ -1,7 +1,12 @@
+from typing import Awaitable, Callable
+import uuid
+
 import pytest
 from datasets.requirement_gatherer_dataset import REQUIREMENT_GATHERER_DATASET_NAME
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.memory import InMemoryStore
+from langchain_core.messages import HumanMessage
+from langgraph.graph.state import CompiledStateGraph
 from langsmith import Client
 from testing import create_async_graph_caller, get_logger
 from testing.evaluators import LLMJudge
@@ -89,17 +94,10 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
         )
 
     logger.info(f"evaluating dataset: {REQUIREMENT_GATHERER_DATASET_NAME}")
-    memory_saver = MemorySaver()  # Checkpointer for the graph
-    memory_store = InMemoryStore()
-
-    # Compile the graph - needs checkpointer for stateful execution during evaluation
-    graph_compiled = graph_builder.compile(
-        checkpointer=memory_saver, store=memory_store
-    )
 
     # Define the function to be evaluated for each dataset example
     results = await client.aevaluate(
-        create_async_graph_caller(graph_compiled),
+        human_in_the_loop_fn,
         data=REQUIREMENT_GATHERER_DATASET_NAME,  # The whole dataset is used
         evaluators=[
             llm_judge.create_correctness_evaluator(
@@ -115,3 +113,32 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
 
     # Assert that results were produced.
     assert results is not None, "evaluation did not return results"
+
+async def human_in_the_loop_fn(inputs: dict):
+    memory_saver = MemorySaver()  # Checkpointer for the graph
+    memory_store = InMemoryStore()
+
+    # Compile the graph - needs checkpointer for stateful execution during evaluation
+    graph = graph_builder.compile(
+        checkpointer=memory_saver, store=memory_store
+    )
+
+    messages = inputs.get("messages", "")
+
+    results = list()
+
+    config = {
+        "configurable": {
+            "thread_id": str(uuid.uuid4()),
+            "user_id": "test_user",
+            "model": "google_genai:gemini-2.0-flash-lite",
+        }
+    }
+
+    for message in messages:
+
+        state = {"messages": [HumanMessage(content=message["content"])]}
+
+        results.append(await graph.ainvoke(state, config=config))
+
+    return str(results)
