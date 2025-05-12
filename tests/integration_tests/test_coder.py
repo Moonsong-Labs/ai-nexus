@@ -2,8 +2,14 @@ import uuid
 from typing import TypedDict
 
 import pytest
+from datasets.coder_dataset import (
+    CODER_DATASET_NAME,
+    CodeEvaluatorInputs,
+    CodeEvaluatorReferenceOutputs,
+)
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage
+from langsmith import aevaluate
 from openevals.types import EvaluatorResult
 from openevals.utils import _arun_evaluator
 
@@ -127,15 +133,6 @@ class Result(TypedDict):
     comment: str
 
 
-class CodeEvaluatorInputs(TypedDict):
-    starting_code: dict
-    user_input: str
-
-
-class CodeEvaluatorReferenceOutputs(TypedDict):
-    expectations: str
-
-
 judge_llm = init_chat_model(
     "google_genai:gemini-2.0-flash", temperature=0
 ).with_structured_output(Result)
@@ -145,7 +142,7 @@ async def evaluate_code_scorer(
     inputs: CodeEvaluatorInputs,
     outputs: str,
     reference_outputs: CodeEvaluatorReferenceOutputs,
-) -> EvaluatorResult:
+) -> tuple[float, str]:
     ret = judge_llm.invoke(
         EVAL_PROMPT.format(
             starting_code=inputs["starting_code"],
@@ -154,11 +151,7 @@ async def evaluate_code_scorer(
         )
     )
 
-    return EvaluatorResult(
-        key="code_evaluation",
-        score=ret["score"],
-        comment=ret["comment"],
-    )
+    return (ret["score"], ret["comment"])
 
 
 async def evaluate_code(
@@ -166,7 +159,7 @@ async def evaluate_code(
     outputs: str,
     reference_outputs: CodeEvaluatorReferenceOutputs,
 ) -> EvaluatorResult:
-    return await _arun_evaluator(
+    ret = await _arun_evaluator(
         run_name="coder",
         scorer=evaluate_code_scorer,
         feedback_key="coder",
@@ -174,6 +167,8 @@ async def evaluate_code(
         outputs=outputs,
         reference_outputs=reference_outputs,
     )
+    print(ret)
+    return ret
 
 
 async def invoke_agent(inputs: CodeEvaluatorInputs) -> dict:
@@ -195,18 +190,5 @@ async def invoke_agent(inputs: CodeEvaluatorInputs) -> dict:
 
 
 @pytest.mark.asyncio
-async def test_coder_creates_rest_api():
-    inputs = CodeEvaluatorInputs(
-        user_input="Create a python JSON REST API server with a root entry point",
-        starting_code={},
-    )
-    expectations = "The agent should have created a JSON REST API server with a '/hello' entry point. If it added dependencies, it should have added them to the proper dependencies file"
-    result = await invoke_agent(inputs)
-
-    eval_result = await evaluate_code(
-        inputs,
-        result,
-        CodeEvaluatorReferenceOutputs(expectations=expectations),
-    )
-
-    print(eval_result)
+async def test_coder_run_eval_dataset():
+    await aevaluate(invoke_agent, CODER_DATASET_NAME, evaluators=[evaluate_code])

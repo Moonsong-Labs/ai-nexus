@@ -57,7 +57,7 @@ This file outlines the overarching standards and technological choices for the A
     *   **Ruff:** Performs code linting and formatting.
     *   **Mypy:** Conducts static type checking (currently not enforced in CI/default linting pass).
     *   **codespell:** Checks for spelling mistakes.
-    *   **openevals:** Suggests involvement in evaluating language models.
+    *   **openevals:** Used for custom evaluation logic, particularly for the Coder agent.
 *   **Version Control:** Git.
 *   **LLM Models:**
     *   **`gemini-1.5-flash-latest` / `gemini-2.5-flash-preview-04-17` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (`agent_template` default updated to `gemini-2.5-flash-preview-04-17`).
@@ -174,17 +174,77 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
 *   (No changes mentioned in PR - likely still uses its custom `Delegate` and `Memory` tools and stubs, not directly affected by `langmem` integration in the template).
 
 #### 5.2. Architect (`src/architect/`)
-*   **Role:** Expert software engineer responsible for architecting a project, not writing code. Receives project needs, coordinates other AI agents. Manages project documentation.
-*   **Key Prompt (`src/architect/prompts/v0.md`):** (Remains the same detailed prompt).
-*   **Structure:** Follows the `agent_template` pattern.
-    *   `configuration.py`: Standard, uses `prompts.SYSTEM_PROMPT`. Default model likely updated if inheriting from template. Includes `use_static_mem`.
-    *   `graph.py`: Now uses the `Agent` class, `ToolNode`, and `tools_condition` flow from the updated `agent_template`. Relies on `langmem` tools (`manage_memory`, `search_memory`) and `file_dump` provided by the `Agent` class, instead of the previous direct `upsert_memory` tool.
-    *   `state.py`: Standard `State` with `messages` and `user_id`.
-    *   `tools.py`: Defines utility tools like `file_dump`. `upsert_memory` is removed. Memory tools come from `Agent`.
-    *   `agent.py`: Contains the `Agent` class instance for this agent.
+
+*   **Role:** Expert software engineer responsible for architecting a project, not writing code. Receives project needs, coordinates other AI agents. Manages project documentation and defines tasks for other agents.
+*   **Key Prompt (`src/architect/prompts/v0.1.md`):** This is a detailed system prompt.
+    *   **Identity:** "I am Architect..."
+    *   **Core Responsibility:** MUST read ALL files in 'project' folder at the start of EVERY task.
+    *   **Core Values:** Research Driven, Technology Selection, Task Definition, Validation and Adjustment, Transparency and Traceability.
+    *   **Project Structure Understanding:** Defines a hierarchy of Markdown files it expects and manages within a 'project' folder:
+        *   Core Files (Required): `projectbrief.md`, `projectRequirements.md`, `systemPatterns.md`, `techContext.md`, `progress.md`.
+        *   Specific Files (Required): `featuresContext.md`, `testingContext.md`, `securityContext.md`. These track current work, changes, next steps, decisions, patterns, learnings for their respective scopes. Tasks need start/finish dates.
+        *   `progress.md` is updated last.
+        *   Flowchart of file dependencies is provided in the prompt.
+    *   **Old Information Management:** Information older than two weeks from task/progress files is moved to `changelog.md`. This file is checked only if prompted with "check changelog".
+    *   **Task Allocation:** After reading files and ensuring documentation is up-to-date, the Architect defines the next tasks based on `featuresContext.md`, `testingContext.md`, and `securityContext.md`.
+        *   Tasks must be small (couple of hours for a human).
+        *   Tasks require thorough explanation, technology list, restrictions, and pointers to relevant code/files.
+        *   Tasks are written to `codingTask.md`, `testingTask.md`, and `securityTask.md` respectively.
+    *   **Documentation Updates:** Triggered by: new patterns, significant changes, user request "update project" (MUST review ALL files), context clarification. Includes a flowchart for the update process.
+*   **`prompts.py` (`src/architect/prompts.py`):**
+    *   Reads `src/architect/prompts/v0.1.md`.
+    *   Formats it by injecting `user_info` (OS, username, current directory) and current `time`.
+*   **`output.py` (`src/architect/output.py`):** Defines Pydantic models for structured output:
+    *   `ArchitectAgentTaskOutput`: `id`, `name`, `description`, `task`, `requirement_id`.
+    *   `ArchitectAgentQuestionOutput`: `id`, `question`, `context`.
+    *   `ArchitectAgentFinalOutput`: Contains lists of questions and tasks. (Note: The graph currently doesn't explicitly parse or bind these models).
+*   **Structure:** Follows the `agent_template` pattern with modifications.
+    *   `configuration.py`: Standard, uses `prompts.SYSTEM_PROMPT`.
+    *   `graph.py`: Standard `call_model`, `store_memory`, `route_message` flow. Uses `tools.upsert_memory`.
+        *   The `call_model` node now returns `{"messages": [{"role": "assistant", "content": str(msg)}]}`.
+    *   `state.py`: Standard `State` with `messages`.
+    *   `tools.py`: Defines the standard `upsert_memory` tool.
+    *   `utils.py`: Standard `split_model_and_provider`, `init_chat_model`.
 
 #### 5.3. Coder (`src/coder/`)
-*   (No changes mentioned in PR - primarily uses GitHub tools, not memory tools. Unaffected).
+
+*   **Role:** Software developer, writes code, interacts with GitHub repositories.
+*   **`prompts.py` (`src/coder/prompts.py`):**
+    *   `SYSTEM_PROMPT = "You are a sofware developer whose task is to write code."` (This is a basic prompt; a more detailed one might be used in a production scenario).
+*   **`tools.py` (`src/coder/tools.py`):**
+    *   `GITHUB_TOOLS`: A list of specific GitHub tool names to be used: `create_file`, `read_file`, `update_file`, `delete_file`, `get_contents` (renamed from `get_files_from_directory`), `create_pull_request`, `create_branch`.
+    *   `github_tools()`:
+        *   Uses `GitHubAPIWrapper` and `GitHubToolkit` from `langchain_community.agent_toolkits` to create actual GitHub tools.
+        *   `make_gemini_compatible(tool)`: Adapts tool schema if needed (e.g., by ensuring descriptions are present).
+        *   Returns a list of selected GitHub tools.
+    *   `mock_github_tools(mock_api: MockGithubApi)`:
+        *   Creates mocked versions of GitHub tools using `RunnableLambda` that call methods on a `MockGithubApi` instance.
+        *   Tools created: `create_file`, `read_file`, `update_file`, `delete_file`, `get_contents`, `create_pull_request`, `create_branch`.
+        *   Some tools like `update_file` and `create_file` have their arguments schema converted to a string input for the mock.
+*   **`mocks.py` (`src/coder/mocks.py`):**
+    *   `MockGithubApi`: A class that simulates a GitHub API for testing.
+        *   Maintains a mock file system (`self.files` as a nested dict), branches (`self.branches`), active branch (`self.active_branch`), and logs operations (`self.operations`).
+        *   Methods: `set_active_branch`, `create_branch` (handles unique naming), `_get_files_recursive`, `get_files_from_directory` (renamed to `get_contents` in tools), `create_pull_request`, `create_file`, `update_file`, `delete_file`, `read_file`.
+*   **`graph.py` (`src/coder/graph.py`):**
+    *   Initializes LLM (e.g., `gemini-1.5-flash-latest` or `gemini-2.0-flash` as per file).
+    *   Uses `mock_github_tools` by default (can be switched to real `github_tools()`).
+    *   `call_model` node:
+        *   Signature: `async def call_model(state: State) -> dict` (Note: no `config` or `store` passed directly if not using memory features from template).
+        *   Constructs messages list including the `SYSTEM_PROMPT`.
+        *   Binds the `github_tools` (mocked or real) to the LLM.
+        *   Invokes LLM: `await llm.bind_tools(github_tools).ainvoke(messages)`.
+        *   Returns `{"messages": [messages_after_invoke]}`.
+    *   `ToolNode(tools=github_tools)`: Handles execution of GitHub tool calls from the LLM.
+    *   Flow:
+        *   Entry point: `call_model`.
+        *   Conditional edge from `call_model` based on tool calls:
+            *   If tool calls: to `execute_tools` (the `ToolNode`).
+            *   Else: to `END`.
+        *   Edge from `execute_tools` back to `call_model` (to allow the LLM to respond after tool execution).
+*   **`state.py` (`src/coder/state.py`):**
+    *   `class State(TypedDict): messages: Annotated[list[AnyMessage], add_messages]` (Uses `AnyMessage` for type hinting).
+*   **`README.md` (`src/coder/README.md`):**
+    *   Instructions for setting up a GitHub App with necessary permissions (Contents R/W, Pull requests R/W, Commit statuses R, Issues R/W, Metadata R) and environment variables (`GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_REPOSITORY`).
 
 #### 5.4. Code Reviewer (`src/code_reviewer/`)
 *   **Role:** Expert code reviewer, makes suggestions to maintain a high-quality codebase. Does NOT modify code/assets directly.
@@ -224,31 +284,148 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
 
 The project uses `pytest` for testing and integrates with LangSmith for evaluation and dataset management.
 
-*   **Common Test Setup:** (Remains similar, but graph compilation might not always need explicit `MemorySaver` or `InMemoryStore` if the graph manages its state internally or via `langmem`'s store).
+
+*   **Common Test Setup:**
+    *   `Client()` from `langsmith` for LangSmith interactions.
+    *   `MemorySaver()` from `langgraph.checkpoint.memory` for graph checkpointing.
+    *   `InMemoryStore()` from `langgraph.stores.memory` for agent memory during tests.
+    *   Graphs are typically compiled with a checkpointer and store: `graph_compiled = graph_builder.compile(checkpointer=memory_saver, store=memory_store)`.
+    *   A wrapper function (e.g., `run_graph_with_config` or `call_tester_agent`) is often created to:
+        *   TTake a dataset example (and potentially attachments) as input.
+        *   Format the input for the graph (e.g., converting to `HumanMessage` lists, injecting attachments as `SystemMessage`s).
+        *   Generate a unique `thread_id` (using `uuid.uuid4()`) for state isolation in `RunnableConfig`.
+        *   Set necessary configuration like `user_id` and `model`.
+        *   Invoke the compiled graph: `await graph_compiled.ainvoke(graph_input, config=config)`.
+        *   Extract and format the output (often the content of the last message) for evaluation.
+    *   `client.aevaluate()` is used to run evaluations against LangSmith datasets, passing the wrapper function and dataset name/examples.
+
+*   **`tests/datasets/requirement_gatherer_dataset.py`:**
+    *   Defines `REQUIREMENT_GATHERER_DATASET_NAME = "Requirement-gatherer-naive-dataset"`.
+    *   `create_dataset()` function:
+        *   Initializes `Client()`.
+        *   Creates a LangSmith dataset using `client.create_dataset()`.
+        *   Adds examples (input-output pairs) to the dataset using `client.create_examples()`. Inputs are simple strings, outputs are expected agent responses.
+
+*   **`tests/datasets/coder_dataset.py`:**
+    *   Defines `CODER_DATASET_NAME = "coder-test-dataset"`.
+    *   Defines input (`CodeEvaluatorInputs`) and reference output (`CodeEvaluatorReferenceOutputs`) structures for Coder evaluation.
+    *   `create_dataset()` function:
+        *   Initializes `Client()`.
+        *   Creates the LangSmith dataset.
+        *   Adds examples (input-output pairs) to the dataset.
+
 *   **`tests/integration_tests/`:**
-    *   **`test_graph.py`:** **REWRITTEN:**
-        *   Tests the new semantic memory functionality of the `agent_template` graph (`langmem`).
-        *   Includes tests to assert the correct `category` (`knowledge`, `rule`, `procedure`) is used when storing memories via the `manage_memory` tool.
-        *   Includes a test for the `memory_dump` tool, verifying that it creates a non-empty JSON dump file in a specified directory after memories have been stored.
-        *   No longer tests the old `upsert_memory` logic or direct `InMemoryStore` inspection for memories under `("memories", user_id)`.
-    *   **`test_requirement_gatherer.py`:** (Test logic remains, but the underlying agent graph uses the new memory system).
-    *   **`test_tester_agent.py`:** (Test logic remains, agent is unaffected).
-    *   **`test_grumpy_agent.py`:** (Test logic remains, but the underlying agent graph uses the new memory system).
-*   **`tests/testing/evaluators.py`:** (Remains the same - `LLMJudge` for correctness evaluation).
-*   **`tests/testing/__init__.py`:** (`create_async_graph_caller` likely still used).
-*   **Makefile Target:** Added `make test-memory-graph` to run the tests in `tests/integration_tests/test_graph.py`.
+    *   **`test_graph.py`:**
+        *   `test_memory_storage`: Basic test for the `agent_template` graph's memory storage.
+        *   Sends a series of messages.
+        *   Checks if memories are saved in `InMemoryStore` under the correct `user_id` and namespace `("memories", user_id)`.
+        *   Verifies that memories are not found under an incorrect namespace.
+    *   **`test_requirement_gatherer.py`:**
+        *   Tests the requirement gatherer agent against the `REQUIREMENT_GATHERER_DATASET_NAME` LangSmith dataset.
+        *   Uses `create_async_graph_caller` from `tests.testing` to wrap the agent's graph for evaluation runs.
+        *   Employs `LLMJudge` from `tests.testing.evaluators`. It calls the `create_correctness_evaluator` method of `LLMJudge` with `plaintext=True` and a custom, detailed prompt (`REQUIREMENT_GATHERER_CORRECTNESS_PROMPT` defined within the test file) to assess the agent's output against reference data.
+        *   The test invokes `client.aevaluate()` with the graph caller, dataset, the configured evaluator, and an updated `experiment_prefix` (e.g., `"requirement-gatherer-gemini-2.5-correctness-eval-plain"`).
+        *   Uses `print_evaluation` from `testing.formatter` to display evaluation results, with configurable `Verbosity`.
+        *   The previous complex input formatting logic (formerly in a local `run_graph_with_config` function) has been refactored, likely simplified by the use of `create_async_graph_caller`.
+    *   **`test_tester_agent.py`:**
+        *   Tests the tester agent against `LANGSMITH_DATASET_NAME = "tester-agent-test-dataset"`.
+        *   Uses `LLMJudge` from `tests.testing.evaluators` with a custom `CORRECTNESS_PROMPT` (defined in the test file) tailored for evaluating the Tester agent's output (analyzing requirements, asking questions, generating tests).
+        *   Uses the `create_async_graph_caller` utility from `tests/testing` to wrap the Tester agent's graph for evaluation.
+        *   Runs the evaluation multiple times (`num_repetitions=3`).
+    *   **`test_grumpy_agent.py`:**
+        *   Tests the grumpy agent against a LangSmith dataset (e.g., `LANGSMITH_DATASET_NAME = "grumpy-failed-questions"`).
+        *   Uses `LLMJudge` from `tests.testing.evaluators` to create a `correctness_evaluator` with a specific prompt for judging Grumpy's output.
+        *   The `create_graph_caller` utility is used to wrap the Grumpy agent's graph for evaluation.
+    *   **`test_coder.py`:**
+        *   Contains tests for the Coder agent's GitHub interactions using `MockGithubApi`.
+        *   Introduces a custom evaluation framework for the Coder agent using `openevals`.
+        *   Defines `CodeEvaluatorInputs`, `CodeEvaluatorReferenceOutputs`, and `Result` TypedDicts for structuring evaluation data.
+        *   Uses a specific `EVAL_PROMPT` and an LLM (`gemini-2.0-flash`) configured for structured output (`Result`) to act as a judge.
+        *   The `evaluate_code` function orchestrates the evaluation using `openevals.utils._arun_evaluator`.
+        *   The `invoke_agent` function runs the Coder graph with mocked GitHub tools and specific starting code state.
+        *   The `test_coder_creates_rest_api` test demonstrates this custom evaluation flow.
+
+*   **`tests/testing/__init__.py`:**
+    *   `get_logger()`: Utility to create a Python logger with a default format.
+    *   `create_async_graph_caller(graph, process_inputs_fn=None, process_outputs_fn=None)`:
+        *   A generic async function to create a caller for `graph.ainvoke`.
+        *   Handles creating a unique `thread_id` for each call.
+        *   Sets default `user_id` and `model` in the config.
+        *   Processes input messages (extracting content, wrapping in `HumanMessage`).
+        *   Returns the content of the last message from the graph's output.
+
+*   **`tests/testing/evaluators.py`:**
+    *   `LLMJudge` class:
+        *   Wrapper for using an LLM (default: `gemini-1.5-flash-latest`) as an evaluator.
+        *   `__init__(model_name: str = "google_genai:gemini-1.5-flash-latest")`.
+        *   `create_llm_as_judge(prompt: str, input_keys: List[str], output_key: str, reference_output_key: str, continuous: bool = True)`:
+            *   Creates an evaluator chain using an LLM.
+            *   Takes a prompt template, keys for input, output, reference, and a flag for continuous feedback.
+        *   `create_correctness_evaluator(plaintext: bool, prompt: str)`: (Method usage seen in PRs)
+            *   A specialized method to create a correctness evaluator, likely taking a prompt and a flag for plaintext comparison.
+    *   `CORRECTNESS_PROMPT`: A prompt template for an LLM to judge if the `prediction` matches the `reference` output given an `input`.
+    *   `correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict)`:
+        *   A specific evaluator instance created using `LLMJudge().create_llm_as_judge` (or potentially `LLMJudge().create_correctness_evaluator`) with `CORRECTNESS_PROMPT`.
+        *   Compares `outputs['output']` (actual agent response) with `reference_outputs['message']['content']` (expected response from dataset).
+
+*   **Evaluation Approaches:**
+    *   **LangSmith Datasets + LLM Judge:** Used for Requirement Gatherer, Tester (simple case), Grumpy. Relies on `client.aevaluate()` and evaluators defined in `tests/testing/evaluators.py`.
+    *   **Custom `openevals` Framework:** Implemented in `tests/integration_tests/test_coder.py` for the Coder agent. Involves custom prompts, input/output structures, and direct use of `openevals` utilities with an LLM judge defined within the test file.
+*   **`tests/testing/formatter.py` (Implied by PR usage):**
+    *   Provides utility functions for formatting and printing evaluation results.
+    *   Includes `print_evaluation(results, client, verbosity)` for displaying detailed evaluation outcomes.
+    *   May include enums like `Verbosity` to control output detail.
+
+*   **`tests/unit_tests/test_configuration.py`:**
+    *   `test_configuration_from_none()`: Basic unit test to check if `Configuration.from_runnable_config()` handles a `None` config correctly, falling back to default values.
+
 
 
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`)
 
-*   **Environment Management:** `uv`.
-*   **Task Runner:** `Makefile` provides targets:
-    *   `make run`, `make sync`, `make deps`, `make clean`, `make lint`, `make fmt`, `make spell_check`, `make spell_fix`, `make check`, `make test_unit`, `make test_integration`, `make test`, `make test-tester`, `make test-memory-graph` (**NEW**).
-*   **Configuration:** `.env` file. `GOOGLE_API_KEY` required. Optional GitHub and LangSmith variables.
-*   **CI/CD (GitHub Actions):** (`checks.yml`) Runs lint, spell check, unit tests. Integration tests might run separately.
-*   **LangGraph Studio:** Supported.
-*   **Adding New Agents:** Process remains similar, but new agents should use the updated `agent_template` with the `Agent` class and `langmem`.
-*   **Memory Usage (README):** **NEW** section added to `README.md` explaining how to add semantic memory to an agent using `SemanticMemory` from `src.common.components.memory`, initializing it, and binding its tools to the LLM.
+
+*   **Environment Management:** `uv` (from Astral) is used for creating virtual environments and installing Python packages.
+    *   Run commands within `uv` environment: `uv run -- <CMD>`.
+*   **Task Runner:** `Makefile` provides targets for common development tasks:
+    *   `make run`: Runs the LangGraph development server (`langgraph dev`).
+    *   `make sync`: Synchronizes dependencies (likely `uv pip sync pyproject.toml`).
+    *   `make deps`: Installs dependencies (likely `uv pip install -r requirements.txt` or similar, though `pyproject.toml` is primary).
+    *   `make clean`: Cleans up build artifacts and caches (`__pycache__`, `.pytest_cache`, etc.).
+    *   `make lint`: Runs linters (Ruff: `uv run -- ruff check .`).
+    *   `make fmt`: Formats code (Ruff: `uv run -- ruff format .`).
+    *   `make spell_check`: Checks for spelling mistakes using `codespell`.
+    *   `make spell_fix`: Fixes spelling mistakes using `codespell`.
+    *   `make check`: Runs `lint` and `spell_check`.
+    *   `make test_unit`: Runs unit tests (`uv run -- pytest tests/unit_tests`).
+    *   `make test_integration`: Runs integration tests (`uv run -- pytest tests/integration_tests`).
+    *   `make test`: Runs both `test_unit` and `test_integration`.
+    *   `make test-grumpy`: Runs Grumpy agent integration tests.
+    *   `make test-requirement-gatherer`: Runs Requirement Gatherer integration tests.
+    *   `make test-tester`: Runs Tester agent integration tests.
+    *   `make test-architect`: Runs Architect agent integration tests.
+*   **Configuration:** `.env` file (copied from `.env.example`) for environment variables.
+    *   Required for Google AI services: `GOOGLE_API_KEY` (this is the preferred variable). Alternatively, `GEMINI_API_KEY` can be set; scripts will use `GOOGLE_API_KEY` if present, otherwise they will use `GEMINI_API_KEY`.
+    *   Optional for Coder agent: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_REPOSITORY`.
+    *   Optional for LangSmith: `LANGCHAIN_API_KEY`, `LANGCHAIN_TRACING_V2`, `LANGCHAIN_ENDPOINT`, `LANGCHAIN_PROJECT`.
+*   **CI/CD (GitHub Actions):**
+    *   Workflow defined in `.github/workflows/checks.yml`.
+    *   Triggers on `push` to `main` and `pull_request` to `main`.
+    *   Jobs:
+        *   `Lint`: Installs dependencies (`uv pip sync`) and runs `make lint`.
+        *   `Spell Check`: Installs `codespell` and runs `make spell_check` on `README.md` and `src/`.
+        *   `Unit Tests`: Installs dependencies and runs `make test_unit`.
+    *   Integration tests (`make test_integration`) are commented out in the `checks.yml` file, indicating they might be run separately or are pending full CI integration.
+*   **LangGraph Studio:**
+    *   The project can be opened in LangGraph Studio for visualization, interaction, and debugging.
+    *   `langgraph.json` can be used to set the default graph to open in Studio (e.g., by setting `default_graph`). It now includes an entry for the `architect` graph.
+    *   The README provides a badge/link to open the project directly in LangGraph Studio using a GitHub URL.
+*   **Adding New Agents:**
+    1.  Copy the `src/agent_template/` directory and rename it.
+    2.  Update package paths within the new agent's files (e.g., imports).
+    3.  Add the new agent package to `pyproject.toml` under `[tool.poetry.packages]` or `[project.entry-points."langgraph.graphs"]` if using that mechanism for discovery.
+    4.  Add the new agent graph entry to `langgraph.json`.
+    5.  Run `make run` and navigate to the new agent in LangGraph Studio.
+*   **Memory Exploration:** LangGraph Studio UI allows reviewing saved memories (e.g., by clicking a "memory" button if the store is connected and UI supports it).
 
 
 ## 8. Overall Project Structure Summary
@@ -264,15 +441,15 @@ ai-nexus/
 ├── README.md                     # Includes NEW section on using semantic memory
 ├── agent_memories/               # Agent-specific static memories (e.g., for Grumpy)
 │   └── grumpy/
-│       ├── review-coding.md
-│       ├── review-designing.md
-│       └── role.md
-├── langgraph.json
-├── project_memories/
-│   ├── PRD.md
-│   └── global.md                 # Describes original "Memory Bank" concept
-├── pyproject.toml                # Added langmem dependency
-├── src/
+│       ├── review-coding.md      # Context for Grumpy's code review
+│       ├── review-designing.md   # Context for Grumpy's design review
+│       └── role.md               # Core operational rules and Mermaid diagram for Grumpy
+├── langgraph.json                # LangGraph Studio configuration (e.g., default graph, agent entries)
+├── project_memories/             # Project-wide standards, global context
+│   ├── PRD.md                    # Product Requirements Document: standards, tech stack, goals
+│   └── global.md                 # High-level project mission, "Cursor" Memory Bank concept
+├── pyproject.toml                # Project metadata, dependencies (for uv/Poetry), package definitions
+├── src/                          # Source code for all agents and common utilities
 │   ├── agent_template/           # Base template for creating new agents
 │   │   ├── __init__.py
 │   │   ├── agent.py              # NEW: Agent class handling LLM/memory interaction
@@ -283,46 +460,48 @@ ai-nexus/
 │   │   ├── state.py              # UPDATED: Added user_id field
 │   │   ├── tools.py              # REVISED: Defines file_dump tool, upsert_memory removed
 │   │   └── utils.py              # (May be moved/refactored to common)
-│   ├── architect/                # Architect agent (inherits template changes)
-│   │   └── prompts/v0.md
-│   ├── code_reviewer/            # Code Reviewer agent (inherits template changes)
-│   │   └── system_prompt.md
-│   ├── coder/                    # Coder agent (unaffected by memory changes)
-│   │   ├── mocks.py
-│   │   └── README.md
+│   ├── architect/                # Architect agent: manages project design and documentation
+│   │   ├── output.py             # Pydantic models for Architect's structured output
+│   │   └── prompts/v0.1.md       # Detailed system prompt for Architect (v0.1)
+│   ├── code_reviewer/            # Code Reviewer agent: reviews code for quality
+│   │   └── system_prompt.md      # System prompt for Code Reviewer
+│   ├── coder/                    # Coder agent: writes code, interacts with GitHub
+│   │   ├── mocks.py              # Mock GitHub API for testing
+│   │   └── README.md             # Setup instructions for GitHub App
 │   ├── common/                   # Common utilities shared across agents
-│   │   ├── components/           # NEW: Reusable components
-│   │   │   ├── __init__.py
-│   │   │   └── memory.py         # NEW: SemanticMemory class, static loading, tool creation
-│   │   └── utils/
-│   ├── grumpy/                   # Grumpy agent (inherits template changes)
-│   ├── orchestrator/             # Orchestrator agent (likely unaffected)
-│   │   ├── memory/
-│   │   └── stubs/
-│   ├── requirement_gatherer/     # Requirement Gatherer agent (inherits template changes, graph needs adaptation)
-│   └── tester/                   # Tester agent (unaffected by memory changes)
-│       ├── README.md
-│       ├── configuration.py
-│       ├── graph.py
-│       ├── output.py
-│       ├── state.py
-│       ├── test-agent-system-prompt.md
-│       ├── test-prompts/
-│       │   ├── web-api-simple.md
+│   │   └── utils/                # Shared utility functions
+│   ├── grumpy/                   # Grumpy agent: reviews design/coding tasks based on strict rules
+│   ├── orchestrator/             # Orchestrator agent: delegates tasks to other agents
+│   │   ├── memory/               # Markdown files defining Orchestrator's rules and team
+│   │   └── stubs/                # Stub implementations for delegated agent calls (for testing/dev)
+│   ├── requirement_gatherer/     # Requirement Gatherer agent: elicits and clarifies requirements
+│   └── tester/                   # Tester agent: generates tests based on requirements
+│       ├── README.md             # Goal, responsibilities, workflow diagram for Tester
+│       ├── configuration.py      # Default model changed to gemini-2.0-flash-lite
+│       ├── graph.py              # REVISED: Uses structured output, multi-stage workflow (analyze/generate), no memory store interaction
+│       ├── output.py             # Pydantic models for Tester's structured output
+│       ├── state.py              # Standard state (messages)
+│       ├── test-agent-system-prompt.md # REVISED: Simplified workflow, new question guidelines, removed test feedback schema
+│       ├── test-prompts/         # Example requirements for Tester
+│       │   ├── web-api-simple.md # NEW: Simpler web API example
 │       │   └── web-api.md
-│       ├── tools.py
-│       └── utils.py
-└── tests/
-    ├── datasets/
+│       ├── tools.py              # Defines upsert_memory, but NOT used by current graph.py
+│       └── utils.py              # Standard utils
+└── tests/                        # Automated tests
+    ├── datasets/                 # Scripts for creating LangSmith datasets
+    │   ├── coder_dataset.py      # NEW: Defines LangSmith dataset for Coder agent evaluation
     │   └── requirement_gatherer_dataset.py
-    ├── integration_tests/
-    │   ├── test_graph.py         # REWRITTEN: Tests semantic memory categories and dump tool
+    ├── integration_tests/        # Integration tests for agents and full graph functionality
+    │   ├── test_architect_agent.py # Tests for Architect agent
+    │   ├── test_coder.py         # REVISED: Uses LangSmith dataset and custom evaluator for Coder agent
+    │   ├── test_graph.py         # Tests agent_template memory
     │   ├── test_grumpy_agent.py
     │   ├── test_requirement_gatherer.py
-    │   └── test_tester_agent.py
-    ├── testing/
-    │   ├── __init__.py
-    │   └── evaluators.py
-    └── unit_tests/
+    │   └── test_tester_agent.py  # REWRITTEN: Uses create_async_graph_caller, LLMJudge, custom prompt, specific dataset
+    ├── testing/                  # Test utilities, 
+    │   ├── __init__.py           # REVISED: create_async_graph_caller updated
+    │   ├── evaluators.py         # LLM-based evaluators (e.g., LLMJudge)
+    │   └── formatter.py          # Utilities for formatting/printing evaluation results
+    └── unit_tests/               # Unit tests for isolated components
         └── test_configuration.py
 ```
