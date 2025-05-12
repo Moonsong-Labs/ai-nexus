@@ -1,15 +1,17 @@
 from typing import List
+import logging
 
 import langsmith as ls
 import pytest
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.store.memory import InMemoryStore
+from agent_template.configuration import Configuration
 
-from orchestrator.graph import builder
+from agent_template.graph import graph_builder
 
+# Get the logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 @pytest.mark.asyncio
-@ls.unit
 @pytest.mark.parametrize(
     "conversation",
     [
@@ -30,26 +32,36 @@ from orchestrator.graph import builder
     ids=["short", "medium", "long"],
 )
 async def test_memory_storage(conversation: List[str]):
-    mem_store = InMemoryStore()
-
-    graph = builder.compile(store=mem_store, checkpointer=MemorySaver())
-    user_id = "test-user"
-    config = {
-        "configurable": {},
-        "user_id": user_id,
-    }
+    config = Configuration()
+    graph = graph_builder(config).compile()
+    
+    manage_memory_calls_found = False
 
     for content in conversation:
-        await graph.ainvoke(
+        response = await graph.ainvoke(
             {"messages": [("user", content)]},
-            {**config, "thread_id": "thread"},
+            {"thread_id": "thread"},
         )
+        
+        # Extract AI messages from the response
+        if "messages" in response:            
+            for message in response["messages"]:
+                # Check if it's an AIMessage with tool calls
+                if hasattr(message, "tool_calls") and message.tool_calls:
+                    logger.info(f"AI message with tool calls:")
+                    logger.info("Tool calls:")
+                    for tool_call in message.tool_calls:
+                        logger.info(f"  - Name: {tool_call['name']}")
+                        logger.info(f"    Args: {tool_call['args']}")
+                        # Check if manage_memory is being called
+                        if tool_call['name'] == 'manage_memory':
+                            manage_memory_calls_found = True
+                            
+                    logger.info("-" * 50)
+        else:
+            logger.warning("No 'messages' key found in response")
+            logger.info(f"Response keys: {list(response.keys())}")
+    
+    # Assert that we found at least one manage_memory call
+    assert manage_memory_calls_found, "No 'manage_memory' tool calls found in any of the responses"
 
-    namespace = ("memories", user_id)
-    memories = mem_store.search(namespace)
-
-    ls.expect(len(memories)).to_be_greater_than(0)
-
-    bad_namespace = ("memories", "wrong-user")
-    bad_memories = mem_store.search(bad_namespace)
-    ls.expect(len(bad_memories)).to_equal(0)

@@ -26,6 +26,8 @@ test-code-reviewer:
 
 test-requirement-gatherer:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_requirement_gatherer.py	
+test-graph:
+	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_graph.py
 test_watch:
 	uv run --env-file .env -- python -m ptw --snapshot-update --now . -- -vv tests/unit_tests
 
