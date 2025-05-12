@@ -79,7 +79,7 @@ def coder_change_request_config():
             "read_file",
             "delete_file",
             "get_pull_request",
-            "list_pull_request_files",
+            "list_pull_requests_files",
         ],
     )
 

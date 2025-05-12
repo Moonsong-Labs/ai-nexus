@@ -193,7 +193,7 @@ class MockGithubApi:
 
         return str(self.pull_request)
 
-    def list_pull_request_files(self, pr_number: str) -> str:
+    def list_pull_requests_files(self, pr_number: str) -> str:
         """List files changed in a pull request."""
         if not self.pull_request:
             return "No pull request found"

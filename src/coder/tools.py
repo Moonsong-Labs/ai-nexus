@@ -42,7 +42,7 @@ GITHUB_TOOLS = [
     "read_file",
     "delete_file",
     "get_pull_request",
-    "list_pull_request_files",
+    "list_pull_requests_files",
     # TODO: evaluate adding these tools as well
     # "overview_of_existing_files_in_main_branch",
     # "overview_of_files_in_current_working_branch",
@@ -147,9 +147,9 @@ def mock_github_tools(mock_api: MockGithubApi):
             args_schema=GetPR,
         ),
         RunnableLambda(
-            _convert_args_schema_to_string(mock_api.list_pull_request_files, GetPR)
+            _convert_args_schema_to_string(mock_api.list_pull_requests_files, GetPR)
         ).as_tool(
-            name="list_pull_request_files",
+            name="list_pull_requests_files",
             description=LIST_PULL_REQUEST_FILES,
             args_schema=GetPR,
         ),
