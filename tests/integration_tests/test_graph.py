@@ -1,4 +1,7 @@
 import logging
+import os
+import tempfile
+from pathlib import Path
 from typing import List
 
 import pytest
@@ -95,3 +98,34 @@ async def test_memory_storage(conversation: List[str], expected_category: str):
     )
 
     logger.info(f"✅ Successfully found memory category: {expected_category}")
+
+
+@pytest.mark.asyncio
+async def test_memory_dump():
+    """Test the memory_dump tool functionality."""
+    # Create a temporary directory for the memory dump
+    with tempfile.TemporaryDirectory() as temp_dir:
+        config = Configuration()
+        graph = base_graph_builder(config).compile()
+        
+        # Step 1: Store a memory
+        store_memory_msg = "The Python programming language was created by Guido van Rossum and released in 1991."
+        await graph.ainvoke(
+            {"messages": [("user", store_memory_msg)]},
+            {"thread_id": "memory_dump_test"},
+        )
+        
+        # Step 2: Request a memory dump
+        dump_request = f"Dump your memories into a file in {temp_dir}"
+        response = await graph.ainvoke(
+            {"messages": [("user", dump_request)]},
+            {"thread_id": "memory_dump_test"},
+        )
+        
+        # Step 3: Verify a dump file was created and is not empty
+        dump_files = list(Path(temp_dir).glob("memory_dump_*.json"))
+        assert len(dump_files) > 0, "No memory dump files were created"
+        
+        # Check that file is not empty
+        dump_file = dump_files[0]
+        assert os.path.getsize(dump_file) > 0, "Memory dump file is empty"
