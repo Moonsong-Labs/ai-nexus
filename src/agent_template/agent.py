@@ -10,7 +10,7 @@ from langchain_core.tools import Tool
 
 from agent_template import configuration, prompts
 from agent_template.configuration import Configuration
-from agent_template.memory import (
+from src.common.components.memory import (
     SemanticMemory,
 )
 from agent_template.state import State

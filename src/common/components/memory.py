@@ -1,4 +1,4 @@
-"""Memory management for the agent template.
+"""Memory management for agents.
 
 This module provides functionality for managing semantic memories for agents.
 It includes tools for loading static memories from files, searching memories,
@@ -10,7 +10,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Protocol
 
 from langchain_core.tools import Tool
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -19,12 +19,10 @@ from langgraph.store.memory import InMemoryStore
 from langmem import create_manage_memory_tool, create_search_memory_tool
 from pydantic import BaseModel, Field
 
-from agent_template.configuration import Configuration
-
 logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 )
 STATIC_MEMORIES_DIR = REPO_ROOT / ".langgraph/static_memories/"
 
@@ -34,6 +32,13 @@ MEMORY_CATEGORIES = [
     "rule",  # Rules, preferences, or constraints
     "procedure",  # How-to knowledge or procedures
 ]
+
+
+class ConfigurationProtocol(Protocol):
+    """Protocol defining the minimum configuration interface required."""
+    
+    use_static_mem: bool
+    user_id: str
 
 
 def load_static_memories(store: BaseStore, user_id: str = "default") -> int:
@@ -96,7 +101,7 @@ class SemanticMemory:
         self,
         agent_name: str = "default",
         store: Optional[BaseStore] = None,
-        config: Optional[Configuration] = None,
+        config: Optional[ConfigurationProtocol] = None,
     ):
         """Initialize the semantic memory.
 
@@ -114,7 +119,7 @@ class SemanticMemory:
         )
         self.initialize(config)
 
-    def initialize(self, config: Optional[Configuration]) -> None:
+    def initialize(self, config: Optional[ConfigurationProtocol] = None) -> None:
         """Initialize the memory store and load static memories if configured.
 
         Args:
@@ -125,9 +130,10 @@ class SemanticMemory:
             self.store = create_memory_store()
 
         # Load static memories if configured
-        if config and config.use_static_mem:
-            load_static_memories(self.store, config.user_id)
-            logger.info(f"Loaded static memories for user {config.user_id}")
+        if config and hasattr(config, 'use_static_mem') and config.use_static_mem:
+            user_id = getattr(config, 'user_id', 'default')
+            load_static_memories(self.store, user_id)
+            logger.info(f"Loaded static memories for user {user_id}")
 
     def get_tools(self) -> List[Tool]:
         """Get the memory management tools.
@@ -140,7 +146,7 @@ class SemanticMemory:
         return self._tools
 
 
-def create_memory_tools(namespace: str, store: BaseStore) -> List[Tool]:
+def create_memory_tools(namespace: tuple, store: BaseStore) -> List[Tool]:
     """Create memory management and search tools for the agent.
 
     Args:
@@ -234,4 +240,4 @@ def create_memory_store() -> BaseStore:
             "dims": 3072,
             "embed": gemini_embeddings,
         }
-    )
+    ) 
