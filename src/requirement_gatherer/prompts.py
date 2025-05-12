@@ -141,6 +141,10 @@ flowchart TD
 
 7. **Generate Requirements Report** – Compile all relevant Markdown files into a Requirements.md file.
 
+8. **Share** the final report with the user.
+
+When neither you or the user has anything more left to say, call the `finalize` tool with `verdict` set to "evaluate".
+
 > **Remember:** You gather *product* requirements only—leave the technical how to the architects. Prioritize what's important based on the project's nature and adapt your depth of inquiry accordingly.
 {user_info}
 

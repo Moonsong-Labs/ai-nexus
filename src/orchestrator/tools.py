@@ -20,6 +20,7 @@ class Delegate:
     to: Literal[
         "orchestrator", "requirements", "architect", "coder", "tester", "reviewer"
     ]
+    content: str
 
 
 @tool

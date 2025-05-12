@@ -16,7 +16,7 @@ class State:
 
     messages: Annotated[list[AnyMessage], add_messages]
     """The messages in the conversation."""
-    veredict: Literal["Completed", "needs_more"] = "needs_more"
+    verdict: Literal["Completed", "needs_more"] = "needs_more"
 
 
 __all__ = [
