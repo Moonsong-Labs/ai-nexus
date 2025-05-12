@@ -394,24 +394,33 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
 
 #### 5.2. Architect (`src/architect/`)
 
-*   **Role:** Expert software engineer responsible for architecting a project, not writing code. Receives project needs, coordinates other AI agents. Manages project documentation.
-*   **Key Prompt (`src/architect/prompts/v0.md`):** This is a very detailed system prompt.
+*   **Role:** Expert software engineer responsible for architecting a project, not writing code. Receives project needs, coordinates other AI agents. Manages project documentation and defines tasks for other agents.
+*   **Key Prompt (`src/architect/prompts/v0.1.md`):** This is a detailed system prompt.
     *   **Identity:** "I am Architect..."
     *   **Core Responsibility:** MUST read ALL files in 'project' folder at the start of EVERY task.
-    *   **Core Values:** Requirement Gathering, Research Driven, Technology Selection, Task Definition, Validation and Adjustment, Transparency and Traceability.
+    *   **Core Values:** Research Driven, Technology Selection, Task Definition, Validation and Adjustment, Transparency and Traceability.
     *   **Project Structure Understanding:** Defines a hierarchy of Markdown files it expects and manages within a 'project' folder:
         *   Core Files (Required): `projectbrief.md`, `projectRequirements.md`, `systemPatterns.md`, `techContext.md`, `progress.md`.
         *   Specific Files (Required): `featuresContext.md`, `testingContext.md`, `securityContext.md`. These track current work, changes, next steps, decisions, patterns, learnings for their respective scopes. Tasks need start/finish dates.
         *   `progress.md` is updated last.
         *   Flowchart of file dependencies is provided in the prompt.
     *   **Old Information Management:** Information older than two weeks from task/progress files is moved to `changelog.md`. This file is checked only if prompted with "check changelog".
+    *   **Task Allocation:** After reading files and ensuring documentation is up-to-date, the Architect defines the next tasks based on `featuresContext.md`, `testingContext.md`, and `securityContext.md`.
+        *   Tasks must be small (couple of hours for a human).
+        *   Tasks require thorough explanation, technology list, restrictions, and pointers to relevant code/files.
+        *   Tasks are written to `codingTask.md`, `testingTask.md`, and `securityTask.md` respectively.
     *   **Documentation Updates:** Triggered by: new patterns, significant changes, user request "update project" (MUST review ALL files), context clarification. Includes a flowchart for the update process.
 *   **`prompts.py` (`src/architect/prompts.py`):**
-    *   Reads `src/architect/prompts/v0.md`.
+    *   Reads `src/architect/prompts/v0.1.md`.
     *   Formats it by injecting `user_info` (OS, username, current directory) and current `time`.
-*   **Structure:** Follows the `agent_template` pattern.
+*   **`output.py` (`src/architect/output.py`):** Defines Pydantic models for structured output:
+    *   `ArchitectAgentTaskOutput`: `id`, `name`, `description`, `task`, `requirement_id`.
+    *   `ArchitectAgentQuestionOutput`: `id`, `question`, `context`.
+    *   `ArchitectAgentFinalOutput`: Contains lists of questions and tasks. (Note: The graph currently doesn't explicitly parse or bind these models).
+*   **Structure:** Follows the `agent_template` pattern with modifications.
     *   `configuration.py`: Standard, uses `prompts.SYSTEM_PROMPT`.
     *   `graph.py`: Standard `call_model`, `store_memory`, `route_message` flow. Uses `tools.upsert_memory`.
+        *   The `call_model` node now returns `{"messages": [{"role": "assistant", "content": str(msg)}]}`.
     *   `state.py`: Standard `State` with `messages`.
     *   `tools.py`: Defines the standard `upsert_memory` tool.
     *   `utils.py`: Standard `split_model_and_provider`, `init_chat_model`.
@@ -605,9 +614,9 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     *   `MemorySaver()` from `langgraph.checkpoint.memory` for graph checkpointing.
     *   `InMemoryStore()` from `langgraph.stores.memory` for agent memory during tests.
     *   Graphs are typically compiled with a checkpointer and store: `graph_compiled = graph_builder.compile(checkpointer=memory_saver, store=memory_store)`.
-    *   A wrapper function (e.g., `run_graph_with_config` or `call_tester_agent`) is often created to:
-        *   Take a dataset example as input.
-        *   Format the input for the graph (e.g., converting to `HumanMessage` lists).
+    *   A wrapper function (e.g., `run_graph_with_config`, `call_tester_agent`, `run_graph_with_attachments`) is often created to:
+        *   Take a dataset example (and potentially attachments) as input.
+        *   Format the input for the graph (e.g., converting to `HumanMessage` lists, injecting attachments as `SystemMessage`s).
         *   Generate a unique `thread_id` (using `uuid.uuid4()`) for state isolation in `RunnableConfig`.
         *   Invoke the compiled graph: `await graph_compiled.ainvoke(graph_input, config=config)`.
         *   Extract and format the output for evaluation.
@@ -642,6 +651,14 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   Tests the grumpy agent against a LangSmith dataset (e.g., `LANGSMITH_DATASET_NAME = "grumpy-failed-questions"`).
         *   Uses `LLMJudge` from `tests.testing.evaluators` to create a `correctness_evaluator` with a specific prompt for judging Grumpy's output.
         *   The `create_graph_caller` utility is used to wrap the Grumpy agent's graph for evaluation.
+    *   **`test_architect_agent.py`:**
+        *   Tests the architect agent against `ARCHITECT_DATASET_NAME = "Architect-dataset"`.
+        *   Uses `LLMJudge` to create a `correctness_evaluator` with a custom `ARCHITECT_CORRECTNESS_PROMPT`.
+        *   Uses `run_graph_with_attachments` function:
+            *   Takes `inputs` (user prompt/messages) and `attachments` (dict of file-like objects).
+            *   Reads content from `attachments` and injects them as `SystemMessage`s before the user input messages. This simulates the Architect reading project files.
+            *   Invokes the compiled Architect graph.
+            *   Extracts the last AI message content for evaluation.
 
 *   **`tests/testing/__init__.py`:**
     *   `get_logger()`: Utility to create a Python logger with a default format.
@@ -658,9 +675,10 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   `create_llm_as_judge(prompt: str, input_keys: List[str], output_key: str, reference_output_key: str, continuous: bool = True)`:
             *   Creates an evaluator chain using an LLM.
             *   Takes a prompt template, keys for input, output, reference, and a flag for continuous feedback.
+        *   `create_correctness_evaluator(...)`: Helper method to create a specific correctness evaluator using `create_llm_as_judge`.
     *   `CORRECTNESS_PROMPT`: A prompt template for an LLM to judge if the `prediction` matches the `reference` output given an `input`.
     *   `correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict)`:
-        *   A specific evaluator instance created using `LLMJudge().create_llm_as_judge` with `CORRECTNESS_PROMPT`.
+        *   A specific evaluator instance created using `LLMJudge().create_correctness_evaluator` with `CORRECTNESS_PROMPT`.
         *   Compares `outputs['output']` (actual agent response) with `reference_outputs['message']['content']` (expected response from dataset).
 
 *   **`tests/unit_tests/test_configuration.py`:**
@@ -684,6 +702,10 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     *   `make test_unit`: Runs unit tests (`uv run -- pytest tests/unit_tests`).
     *   `make test_integration`: Runs integration tests (`uv run -- pytest tests/integration_tests`).
     *   `make test`: Runs both `test_unit` and `test_integration`.
+    *   `make test-grumpy`: Runs Grumpy agent integration tests.
+    *   `make test-requirement-gatherer`: Runs Requirement Gatherer integration tests.
+    *   `make test-tester`: Runs Tester agent integration tests.
+    *   `make test-architect`: Runs Architect agent integration tests.
 *   **Configuration:** `.env` file (copied from `.env.example`) for environment variables.
     *   Required for Google AI services: `GOOGLE_API_KEY` (this is the preferred variable). Alternatively, `GEMINI_API_KEY` can be set; scripts will use `GOOGLE_API_KEY` if present, otherwise they will use `GEMINI_API_KEY`.
     *   Optional for Coder agent: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_REPOSITORY`.
@@ -698,13 +720,14 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     *   Integration tests (`make test_integration`) are commented out in the `checks.yml` file, indicating they might be run separately or are pending full CI integration.
 *   **LangGraph Studio:**
     *   The project can be opened in LangGraph Studio for visualization, interaction, and debugging.
-    *   `langgraph.json` can be used to set the default graph to open in Studio (e.g., by setting `default_graph`).
+    *   `langgraph.json` can be used to set the default graph to open in Studio (e.g., by setting `default_graph`). It now includes an entry for the `architect` graph.
     *   The README provides a badge/link to open the project directly in LangGraph Studio using a GitHub URL.
 *   **Adding New Agents:**
     1.  Copy the `src/agent_template/` directory and rename it.
     2.  Update package paths within the new agent's files (e.g., imports).
     3.  Add the new agent package to `pyproject.toml` under `[tool.poetry.packages]` or `[project.entry-points."langgraph.graphs"]` if using that mechanism for discovery.
-    4.  Run `make run` and navigate to the new agent in LangGraph Studio.
+    4.  Add the new agent graph entry to `langgraph.json`.
+    5.  Run `make run` and navigate to the new agent in LangGraph Studio.
 *   **Memory Exploration:** LangGraph Studio UI allows reviewing saved memories (e.g., by clicking a "memory" button if the store is connected and UI supports it).
 
 
@@ -723,7 +746,7 @@ ai-nexus/
 │       ├── review-coding.md      # Context for Grumpy's code review
 │       ├── review-designing.md   # Context for Grumpy's design review
 │       └── role.md               # Core operational rules and Mermaid diagram for Grumpy
-├── langgraph.json                # LangGraph Studio configuration (e.g., default graph)
+├── langgraph.json                # LangGraph Studio configuration (e.g., default graph, agent entries)
 ├── project_memories/             # Project-wide standards, global context
 │   ├── PRD.md                    # Product Requirements Document: standards, tech stack, goals
 │   └── global.md                 # High-level project mission, "Cursor" Memory Bank concept
@@ -739,7 +762,8 @@ ai-nexus/
 │   │   ├── tools.py              # Agent tools (e.g., upsert_memory)
 │   │   └── utils.py              # Utility functions (e.g., init_chat_model)
 │   ├── architect/                # Architect agent: manages project design and documentation
-│   │   └── prompts/v0.md         # Detailed system prompt for Architect
+│   │   ├── output.py             # Pydantic models for Architect's structured output
+│   │   └── prompts/v0.1.md       # Detailed system prompt for Architect (v0.1)
 │   ├── code_reviewer/            # Code Reviewer agent: reviews code for quality
 │   │   └── system_prompt.md      # System prompt for Code Reviewer
 │   ├── coder/                    # Coder agent: writes code, interacts with GitHub
@@ -760,6 +784,7 @@ ai-nexus/
     ├── datasets/                 # Scripts for creating LangSmith datasets
     │   └── requirement_gatherer_dataset.py
     ├── integration_tests/        # Integration tests for agents and full graph functionality
+    │   ├── test_architect_agent.py # Tests for Architect agent
     │   ├── test_graph.py         # Tests agent_template memory
     │   ├── test_grumpy_agent.py
     │   ├── test_requirement_gatherer.py
