@@ -42,12 +42,6 @@ model_requirements_messages = MessageWheel(
         """,
     ]
 )
-model_coder_messages = MessageWheel(
-    [
-        """I have finished coding.""",
-        """I fixed the required issue.""",
-    ]
-)
 model_tester_messages = MessageWheel(
     [
         """I found issues with code. Here are the details:
@@ -92,19 +86,6 @@ def architect(state: State, config: RunnableConfig, store: BaseStore):
                 content="""I am finished with the design. Here are the details:
                 The design should be simple HTML file with CSS styling.
                 """,
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
-
-
-def coder(state: State, config: RunnableConfig, store: BaseStore):
-    """Call code."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content=model_coder_messages.next(),
                 tool_call_id=tool_call_id,
             )
         ]

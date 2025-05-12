@@ -10,6 +10,8 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.store.base import BaseStore
 
+# Import specific agent graphs
+from coder.lg_server import graph as coder_graph
 from common import utils
 from orchestrator import configuration, stubs, tools
 from orchestrator.state import State
@@ -82,7 +84,7 @@ def delegate_to(
             elif tool_call["args"]["to"] == "architect":
                 return stubs.architect.__name__
             elif tool_call["args"]["to"] == "coder":
-                return stubs.coder.__name__
+                return coder_graph.name
             elif tool_call["args"]["to"] == "tester":
                 return stubs.tester.__name__
             elif tool_call["args"]["to"] == "reviewer":
@@ -101,7 +103,7 @@ builder.add_node(orchestrate)
 # builder.add_node(store_memory)
 builder.add_node(stubs.requirements)
 builder.add_node(stubs.architect)
-builder.add_node(stubs.coder)
+builder.add_node(coder_graph)
 builder.add_node(stubs.tester)
 builder.add_node(stubs.reviewer)
 builder.add_node(stubs.memorizer)
@@ -113,7 +115,7 @@ builder.add_conditional_edges(
 )
 builder.add_edge(stubs.requirements.__name__, orchestrate.__name__)
 builder.add_edge(stubs.architect.__name__, orchestrate.__name__)
-builder.add_edge(stubs.coder.__name__, orchestrate.__name__)
+builder.add_edge("coder", orchestrate.__name__)
 builder.add_edge(stubs.tester.__name__, orchestrate.__name__)
 builder.add_edge(stubs.reviewer.__name__, orchestrate.__name__)
 builder.add_edge(stubs.memorizer.__name__, orchestrate.__name__)
