@@ -12,7 +12,7 @@ from agent_template import configuration, prompts
 from agent_template.configuration import Configuration
 from agent_template.state import State
 from agent_template.tools import create_file_dump_tool
-from src.common.components.memory import (
+from common.components.memory import (
     SemanticMemory,
 )
 
