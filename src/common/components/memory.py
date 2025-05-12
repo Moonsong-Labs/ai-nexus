@@ -170,15 +170,20 @@ def create_memory_tools(namespace: tuple, store: BaseStore) -> List[Tool]:
         try:
             memories = []
 
-            # Simply search the current namespace
+            # Get all namespaces and search across all memory namespaces
             try:
-                results = store.search(("memories"), query=None, limit=10000)
-                memories = [
-                    {**m.value, "key": m.key, "namespace": m.namespace} for m in results
-                ]
-                logger.info(f"Found {len(memories)} memories in namespace {namespace}")
+                all_namespaces = store.list_namespaces(prefix=("memories",))
+                logger.info(f"Found {len(all_namespaces)} memory namespaces")
+                
+                for ns in all_namespaces:
+                    ns_results = store.search(ns, query=None, limit=10000)
+                    ns_memories = [
+                        {**m.value, "key": m.key, "namespace": m.namespace} for m in ns_results
+                    ]
+                    memories.extend(ns_memories)
+                    logger.info(f"Found {len(ns_memories)} memories in namespace {ns}")
             except Exception as e:
-                logger.warning(f"Error searching namespace {namespace}: {str(e)}")
+                logger.warning(f"Error searching namespaces: {str(e)}")
 
             # Create the output directory
             output_path = Path(output_dir)
@@ -192,7 +197,7 @@ def create_memory_tools(namespace: tuple, store: BaseStore) -> List[Tool]:
             if len(namespace) > 1:
                 agent_name = namespace[1]
 
-            file_path = output_path / f"memory_dump_{agent_name}.json"
+            file_path = output_path / f"memory_dump_{agent_name}_{datetime.now().strftime('%Y-%m-%d')}.json"
 
             # Write the file
             with open(file_path, "w") as f:
