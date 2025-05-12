@@ -12,13 +12,9 @@ from agent_template.state import State
 logger = logging.getLogger(__name__)
 
 
-def graph_builder() -> StateGraph:
+def graph_builder(config: Configuration) -> StateGraph:
     # Create the graph + all nodes
     builder = StateGraph(State)
-
-    # Create the configuration instance
-    config = Configuration()
-    config.use_static_mem = True
 
     # Create the agent instance
     agent = Agent(config)
@@ -39,7 +35,10 @@ def graph_builder() -> StateGraph:
     return builder
 
 
-graph = graph_builder().compile()
+default_config = Configuration()    
+default_config.use_static_mem = True
+
+graph = graph_builder(default_config).compile()
 graph.name = "Agent Template"
 
 
