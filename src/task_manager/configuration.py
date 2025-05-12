@@ -9,6 +9,7 @@ from typing_extensions import Annotated
 
 from task_manager import prompts
 
+TASK_MANAGER_MODEL="google_genai:gemini-2.5-flash-preview-04-17"
 
 @dataclass(kw_only=True)
 class Configuration:
@@ -17,7 +18,7 @@ class Configuration:
     user_id: str = "default"
     """The ID of the user to remember in the conversation."""
     model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default="google_genai:gemini-2.5-flash-preview-04-17",
+        default=TASK_MANAGER_MODEL,
         metadata={
             "description": "The name of the language model to use for the agent. "
             "Should be in the form: provider/model-name."

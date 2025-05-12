@@ -1,20 +1,92 @@
 import pytest
 from langgraph.checkpoint.memory import MemorySaver
 from langsmith import Client
-from testing import create_async_graph_caller, get_logger
+from typing import Awaitable, Callable
+import uuid
+
+from langchain_core.messages import HumanMessage
+from langgraph.graph.state import CompiledStateGraph
+
+from testing import get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
+from task_manager.configuration import TASK_MANAGER_MODEL
 from task_manager.graph import builder as graph_builder
+
+from datasets.task_manager_dataset import TASK_MANAGER_DATASET_NAME as LANGSMITH_DATASET_NAME
 
 # Setup basic logging for the test
 logger = get_logger(__name__)
 
-# Define the LangSmith dataset ID
-LANGSMITH_DATASET_NAME = "task-manager-requirements"
-
 # Create a LLMJudge
 llm_judge = LLMJudge()
+
+def create_task_manager_graph_caller(
+    graph: CompiledStateGraph,
+) -> Callable[[dict], Awaitable[dict]]:
+    """
+    Create a task-manager specific graph caller that properly handles the dataset format.
+    This avoids modifying the original graph caller that might be used by other tests.
+    """
+    logger = get_logger("task_manager_graph_caller")
+
+    async def call_model(inputs: dict):
+        # Handle different input formats
+        messages = []
+        
+        # Case 1: Direct message content
+        if "message" in inputs and isinstance(inputs["message"], str):
+            content = inputs["message"]
+            if content and content.strip():
+                messages.append(HumanMessage(content=content))
+            else:
+                messages.append(HumanMessage(content="Task manager test query"))
+                
+        # Case 2: Message object with content
+        elif "message" in inputs and isinstance(inputs["message"], dict) and "content" in inputs["message"]:
+            content = inputs["message"]["content"]
+            if content and content.strip():
+                messages.append(HumanMessage(content=content))
+            else:
+                messages.append(HumanMessage(content="Task manager test query"))
+        
+        # Case 3: Messages array (used by LangSmith dataset)
+        elif "messages" in inputs and isinstance(inputs["messages"], list):
+            for msg in inputs["messages"]:
+                if isinstance(msg, dict) and "role" in msg and msg["role"] == "human" and "content" in msg:
+                    content = msg["content"]
+                    if content and content.strip():
+                        messages.append(HumanMessage(content=content))
+        
+        # Default case if no valid messages were found
+        if not messages:
+            messages.append(HumanMessage(content="Task manager test query"))
+            
+        logger.info(f"Processed messages for task manager: {messages}")
+        
+        state = {"messages": messages}
+
+        config = {
+            "configurable": {
+                "thread_id": str(uuid.uuid4()),
+                "user_id": "test_user",
+                "model": "google_genai:gemini-2.5-flash-preview-04-17",
+            }
+        }
+
+        try:
+            result = await graph.ainvoke(state, config=config)
+            
+            if isinstance(result, dict) and "messages" in result and result["messages"]:
+                return result["messages"][-1].content
+
+            return str(result)
+        except Exception as e:
+            logger.error(f"Error invoking graph: {e}")
+            return f"Error: {str(e)}"
+
+    return call_model
 
 @pytest.mark.asyncio
 async def test_task_manager_langsmith(pytestconfig):
@@ -39,7 +111,7 @@ async def test_task_manager_langsmith(pytestconfig):
     # Generate a unique thread_id for each evaluation run
 
     results = await client.aevaluate(
-        create_async_graph_caller(graph_compiled),
+        create_task_manager_graph_caller(graph_compiled),  # Use specialized caller for task manager
         data=LANGSMITH_DATASET_NAME,  # The whole dataset is used
         # data=client.list_examples(  # Only the dev split is used
         #     dataset_name=LANGSMITH_DATASET_NAME, splits=["dev"]
