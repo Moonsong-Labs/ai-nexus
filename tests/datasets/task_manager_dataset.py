@@ -22,7 +22,9 @@ def create_dataset():
                 ]
             },
             "outputs": {
-                "message": {"content": "In order to create a task planning, I need to have access to prd.md, techstack.md and split_criteria.md files."}
+                "message": {
+                    "content": "In order to create a task planning, I need to have access to prd.md, techstack.md and split_criteria.md files."
+                }
             },
         },
     ]

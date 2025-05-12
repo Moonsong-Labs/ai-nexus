@@ -9,7 +9,8 @@ from typing_extensions import Annotated
 
 from task_manager import prompts
 
-TASK_MANAGER_MODEL="google_genai:gemini-2.5-flash-preview-04-17"
+TASK_MANAGER_MODEL = "google_genai:gemini-2.5-flash-preview-04-17"
+
 
 @dataclass(kw_only=True)
 class Configuration:

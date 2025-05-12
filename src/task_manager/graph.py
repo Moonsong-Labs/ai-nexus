@@ -11,11 +11,11 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from task_manager import configuration, tools, utils
 from task_manager.state import State
 
-
 logger = logging.getLogger(__name__)
 
 # Initialize the language model
 llm = init_chat_model(model=configuration.TASK_MANAGER_MODEL)
+
 
 async def call_model(state: State, config: RunnableConfig) -> dict:
     """Process user input and generate tasks."""
