@@ -39,6 +39,9 @@ test-architect:
 test_watch:
 	uv run --env-file .env -- python -m ptw --snapshot-update --now . -- -vv tests/unit_tests
 
+test-task-manager:
+	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_task_manager.py
+
 test_unit:
 	uv run pytest tests/unit_tests
 test_integration:
@@ -52,6 +55,8 @@ extended_tests:
 set-requirement-dataset:
 	uv run --env-file .env -- python tests/datasets/requirement_gatherer_dataset.py
 
+set-task-manager-dataset:
+	uv run --env-file .env -- python tests/datasets/task_manager_dataset.py
 
 ######################
 # LINTING AND FORMATTING
