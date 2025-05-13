@@ -67,6 +67,8 @@ lint.ignore = ["UP006", "UP007", "UP035", "D417", "E501"]
 include = ["*.py", "*.pyi", "*.ipynb"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D", "UP", "T201"]
+"src/orchestrator/{graph,test}.py" = ["T201"]
+"src/requirement_gatherer/graph.py" = ["T201"]
 "ntbk/*" = ["D", "UP", "T201"]
 [tool.ruff.lint.pydocstyle]
 convention = "google"

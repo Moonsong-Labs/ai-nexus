@@ -420,7 +420,7 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
 
 *   **Role:** Software developer, writes code, interacts with GitHub repositories.
 *   **`prompts.py` (`src/coder/prompts.py`):**
-    *   `SYSTEM_PROMPT = "You are a sofware developer whose task is to write code."` (This is a basic prompt; a more detailed one might be used in a production scenario).
+    *   `SYSTEM_PROMPT = "You are a software developer whose task is to write code."` (This is a basic prompt; a more detailed one might be used in a production scenario).
 *   **`tools.py` (`src/coder/tools.py`):**
     *   `GITHUB_TOOLS`: A list of specific GitHub tool names to be used: `create_file`, `read_file`, `update_file`, `delete_file`, `get_contents` (renamed from `get_files_from_directory`), `create_pull_request`, `create_branch`.
     *   `github_tools()`:

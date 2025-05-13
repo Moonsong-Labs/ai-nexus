@@ -112,7 +112,7 @@ if ! bunx repomix --include "**/*.py,**/*.md" --ignore "memory-bank/**" --compre
 fi
 
 REPOMIX_CONTENT=$(cat "$REPOMIX_FILE")
-echo "Repomix geenrated and saved to temporary file: $REPOMIX_FILE" >&2
+echo "Repomix generated and saved to temporary file: $REPOMIX_FILE" >&2
 
 
 # For debugging: echo "Fetched content (first 100 chars): $(head -c 100 "$PR_DETAILS_FILE")" >&2

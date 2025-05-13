@@ -1,4 +1,4 @@
-"""Test the orchestrator locally"""
+"""Test the orchestrator locally."""
 
 import asyncio
 import json
@@ -22,12 +22,12 @@ from pydantic import BaseModel
 from termcolor import colored
 
 from common.config import Configuration
-from orchestrator import graph
 from orchestrator.graph import OrchestratorGraph
 from orchestrator.state import State
 
 
 def print_messages_any(messages: list[dict]):
+    """Pretty-Print messages."""
     next_tool_name = None
     for msg in messages:
         msg_type = msg["type"]
