@@ -185,3 +185,24 @@ class MockGithubApi:
             return f"Error: {file_path} is not a file"
 
         return current["content"]
+
+    def get_pull_request(self, pr_number: str) -> str:
+        """Get information about a pull request."""
+        if not self.pull_request:
+            return "No pull request found"
+
+        return str(self.pull_request)
+
+    def list_pull_requests_files(self, pr_number: str) -> str:
+        """List files changed in a pull request."""
+        if not self.pull_request:
+            return "No pull request found"
+
+        # Get all file operations related to this PR
+        pr_files = [
+            op["args"]["path"]
+            for op in self.operations
+            if op["args"].get("branch") == self.pull_request["head"]
+        ]
+
+        return str(pr_files) if pr_files else "No files changed in this pull request"

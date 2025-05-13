@@ -4,11 +4,13 @@
     "agent_template": "./src/agent_template/graph.py:graph",
     "orchestrator": "./src/orchestrator/graph.py:graph",
     "grumpy": "./src/grumpy/graph.py:graph",
-    "coder": "./src/coder/lg_server.py:graph",
+    "coder_new_pr": "./src/coder/lg_server.py:graph_new_pr",
+    "coder_change_request": "./src/coder/lg_server.py:graph_change_request",
     "tester": "./src/tester/graph.py:graph",
     "code_reviewer": "./src/code_reviewer/graph.py:graph",
     "requirement_gatherer": "./src/requirement_gatherer/graph.py:graph",
-    "task_manager": "./src/task_manager/graph.py:graph"
+    "task_manager": "./src/task_manager/graph.py:graph",
+    "architect": "./src/architect/graph.py:graph"
   },
   "env": ".env",
   "python_version": "3.12",

@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from coder.graph import graph_builder
+from coder.graph import coder_new_pr_config
 from coder.mocks import MockGithubApi
 from coder.tools import get_github_tools
 
@@ -13,7 +13,7 @@ async def test_coder_creates_hello_world():
     github_tools = get_github_tools(mock_api)
 
     # Create and build graph
-    graph = graph_builder(github_tools).compile()
+    graph = coder_new_pr_config().graph_builder(github_tools).compile()
 
     # Run agent with request to create main.py
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
@@ -52,7 +52,7 @@ async def test_coder_renames_function():
     github_tools = get_github_tools(mock_api)
 
     # Create and build graph
-    graph = graph_builder(github_tools).compile()
+    graph = coder_new_pr_config().graph_builder(github_tools).compile()
 
     # Run agent with request to rename function
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
