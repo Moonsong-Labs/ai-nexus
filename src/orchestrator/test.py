@@ -20,6 +20,7 @@ from pydantic import BaseModel
 from termcolor import colored
 
 from orchestrator import graph
+from orchestrator.graph import OrchestratorGraph
 from orchestrator.state import State
 
 
@@ -62,8 +63,21 @@ if __name__ == "__main__":
         exit(1)
 
     if mode == "exec":
+        # result = asyncio.run(
+        #     graph.ainvoke(
+        #         State(messages=HumanMessage(content="I want to build a website")),
+        #         config=RunnableConfig(configurable={"thread_id": str(uuid.uuid4())}),
+        #     )
+        # )
+        from langgraph.store.memory import InMemoryStore
+        from langgraph.checkpoint.memory import InMemorySaver
+        from common.config import Configuration
+
+        orchestrator = OrchestratorGraph(Configuration(), checkpointer=InMemorySaver(), store=InMemoryStore())
+        orchestrator.compile()
+
         result = asyncio.run(
-            graph.ainvoke(
+            orchestrator.ainvoke(
                 State(messages=HumanMessage(content="I want to build a website")),
                 config=RunnableConfig(configurable={"thread_id": str(uuid.uuid4())}),
             )
