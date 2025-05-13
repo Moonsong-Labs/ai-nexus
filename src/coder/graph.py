@@ -24,7 +24,7 @@ class CoderInstanceConfig:
     github_tools: List[str]
 
     def graph_builder(self, github_toolset: list[Tool]):
-        builder = graph_builder(self.filter_tools(github_toolset), self.system_prompt)
+        builder = _graph_builder(self.filter_tools(github_toolset), self.system_prompt)
         builder.name = self.name
         return builder
 
@@ -98,7 +98,7 @@ class CallModel:
         return {"messages": messages_after_invoke}
 
 
-def graph_builder(github_toolset: list[Tool], system_prompt: str):
+def _graph_builder(github_toolset: list[Tool], system_prompt: str):
     """Return coder graph builder."""
     builder = StateGraph(State)
 
