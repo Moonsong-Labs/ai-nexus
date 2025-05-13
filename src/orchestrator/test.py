@@ -13,12 +13,15 @@ from langchain_core.messages import (
     HumanMessage,
 )
 from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.store.memory import InMemoryStore
 from langsmith import RunTree
 from langsmith.client import Client
 from langsmith.evaluation import EvaluationResult
 from pydantic import BaseModel
 from termcolor import colored
 
+from common.config import Configuration
 from orchestrator import graph
 from orchestrator.graph import OrchestratorGraph
 from orchestrator.state import State
@@ -69,9 +72,7 @@ if __name__ == "__main__":
         #         config=RunnableConfig(configurable={"thread_id": str(uuid.uuid4())}),
         #     )
         # )
-        from langgraph.store.memory import InMemoryStore
-        from langgraph.checkpoint.memory import InMemorySaver
-        from common.config import Configuration
+        
 
         orchestrator = OrchestratorGraph(Configuration(), checkpointer=InMemorySaver(), store=InMemoryStore())
 

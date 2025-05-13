@@ -1,202 +1,61 @@
 """Graphs that extract memories on a schedule."""
 
-import asyncio
 import logging
+import uuid
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Literal
+from typing import Optional
 
 from langchain.chat_models import init_chat_model
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
-from langgraph.checkpoint.memory import MemorySaver
+from langchain_core.tools import InjectedToolArg, InjectedToolCallId, tool
 from langgraph.graph import END, START, StateGraph
+from langgraph.prebuilt import InjectedState, InjectedStore, ToolNode
 from langgraph.store.base import BaseStore
-from langgraph.types import interrupt
-from pydantic import BaseModel, Field
+from langgraph.types import Checkpointer, Command
+from termcolor import colored
+from typing_extensions import Annotated
 
-from requirement_gatherer import configuration, tools, utils
+from common import config
+from common.graph import AgentGraph
+from requirement_gatherer import prompts
 from requirement_gatherer.state import State
-
-
-class Verdict(BaseModel):
-    """Feedback to decide if all requirements are meet."""
-
-    verdict: Literal["Completed", "needs_more"] = Field(
-        description="Decide if requirements are complete"
-    )
-
 
 logger = logging.getLogger(__name__)
 
-# Initialize the language model to be used for memory extraction
-llm = init_chat_model()
-evaluator_llm = init_chat_model()
-evaluator = evaluator_llm.with_structured_output(Verdict)
 
+@dataclass(kw_only=True)
+class Configuration(config.Configuration):
+    """Main configuration class for the memory graph system."""
 
-def call_evaluator_model(
-    state: State, config: RunnableConfig, *, store: BaseStore
-) -> dict:
-    """Extract the user's state from the conversation and update the memory."""
-    configurable = configuration.Configuration.from_runnable_config(config)
-
-    # Retrieve the most recent memories for context
-    memories = store.search(
-        ("memories", configurable.user_id),
-        query=str([m.content for m in state.messages[-3:]]),
-        limit=10,
-    )
-
-    # Format memories for inclusion in the prompt
-    formatted = "\n".join(
-        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
-    )
-    if formatted:
-        formatted = f"""
-<memories>
-{formatted}
-</memories>"""
-
-    # Prepare the system prompt with user memories and current time
-    # This helps the model understand the context and temporal relevance
-    sys = configurable.evaluator_system_prompt.format(
-        user_info=formatted, time=datetime.now().isoformat()
-    )
-
-    verdict = evaluator.invoke(
-        [{"role": "system", "content": sys}, *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
-    )
-    return {"verdict": verdict}
-
-
-async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
-    """Extract the user's state from the conversation and update the memory."""
-    configurable = configuration.Configuration.from_runnable_config(config)
-
-    # Retrieve the most recent memories for context
-    memories = await store.asearch(
-        ("memories", configurable.user_id),
-        query=str([m.content for m in state.messages[-3:]]),
-        limit=10,
-    )
-
-    # Format memories for inclusion in the prompt
-    formatted = "\n".join(
-        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
-    )
-    if formatted:
-        formatted = f"""
-<memories>
-{formatted}
-</memories>"""
-
-    # Prepare the system prompt with user memories and current time
-    # This helps the model understand the context and temporal relevance
-    sys = configurable.gatherer_system_prompt.format(
-        user_info=formatted, time=datetime.now().isoformat()
-    )
-
-    # Invoke the language model with the prepared prompt and tools
-    # "bind_tools" gives the LLM the JSON schema for all tools in the list so it knows how
-    # to use them.
-    msg = await llm.bind_tools([tools.upsert_memory, tools.finalize]).ainvoke(
-        [{"role": "system", "content": sys}, *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
-    )
-
-    print(f"CALL MODEL: {msg}")
-
-    return {"messages": [msg]}
-
-
-async def store_memory(state: State, config: RunnableConfig, *, store: BaseStore):
-    # Extract tool calls from the last message
-    tool_calls = state.messages[-1].tool_calls
-
-    # Concurrently execute all upsert_memory calls
-    saved_memories = await asyncio.gather(
-        *(
-            tools.upsert_memory(**tc["args"], config=config, store=store)
-            for tc in tool_calls
-        )
-    )
-
-    # Format the results of memory storage operations
-    # This provides confirmation to the model that the actions it took were completed
-    results = [
-        {
-            "role": "tool",
-            "content": mem,
-            "tool_call_id": tc["id"],
-        }
-        for tc, mem in zip(tool_calls, saved_memories)
-    ]
-    return {"messages": results}
-
-
-async def evaluate_verdict(state: State, config: RunnableConfig, *, store: BaseStore):
-    # Extract tool calls from the last message
-    tool_calls = state.messages[-1].tool_calls
-    tool_call = tool_calls[0]
-
-    print("CHECK")
-    for i, msg in enumerate(state.messages):
-        print(f"[{i:<3}] {msg}")
-    result = call_evaluator_model(
-        State(messages=state.messages[:-1]), config=config, store=store
-    )
-
-    print(f"EVAL {result}")
-    # Format the results of memory storage operations
-    # This provides confirmation to the model that the actions it took were completed
-    results = [
-        {
-            "role": "tool",
-            "content": "All good",
-            "tool_call_id": tool_call["id"],
-        }
-    ]
-    return {"messages": results}
-
-
-async def finalize(state: State, config: RunnableConfig, *, store: BaseStore):
-    print(f"FINALIZE {state.messages[-2].content}")
-    return {
-        "messages": [
-            {
-                "role": "tool",
-                "content": state.messages[-3].content,  # This is the summary
-                "tool_call_id": state.messages[-1].tool_calls[0]["id"],
-            }
-        ]
-    }
-
-
-def evaluate_completion(state: State):
-    """Determine the next step based on the presence of tool calls."""
-    msg = state.messages[-1]
-    tool_calls = msg.tool_calls
-
-    print(tool_calls)
-
-    if tool_calls:
-        if (
-            tool_calls[0]["name"] == "finalize"
-            and tool_calls[0]["args"]["verdict"] == "Completed"
-        ):
-            return "finalize"
-        elif tool_calls[0]["name"] == "upsert_memory":
-            return "store_memory"
-    return human_ai_feedback.__name__
+    gatherer_system_prompt: str = prompts.SYSTEM_PROMPT
 
 
 demo_user = init_chat_model()
 
 
-async def human_ai_feedback(state: State, config: RunnableConfig):
-    msg = state.messages[-1].content
+@tool("human_feedback", parse_docstring=True)
+async def human_feedback(
+    question: str,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+    state: Annotated[State, InjectedState],
+    config: RunnableConfig,
+) -> Command:
+    """Request feedback from a human.
 
-    print(f"\n{'=' * 50} QUESTION {'=' * 50}\n{msg}\n{'=' * 150}\n")
+    Args:
+        question: The question to ask.
+
+    Returns:
+        A Command to update the state with the human response.
+    """
+    content = ""
+    if state.messages[-1].content:
+        content = f"\n\n{colored(state.messages[-1].content, 'light_grey')}"
+    print(
+        f"\n{'=' * 50} {'QUESTION':^10} {'=' * 50}\n{question}{content}\n{'=' * 112}\n"
+    )
 
     sys = """You are an end-user that wants to create a software product. Your requirements are simple but specific.
 You will be reply to any questions as per the following rubric:
@@ -234,55 +93,172 @@ You MUST always reply with an answer
 </input>
     """
 
-    from langchain_core.messages import HumanMessage, SystemMessage
-
-    configurable = configuration.Configuration.from_runnable_config(config)
     reply = await demo_user.ainvoke(
         [
             SystemMessage(content=sys.format(input=state.messages)),
-            HumanMessage(content=msg),
+            HumanMessage(content=question),
         ],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
+        config,
     )
 
-    print(f"\n{'=' * 50} ANSWER {'=' * 50}\n{reply.content}\n{'=' * 150}\n")
+    print(f"\n{'=' * 50} {'ANSWER':^10} {'=' * 50}\n{reply.content}\n{'=' * 112}\n")
 
     # user_input = interrupt({"query": msg})
     # return {"messages": user_input}
-    from langchain_core.messages import HumanMessage
 
-    return {"messages": [HumanMessage(content=reply.content)]}
-
-
-async def human_feedback(state: State, config: RunnableConfig):
-    msg = state.messages[-1].content
-    user_input = interrupt({"query": msg})
-    return {"messages": user_input}
+    return Command(
+        update={
+            "messages": [ToolMessage(content=reply.content, tool_call_id=tool_call_id)]
+        }
+    )
 
 
-memory = MemorySaver()
+@tool("memorize", parse_docstring=True)
+async def memorize(
+    content: str,
+    context: str,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+    store: Annotated[BaseStore, InjectedStore],
+    config: Annotated[RunnableConfig, InjectedToolArg],
+    memory_id: Optional[uuid.UUID] = None,
+):
+    """Upsert a memory in the database.
 
-builder = StateGraph(State, config_schema=configuration.Configuration)
+    If a memory conflicts with an existing one, then just UPDATE the
+    existing one by passing in memory_id - don't create two memories
+    that are the same. If the user corrects a memory, UPDATE it.
 
-# Define the flow of the memory extraction process
-builder.add_node(call_model)
-builder.add_node(human_ai_feedback)
-builder.add_node(store_memory)
-builder.add_node(finalize)
+    Args:
+        content: The main content of the memory. For example:
+            "User expressed interest in learning about French."
+        context: Additional context for the memory. For example:
+            "This was mentioned while discussing career options in Europe."
+        memory_id: ONLY PROVIDE IF UPDATING AN EXISTING MEMORY.
+        The memory to overwrite.
+    """
+    mem_id = memory_id or uuid.uuid4()
+    from agent_template.configuration import Configuration
 
-builder.add_edge(START, call_model.__name__)
-builder.add_conditional_edges(
-    call_model.__name__,
-    evaluate_completion,
-    [human_ai_feedback.__name__, store_memory.__name__, finalize.__name__],
-)
-builder.add_edge(store_memory.__name__, call_model.__name__)
-builder.add_edge(human_ai_feedback.__name__, call_model.__name__)
-builder.add_edge(finalize.__name__, END)
+    user_id = Configuration.from_runnable_config(config).user_id
+    await store.aput(
+        ("memories", user_id),
+        key=str(mem_id),
+        value={"content": content, "context": context},
+    )
+    return f"Stored memory {mem_id}"
 
 
-graph = builder.compile()
-graph.name = "Requirement Gatherer Agent"
+@tool("summarize", parse_docstring=True)
+async def summarize(
+    summary: str,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+):
+    """Summarize the agent output.
+
+    Args:
+        summary: The entire summary.
+    """
+    print("=== Summary ===")
+    print(f"{summary}")
+    print("=================")
+
+    return Command(
+        update={
+            "messages": [
+                ToolMessage(
+                    content=summary,
+                    tool_call_id=tool_call_id,
+                )
+            ],
+            "summary": summary,
+        }
+    )
 
 
-__all__ = ["graph"]
+# Initialize the language model and the tools
+all_tools = [human_feedback, memorize, summarize]
+
+llm = init_chat_model()
+llm_with_tools = llm.bind_tools(all_tools)
+tool_node = ToolNode(all_tools, name="tools")
+
+
+async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
+    """Extract the user's state from the conversation and update the memory."""
+    # configurable = configuration.Configuration.from_runnable_config(config)
+
+    user_id = config["configurable"]["user_id"]
+    # Retrieve the most recent memories for context
+    memories = await store.asearch(
+        ("memories", user_id),
+        query=str([m.content for m in state.messages[-3:]]),
+        limit=10,
+    )
+
+    # Format memories for inclusion in the prompt
+    formatted = "\n".join(
+        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
+    )
+    if formatted:
+        formatted = f"""
+<memories>
+{formatted}
+</memories>"""
+
+    # Prepare the system prompt with user memories and current time
+    # This helps the model understand the context and temporal relevance
+    sys_prompt = config["configurable"]["gatherer_system_prompt"].format(
+        user_info=formatted, time=datetime.now().isoformat()
+    )
+
+    # Invoke the language model with the prepared prompt and tools
+    msg = await llm_with_tools.ainvoke(
+        [SystemMessage(content=sys_prompt), *state.messages],
+        config=config,
+    )
+
+    # print(f"CALL_MODEL_REUSULT:\n{msg}")
+
+    return {"messages": [msg]}
+
+
+async def gather_requirements(state: State, config: RunnableConfig):
+    if state.messages[-1].tool_calls:
+        return tool_node.name
+    elif state.summary:
+        return END
+    else:
+        return call_model.__name__
+
+
+class RequirementsGathererGraph(AgentGraph):
+    def __init__(
+        self,
+        config: config.Configuration = config.Configuration(),
+        checkpointer: Checkpointer = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__(config, checkpointer, store)
+        self._name = "Requirements Gatherer"
+        self._config = Configuration(**asdict(config))
+
+    def create_builder(self) -> StateGraph:
+        """Create a graph builder."""
+        builder = StateGraph(State, config_schema=Configuration)
+        builder.add_node(call_model)
+        builder.add_node(tool_node.name, tool_node)
+
+        builder.add_edge(START, call_model.__name__)
+        builder.add_conditional_edges(
+            call_model.__name__,
+            gather_requirements,
+            [tool_node.name, call_model.__name__, END],
+        )
+        builder.add_edge(tool_node.name, call_model.__name__)
+
+        return builder
+
+
+graph = RequirementsGathererGraph().compiled_graph
+
+__all__ = [RequirementsGathererGraph.__name__, "graph"]
