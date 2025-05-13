@@ -7,7 +7,7 @@ from testing import create_async_graph_caller, get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
-from requirement_gatherer.graph import builder as graph_builder
+from requirement_gatherer.graph import RequirementsGathererGraph
 
 ## Setup basic logging for the test
 logger = get_logger(__name__)
@@ -93,13 +93,11 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
     memory_store = InMemoryStore()
 
     # Compile the graph - needs checkpointer for stateful execution during evaluation
-    graph_compiled = graph_builder.compile(
-        checkpointer=memory_saver, store=memory_store
-    )
+    graph = RequirementsGathererGraph(checkpointer=memory_saver, store=memory_store)
 
     # Define the function to be evaluated for each dataset example
     results = await client.aevaluate(
-        create_async_graph_caller(graph_compiled),
+        create_async_graph_caller(graph),
         data=REQUIREMENT_GATHERER_DATASET_NAME,  # The whole dataset is used
         evaluators=[
             llm_judge.create_correctness_evaluator(

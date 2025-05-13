@@ -5,7 +5,7 @@ from agentevals.trajectory.llm import create_trajectory_llm_as_judge
 from langchain_core.messages import HumanMessage
 from termcolor import colored
 
-from orchestrator.graph import builder as graph_builder
+from orchestrator.graph import OrchestratorGraph
 from orchestrator.state import State
 
 CUSTOM_TRAJECTORY_ACCURACY_PROMPT_WITH_REFERENCE = """You are an expert data labeler.
@@ -118,7 +118,7 @@ async def test_orchestrator(pytestconfig):
         {"role": "assistant", "content": "The project is done."},
     ]
 
-    graph = graph_builder.compile()
+    graph = OrchestratorGraph()
     result = await graph.ainvoke(
         State(
             messages=[HumanMessage(content="I want to build a website to sell plants")]

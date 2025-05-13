@@ -1,5 +1,7 @@
 """Define default prompts."""
 
+from datetime import datetime
+
 ORCHESTRATOR_SYSTEM_PROMPT = """You are an orchestrator of a professional engineering team. You will never perform any direct actions.
 You are to help a user implement a project. You will not focus on researching, designing, or implementing a project. \
 Instead you will delegate the responsibilities to your team, depending upon the conversations of your team and human input.
@@ -90,7 +92,9 @@ I repeat, your absolute rules are:
 
 {absolute}
 
-and MUST not be broken."""
+and MUST not be broken.
+
+System Time: {time}"""
 
 
 def _read_memory_bank(type: str) -> str:
@@ -107,4 +111,6 @@ def get_prompt() -> str:
         for k in ["absolute", "team", "project_states", "process"]
     }
     # print(memory)  # noqa: T201
-    return ORCHESTRATOR_MEM_SYSTEM_PROMPT.format(**memory)
+    return ORCHESTRATOR_MEM_SYSTEM_PROMPT.format(
+        time=datetime.now().isoformat(), **memory
+    )
