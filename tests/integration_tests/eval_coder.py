@@ -14,9 +14,9 @@ from openevals.types import EvaluatorResult
 from openevals.utils import _arun_evaluator
 
 from coder.graph import coder_new_pr_config
-from coder.mocks import MockGithubApi
 from coder.state import State
 from coder.tools import get_github_tools
+from common.components.github_mocks import MockGithubApi
 
 EVAL_PROMPT = """You are an expert code reviewer.
 Provided a starting code, user input and a set of expectations, your job is to grade the quality of a coder agent's

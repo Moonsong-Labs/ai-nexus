@@ -16,7 +16,7 @@ from langsmith import Client
 from openevals.llm import create_llm_as_judge
 from openevals.prompts import CORRECTNESS_PROMPT
 
-from code_reviewer.graph import builder_no_memory as graph_builder  # Import the builder
+from code_reviewer.graph import non_github_code_reviewer_config
 
 # Setup basic logging for the test
 logging.basicConfig(
@@ -40,7 +40,7 @@ def correctness_evaluator(inputs: dict, outputs: dict, reference_outputs: dict):
         outputs_contents = outputs["output"]
         print(f"outputs_contents: {outputs_contents}")
         print(f"reference_outputs: {reference_outputs}")
-        reference_outputs_contents = reference_outputs["message"][0]["content"]
+        reference_outputs_contents = reference_outputs["messages"][0]["content"]
 
         eval_result = evaluator(
             inputs=inputs,
@@ -73,7 +73,11 @@ async def test_code_reviewer_easy_review_langsmith(pytestconfig):
     memory_saver = MemorySaver()  # Checkpointer for the graph
 
     # Compile the graph - needs checkpointer for stateful execution during evaluation
-    graph_compiled = graph_builder.compile(checkpointer=memory_saver)
+    graph_compiled = (
+        non_github_code_reviewer_config()
+        .graph_builder([])
+        .compile(checkpointer=memory_saver)
+    )
 
     # Define the function to be evaluated for each dataset example
     async def run_graph_with_config(input_example: dict):
@@ -236,3 +240,8 @@ async def test_code_reviewer_easy_review_langsmith(pytestconfig):
     except Exception as e:
         logger.error("LangSmith evaluation failed: %s", e, exc_info=True)
         pytest.fail(f"LangSmith evaluation failed: {e}")
+
+
+if __name__ == "__main__":
+    # Run the test function
+    pytest.main([__file__, "-v", "-s"])  # Verbose and show print statements

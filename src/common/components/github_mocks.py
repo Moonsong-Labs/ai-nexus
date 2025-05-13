@@ -1,5 +1,13 @@
 """Mock Github API for testing."""
 
+import logging
+import os
+from typing import Union
+
+from langchain_community.utilities.github import GitHubAPIWrapper
+
+logger = logging.getLogger(__name__)
+
 
 class MockGithubApi:
     """Mock Github API that keeps changes in memory."""
@@ -206,3 +214,31 @@ class MockGithubApi:
         ]
 
         return str(pr_files) if pr_files else "No files changed in this pull request"
+
+
+def maybe_mock_github() -> Union[GitHubAPIWrapper, MockGithubApi]:
+    """Get either a real GitHub API wrapper or a mock based on environment variables.
+
+    Required environment variables for real GitHub API:
+    - GITHUB_APP_ID
+    - GITHUB_APP_PRIVATE_KEY
+    - GITHUB_REPOSITORY
+    """
+    required_vars = ["GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY", "GITHUB_REPOSITORY"]
+
+    if all(os.getenv(var) for var in required_vars):
+        logger.debug("Using live GitHub API toolkit")
+        return GitHubAPIWrapper(
+            github_app_id=os.getenv("GITHUB_APP_ID"),
+            github_app_private_key=os.getenv("GITHUB_APP_PRIVATE_KEY"),
+            github_repository=os.getenv("GITHUB_REPOSITORY"),
+        )
+
+    if any(os.getenv(var) for var in required_vars):
+        logger.warning(
+            "Some but not all required GitHub environment variables are set. Falling back mock GitHub toolset."
+        )
+
+    logger.debug("Using mock GitHub API toolkit")
+
+    return MockGithubApi()
