@@ -1,5 +1,4 @@
 """Graphs that extract memories on a schedule."""
-
 import asyncio
 import logging
 import pprint
@@ -19,9 +18,11 @@ from langgraph.prebuilt import InjectedState, InjectedStore, ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer, Command, interrupt
 from pydantic import BaseModel, Field
+from termcolor import colored
 from typing_extensions import Annotated
 
 from common import config
+from common.graph import AgentGraph
 from requirement_gatherer import prompts, tools, utils
 from requirement_gatherer.state import State
 
@@ -54,7 +55,10 @@ async def human_feedback(
     Returns:
         A Command to update the state with the human response.
     """
-    print(f"\n{'=' * 50} {'QUESTION':^10} {'=' * 50}\n{question}\n{'=' * 112}\n")
+    content = ""
+    if state.messages[-1].content: 
+        content = f"\n\n{colored(state.messages[-1].content, "light_grey")}"
+    print(f"\n{'=' * 50} {'QUESTION':^10} {'=' * 50}\n{question}{content}\n{'=' * 112}\n")
 
     sys = """You are an end-user that wants to create a software product. Your requirements are simple but specific.
 You will be reply to any questions as per the following rubric:
@@ -100,7 +104,7 @@ You MUST always reply with an answer
         config,
     )
 
-    print(f"\n{'=' * 50} {"ANSWER":^10} {'=' * 50}\n{reply.content}\n{'=' * 112}\n")
+    print(f"\n{'=' * 50} {'ANSWER':^10} {'=' * 50}\n{reply.content}\n{'=' * 112}\n")
 
     # user_input = interrupt({"query": msg})
     # return {"messages": user_input}
@@ -157,6 +161,10 @@ async def summarize(
     Args:
         summary: The entire summary.
     """
+    print(f"=== Summary ===")
+    print(f"{summary}")
+    print(f"=================")
+
     return Command(
         update={
             "messages": [
@@ -212,6 +220,8 @@ async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) 
         config=config,
     )
 
+    # print(f"CALL_MODEL_REUSULT:\n{msg}")
+
     return {"messages": [msg]}
 
 
@@ -246,20 +256,20 @@ graph = builder.compile(name="Requirements Gatherer")
 __all__ = ["graph"]
 
 
-class RequirementsGathererGraph:
+class RequirementsGathererGraph(AgentGraph):
     def __init__(
         self,
         base_config: config.Configuration,
         checkpointer: Checkpointer = None,
         store: Optional[BaseStore] = None,
     ):
+        super().__init__(config, checkpointer, store)
+        self._name = "Requirements Gatherer"
         self._config = Configuration(**asdict(base_config))
-        self._checkpointer = checkpointer
-        self._store = store
-        self._compiled_graph = None
 
+    def create_builder(self) -> StateGraph:
+        """Create a graph builder."""
         builder = StateGraph(State, config_schema=Configuration)
-        # Define the flow of the memory extraction process
         builder.add_node(call_model)
         builder.add_node(tool_node.name, tool_node)
 
@@ -271,31 +281,4 @@ class RequirementsGathererGraph:
         )
         builder.add_edge(tool_node.name, call_model.__name__)
 
-        self._builder = builder
-
-    @property
-    def builder(self):
-        return self._builder
-
-    def compile(
-        self,
-        *,
-        with_store=True,
-    ) -> CompiledStateGraph:
-        if with_store:
-            self._compiled_graph = self._builder.compile(
-                name="Requirements Gatherer", checkpointer=self._checkpointer, store=self._store
-            )
-        else:
-            self._compiled_graph = self._builder.compile(name="Requirements Gatherer")
-
-        return self
-
-    async def ainvoke(self, state: State, config: RunnableConfig | None = None):
-        new_config = None
-        if config is not None:
-            new_config = RunnableConfig(**config)
-            for k, v in asdict(self._config).items():
-                if k not in new_config["configurable"]:
-                    new_config["configurable"][k] = v
-        return await self._compiled_graph.ainvoke(state, new_config)
+        return builder

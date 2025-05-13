@@ -74,7 +74,6 @@ if __name__ == "__main__":
         from common.config import Configuration
 
         orchestrator = OrchestratorGraph(Configuration(), checkpointer=InMemorySaver(), store=InMemoryStore())
-        orchestrator.compile()
 
         result = asyncio.run(
             orchestrator.ainvoke(

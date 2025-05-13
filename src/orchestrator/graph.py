@@ -20,6 +20,7 @@ from langgraph.store.memory import InMemoryStore
 from langgraph.types import Checkpointer, Command, interrupt
 
 from common import config, utils
+from common.graph import AgentGraph
 from orchestrator import configuration, prompts, stubs, tools
 from orchestrator.state import State
 from requirement_gatherer.graph_v2 import RequirementsGathererGraph
@@ -136,12 +137,14 @@ async def requirements(state: State, config: RunnableConfig, store: BaseStore):
     }
 
 
-def create_requirements(requirements_graph: RequirementsGathererGraph, recursion_limit: int = 100):
+def create_requirements(
+    requirements_graph: RequirementsGathererGraph, recursion_limit: int = 100
+):
     async def requirements(state: State, config: RunnableConfig, store: BaseStore):
         tool_call = state.messages[-1].tool_calls[0]
         config_with_recursion = RunnableConfig(**config)
         config_with_recursion["recursion_limit"] = recursion_limit
-        
+
         result = await requirements_graph.ainvoke(
             RequirementsState(
                 messages=[HumanMessage(content=tool_call["args"]["content"])]
@@ -191,9 +194,6 @@ builder.add_edge(stubs.memorizer.__name__, orchestrate.__name__)
 graph = builder.compile(name="Orchestrator", checkpointer=checkpointer, store=store)
 
 
-__all__ = ["graph"]
-
-
 @dataclass(kw_only=True)
 class Configuration(config.Configuration):
     """Main configuration class for the memory graph system."""
@@ -201,21 +201,26 @@ class Configuration(config.Configuration):
     system_prompt: str = prompts.get_prompt()
 
 
-class OrchestratorGraph:
+class OrchestratorGraph(AgentGraph):
+    """Orchestrator graph."""
     def __init__(
         self,
-        base_config: config.Configuration,
+        config: config.Configuration,
         checkpointer: Checkpointer = None,
         store: Optional[BaseStore] = None,
     ):
-        self._config = Configuration(**asdict(base_config))
-        self._checkpointer = checkpointer
-        self._store = store
-        self._compiled_graph = None
+        """Initialize."""
         self._requirements_graph = RequirementsGathererGraph(
-            base_config, checkpointer, store
-        ).compile()
+            config, checkpointer, store
+        )
+        
+        super().__init__(config, checkpointer, store)
+        self._name = "Orchestrator"
+        self._config = Configuration(**asdict(config))
+        
 
+    def create_builder(self) -> StateGraph:
+        """Create a graph builder."""
         # Create the graph + all nodes
         builder = StateGraph(State, config_schema=configuration.Configuration)
 
@@ -242,34 +247,7 @@ class OrchestratorGraph:
         builder.add_edge(stubs.tester.__name__, orchestrate.__name__)
         builder.add_edge(stubs.reviewer.__name__, orchestrate.__name__)
         builder.add_edge(stubs.memorizer.__name__, orchestrate.__name__)
+        
+        return builder
 
-        self._builder = builder
-        self._compiled_graph = None
-        self._config = Configuration(**asdict(base_config))
-
-    @property
-    def builder(self):
-        return self._builder
-
-    def compile(
-        self,
-        *,
-        with_store=True,
-    ) -> CompiledStateGraph:
-        if with_store:
-            self._compiled_graph = self._builder.compile(
-                name="Orchestrator", checkpointer=self._checkpointer, store=self._store
-            )
-        else:
-            self._compiled_graph = self._builder.compile(name="Orchestrator")
-
-        return self
-
-    async def ainvoke(self, state: State, config: RunnableConfig | None = None):
-        new_config = None
-        if config is not None:
-            new_config = RunnableConfig(**config)
-            for k, v in asdict(self._config).items():
-                if k not in new_config["configurable"]:
-                    new_config["configurable"][k] = v
-        return await self._compiled_graph.ainvoke(state, new_config)
+__all__ = ["OrchestratorGraph"]
