@@ -14,7 +14,7 @@ from task_manager.state import State
 logger = logging.getLogger(__name__)
 
 # Initialize the language model
-llm = init_chat_model()
+llm = init_chat_model(model=configuration.TASK_MANAGER_MODEL)
 
 
 async def call_model(state: State, config: RunnableConfig) -> dict:
@@ -79,4 +79,4 @@ graph = builder.compile()
 graph.name = "Task Manager"
 
 
-__all__ = ["graph"]
+__all__ = ["graph", "builder"]
