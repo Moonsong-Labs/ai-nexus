@@ -111,4 +111,6 @@ def get_prompt() -> str:
         for k in ["absolute", "team", "project_states", "process"]
     }
     # print(memory)  # noqa: T201
-    return ORCHESTRATOR_MEM_SYSTEM_PROMPT.format(time=datetime.now().isoformat(), **memory)
+    return ORCHESTRATOR_MEM_SYSTEM_PROMPT.format(
+        time=datetime.now().isoformat(), **memory
+    )

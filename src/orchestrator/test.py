@@ -72,9 +72,10 @@ if __name__ == "__main__":
         #         config=RunnableConfig(configurable={"thread_id": str(uuid.uuid4())}),
         #     )
         # )
-        
 
-        orchestrator = OrchestratorGraph(Configuration(), checkpointer=InMemorySaver(), store=InMemoryStore())
+        orchestrator = OrchestratorGraph(
+            Configuration(), checkpointer=InMemorySaver(), store=InMemoryStore()
+        )
 
         result = asyncio.run(
             orchestrator.ainvoke(
