@@ -102,7 +102,9 @@ class CallModel:
             .ainvoke(messages)
         )
         return {
-            "messages": [{"role": "assistant", "content": diff_feedback.model_dump_json()}],
+            "messages": [
+                {"role": "assistant", "content": diff_feedback.model_dump_json()}
+            ],
             "diff_feedback": diff_feedback,
         }
 
