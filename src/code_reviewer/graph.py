@@ -1,18 +1,14 @@
 """Graphs that extract memories on a schedule."""
 
-import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import datetime
 from typing import List
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import SystemMessage
-from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import Tool
-from langgraph.graph import END, StateGraph
+from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
-from langgraph.store.base import BaseStore
 from pydantic import BaseModel, Field
 
 from code_reviewer import configuration
@@ -34,7 +30,7 @@ class DiffHunkFeedback(BaseModel):
 
 
 class DiffFeedback(BaseModel):
-    """Feedback for an overall diff"""
+    """Feedback for an overall diff."""
 
     requests_changes: bool = Field(
         description="Whether or not any changes are requested for the diff"
@@ -66,6 +62,7 @@ class CodeReviewerInstanceConfig:
 
     def filter_tools(self, tools: List[Tool]) -> List[Tool]:
         """Filter tools to only include those specified in github_tools.
+
         Args:
             tools: List of all available tools
         Returns:
