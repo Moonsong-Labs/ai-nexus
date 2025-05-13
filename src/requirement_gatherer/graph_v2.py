@@ -16,58 +16,10 @@ from pydantic import BaseModel, Field
 from requirement_gatherer import configuration, tools, utils
 from requirement_gatherer.state import State
 
-
-class Verdict(BaseModel):
-    """Feedback to decide if all requirements are meet."""
-
-    verdict: Literal["Completed", "needs_more"] = Field(
-        description="Decide if requirements are complete"
-    )
-
-
 logger = logging.getLogger(__name__)
 
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model()
-evaluator_llm = init_chat_model()
-evaluator = evaluator_llm.with_structured_output(Verdict)
-
-
-def call_evaluator_model(
-    state: State, config: RunnableConfig, *, store: BaseStore
-) -> dict:
-    """Extract the user's state from the conversation and update the memory."""
-    configurable = configuration.Configuration.from_runnable_config(config)
-
-    # Retrieve the most recent memories for context
-    memories = store.search(
-        ("memories", configurable.user_id),
-        query=str([m.content for m in state.messages[-3:]]),
-        limit=10,
-    )
-
-    # Format memories for inclusion in the prompt
-    formatted = "\n".join(
-        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
-    )
-    if formatted:
-        formatted = f"""
-<memories>
-{formatted}
-</memories>"""
-
-    # Prepare the system prompt with user memories and current time
-    # This helps the model understand the context and temporal relevance
-    sys = configurable.evaluator_system_prompt.format(
-        user_info=formatted, time=datetime.now().isoformat()
-    )
-
-    verdict = evaluator.invoke(
-        [{"role": "system", "content": sys}, *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
-    )
-    return {"verdict": verdict}
-
 
 async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
     """Extract the user's state from the conversation and update the memory."""
@@ -165,14 +117,14 @@ async def finalize(state: State, config: RunnableConfig, *, store: BaseStore):
         "messages": [
             {
                 "role": "tool",
-                "content": state.messages[-3].content,  # This is the summary
+                "content": state.messages[-3].content, # This is the summary
                 "tool_call_id": state.messages[-1].tool_calls[0]["id"],
             }
         ]
     }
 
 
-def evaluate_completion(state: State):
+def route_memory(state: State):
     """Determine the next step based on the presence of tool calls."""
     msg = state.messages[-1]
     tool_calls = msg.tool_calls
@@ -185,15 +137,24 @@ def evaluate_completion(state: State):
             and tool_calls[0]["args"]["verdict"] == "Completed"
         ):
             return "finalize"
+            # else:
+            #     return evaluate_verdict.__name__
         elif tool_calls[0]["name"] == "upsert_memory":
             return "store_memory"
     return human_ai_feedback.__name__
 
 
+
 demo_user = init_chat_model()
 
+from langchain_core.tools import tool
+from langgraph.types import Command
+from langgraph.prebuilt import InjectedState
 
-async def human_ai_feedback(state: State, config: RunnableConfig):
+
+@tool("human_feedback", parse_docstring=True)
+async def human_ai_feedback(state: State, config: RunnableConfig) -> Command:
+    """Request a feedback from a human."""
     msg = state.messages[-1].content
 
     print(f"\n{'=' * 50} QUESTION {'=' * 50}\n{msg}\n{'=' * 150}\n")
@@ -253,32 +214,56 @@ You MUST always reply with an answer
 
     return {"messages": [HumanMessage(content=reply.content)]}
 
+from langgraph.prebuilt import ToolNode
 
 async def human_feedback(state: State, config: RunnableConfig):
     msg = state.messages[-1].content
     user_input = interrupt({"query": msg})
     return {"messages": user_input}
 
+async def tool_dispatcher(state: State, config: RunnableConfig):
+    tool_calls = state["tool_calls"]
+    tool_results = state["tool_results"] or {}
+
+    if not tool_calls:
+        # No more tool calls to process
+        return {**state, "next": "agent"}  # Go back to the agent
+
+    # Get the next tool call
+    tool_call = tool_calls[0]
+    tool_name = tool_call["tool_name"]
+    tool_input = tool_call["tool_input"]
+
+    # Update the state with the current tool call
+    updated_state = {
+        **state,
+        "current_tool_name": tool_name,
+        "current_tool_input": tool_input,
+        "tool_calls": tool_calls[1:],  # Remove the current tool call from the list
+    }
+
+    # Route to the appropriate tool node
+    return {**updated_state, "next": tool_name}
+
+async def gather_requirements(state: State, config: RunnableConfig):
+    pass
 
 memory = MemorySaver()
 
 builder = StateGraph(State, config_schema=configuration.Configuration)
+tool_node = ToolNode([human_ai_feedback, finalize, store_memory])
 
 # Define the flow of the memory extraction process
 builder.add_node(call_model)
-builder.add_node(human_ai_feedback)
-builder.add_node(store_memory)
-builder.add_node(finalize)
+builder.add_node(tool_node)
 
 builder.add_edge(START, call_model.__name__)
 builder.add_conditional_edges(
     call_model.__name__,
-    evaluate_completion,
-    [human_ai_feedback.__name__, store_memory.__name__, finalize.__name__],
+    gather_requirements,
+    [tool_node.name, END],
 )
-builder.add_edge(store_memory.__name__, call_model.__name__)
-builder.add_edge(human_ai_feedback.__name__, call_model.__name__)
-builder.add_edge(finalize.__name__, END)
+builder.add_edge(tool_node.name, call_model.__name__)
 
 
 graph = builder.compile()

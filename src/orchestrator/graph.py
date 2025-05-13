@@ -19,7 +19,7 @@ from langgraph.store.memory import InMemoryStore
 from common import utils
 from orchestrator import configuration, stubs, tools
 from orchestrator.state import State
-from requirement_gatherer.graph import builder as requirements_gatherer_builder
+from requirement_gatherer.graph_v2 import builder as requirements_gatherer_builder
 from requirement_gatherer.state import State as RequirementsState
 
 logger = logging.getLogger(__name__)
@@ -122,13 +122,14 @@ async def requirements(state: State, config: RunnableConfig, store: BaseStore):
     import pprint
 
     print("== GOT RESULT ==")
-    pprint.pp(result["messages"][-3], indent=2)
+    print(result["messages"])
+    pprint.pp(result["messages"][-1], indent=2)
     # print("RETURN REQ")
     # pprint.pp(result["messages"], indent=2)
     return {
         "messages": [
             ToolMessage(
-                content=result["messages"][-3].content,
+                content=result["messages"][-1].content,
                 tool_call_id=tool_call["id"],
             )
         ]
