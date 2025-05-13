@@ -2,9 +2,11 @@
 
 import asyncio
 import logging
+import os
 from datetime import datetime
 
 from langchain.chat_models import init_chat_model
+from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
@@ -103,34 +105,67 @@ def route_message(state: State):
     return END
 
 
-# Create the graph + all nodes
-builder = StateGraph(State, config_schema=configuration.Configuration)
+def code_reviewer_stub(state: dict, config: RunnableConfig, store: BaseStore):
+    """Stub function for the code reviewer graph."""
+    # Access state as a dictionary, not as an object
+    tool_call_id = state["messages"][-1].tool_calls[0]["id"]
+    return {
+        "messages": [
+            ToolMessage(content="Everything looks good.", tool_call_id=tool_call_id)
+        ]
+    }
 
-# Define the flow of the memory extraction process
-builder.add_node(call_model)
-builder.add_edge("__start__", "call_model")
-builder.add_node(store_memory)
-builder.add_conditional_edges("call_model", route_message, ["store_memory", END])
-# Right now, we're returning control to the user after storing a memory
-# Depending on the model, you may want to route back to the model
-# to let it first store memories, then generate a response
-builder.add_edge("store_memory", "call_model")
-graph = builder.compile()
-graph.name = "Code Reviewer"
 
-# Create the graph + all nodes
-builder_no_memory = StateGraph(State, config_schema=configuration.Configuration)
+def build_stub_graph():
+    """Build and return a stub implementation of the code reviewer graph."""
+    builder = StateGraph(State, config_schema=configuration.Configuration)
+    # Use the existing reviewer_stub from orchestrator.stubs
+    builder.add_node("reviewer_stub", code_reviewer_stub)
+    builder.set_entry_point("reviewer_stub")
+    builder.set_finish_point("reviewer_stub")
+    graph = builder.compile()
+    graph.name = "code_reviewer_stub"
+    return graph
 
-# Define the flow of the memory extraction process
-builder_no_memory.add_node(call_model)
-builder_no_memory.add_edge("__start__", "call_model")
-graph_no_memory = builder_no_memory.compile()
-graph_no_memory.name = "code_reviewer_no_memory"
+
+def build_graph():
+    """Build and return the real implementation of the code reviewer graph."""
+    builder = StateGraph(State, config_schema=configuration.Configuration)
+
+    # Define the flow of the memory extraction process
+    builder.add_node(call_model)
+    builder.add_edge("__start__", "call_model")
+    builder.add_node(store_memory)
+    builder.add_conditional_edges("call_model", route_message, ["store_memory", END])
+    # Right now, we're returning control to the user after storing a memory
+    # Depending on the model, you may want to route back to the model
+    # to let it first store memories, then generate a response
+    builder.add_edge("store_memory", "call_model")
+    graph = builder.compile()
+    graph.name = "code_reviewer"
+    return graph
+
+
+def graph_builder():
+    """Build and compile the code reviewer graph, deciding between stub and real implementation."""
+    _code_reviewer_stub_enabled = (
+        os.getenv("CODE_REVIEWER_STUB_ENABLE", "true").lower() != "false"
+    )
+
+    if _code_reviewer_stub_enabled:
+        return build_stub_graph()
+    else:
+        return build_graph()
+
+
+# Use the graph_builder to determine which graph to export
+graph = graph_builder()
+graph.name = "reviewer"
 
 
 __all__ = [
     "graph",
-    "builder",
-    "graph_no_memory",
-    "builder_no_memory",
+    "graph_builder",
+    "build_stub_graph",
+    "build_graph",
 ]

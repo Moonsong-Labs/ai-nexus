@@ -1,5 +1,5 @@
 """Enrichment for a pre-defined schema."""
 
-from agent_template.graph import graph
+from code_reviewer.graph import graph_builder
 
-__all__ = ["graph"]
+__all__ = ["graph_builder"]
