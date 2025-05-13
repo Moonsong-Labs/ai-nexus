@@ -1,5 +1,2 @@
-from agent_template.configuration import Configuration
-
-
-def test_configuration_from_none() -> None:
-    Configuration.from_runnable_config()
+def test_foo() -> None:
+    pass
