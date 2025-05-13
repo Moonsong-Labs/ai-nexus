@@ -1,12 +1,13 @@
 """Mock Github API for testing."""
 
 import logging
-
-from typing import Union
 import os
+from typing import Union
+
 from langchain_community.utilities.github import GitHubAPIWrapper
 
 logger = logging.getLogger(__name__)
+
 
 class MockGithubApi:
     """Mock Github API that keeps changes in memory."""
@@ -213,6 +214,7 @@ class MockGithubApi:
         ]
 
         return str(pr_files) if pr_files else "No files changed in this pull request"
+
 
 def maybe_mock_github() -> Union[GitHubAPIWrapper, MockGithubApi]:
     """Get either a real GitHub API wrapper or a mock based on environment variables.

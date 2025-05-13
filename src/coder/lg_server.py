@@ -9,7 +9,6 @@ from common.components.github_tools import get_github_tools
 logger = logging.getLogger(__name__)
 
 
-
 # Use the function to get the appropriate GitHub source
 github_source = maybe_mock_github()
 github_tools = get_github_tools(github_source)

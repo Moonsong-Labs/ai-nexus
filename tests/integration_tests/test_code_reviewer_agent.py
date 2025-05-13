@@ -73,7 +73,11 @@ async def test_code_reviewer_easy_review_langsmith(pytestconfig):
     memory_saver = MemorySaver()  # Checkpointer for the graph
 
     # Compile the graph - needs checkpointer for stateful execution during evaluation
-    graph_compiled = non_github_code_reviewer_config().graph_builder([]).compile(checkpointer=memory_saver)
+    graph_compiled = (
+        non_github_code_reviewer_config()
+        .graph_builder([])
+        .compile(checkpointer=memory_saver)
+    )
 
     # Define the function to be evaluated for each dataset example
     async def run_graph_with_config(input_example: dict):
@@ -236,6 +240,7 @@ async def test_code_reviewer_easy_review_langsmith(pytestconfig):
     except Exception as e:
         logger.error("LangSmith evaluation failed: %s", e, exc_info=True)
         pytest.fail(f"LangSmith evaluation failed: {e}")
+
 
 if __name__ == "__main__":
     # Run the test function

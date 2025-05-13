@@ -94,8 +94,8 @@ async def test_architect_write_system_requirements(pytestconfig):
     results = await client.aevaluate(
         run_graph_with_attachments,
         data=[client.read_example(example_id="ecadfbbe-bd5b-4108-aba7-8525cec7012e")],
-                evaluators=[
-                llm_judge.create_correctness_evaluator(
+        evaluators=[
+            llm_judge.create_correctness_evaluator(
                 plaintext=True, prompt=ARCHITECT_CORRECTNESS_PROMPT
             )
         ],
@@ -130,8 +130,8 @@ async def test_architect_whole_dataset(pytestconfig):
     results = await client.aevaluate(
         run_graph_with_attachments,
         data=ARCHITECT_DATASET_NAME,
-                evaluators=[
-                llm_judge.create_correctness_evaluator(
+        evaluators=[
+            llm_judge.create_correctness_evaluator(
                 plaintext=True, prompt=ARCHITECT_CORRECTNESS_PROMPT
             )
         ],
