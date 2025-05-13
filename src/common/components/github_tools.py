@@ -30,7 +30,7 @@ from langchain_core.runnables import RunnableLambda
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 
-from coder.mocks import MockGithubApi
+from common.components.github_mocks import MockGithubApi
 
 GITHUB_TOOLS = [
     "set_active_branch",

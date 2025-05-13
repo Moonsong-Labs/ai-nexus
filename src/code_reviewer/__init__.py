@@ -1,5 +1,5 @@
-"""Enrichment for a pre-defined schema."""
+"""Code reviewer module."""
 
-from agent_template.graph import graph
+from code_reviewer.lg_server import graph_non_github
 
-__all__ = ["graph"]
+__all__ = ["graph_non_github"]

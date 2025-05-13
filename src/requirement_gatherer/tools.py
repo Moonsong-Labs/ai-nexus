@@ -41,3 +41,10 @@ async def upsert_memory(
         value={"content": content, "context": context},
     )
     return f"Stored memory {mem_id}"
+
+
+async def finalize(
+    verdict: str,
+):
+    """Trigger the finalization process."""
+    pass

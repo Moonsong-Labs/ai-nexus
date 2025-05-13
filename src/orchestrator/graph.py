@@ -1,18 +1,27 @@
 """Graphs that orchestrates a software project."""
 
 import logging
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 
 from langchain.chat_models import init_chat_model
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import (
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.store.base import BaseStore
+from langgraph.types import Checkpointer
 
-from common import utils
-from orchestrator import configuration, stubs, tools
+from common import config
+from common.graph import AgentGraph
+from orchestrator import prompts, stubs, tools
 from orchestrator.state import State
+from requirement_gatherer.graph import RequirementsGathererGraph
+from requirement_gatherer.state import State as RequirementsState
 
 logger = logging.getLogger(__name__)
 
@@ -20,19 +29,26 @@ logger = logging.getLogger(__name__)
 model_orchestrator = init_chat_model()
 
 
+@dataclass(kw_only=True)
+class Configuration(config.Configuration):
+    """Main configuration class for the memory graph system."""
+
+    system_prompt: str = prompts.get_prompt()
+
+
 async def orchestrate(
     state: State, config: RunnableConfig, *, store: BaseStore
 ) -> dict:
     """Extract the user's state from the conversation and update the memory."""
-    configurable = configuration.Configuration.from_runnable_config(config)
-
-    sys = configurable.system_prompt.format(time=datetime.now().isoformat())
+    sys_prompt = config["configurable"]["system_prompt"].format(
+        time=datetime.now().isoformat()
+    )
 
     msg = await model_orchestrator.bind_tools(
         [tools.Delegate, tools.store_memory]
     ).ainvoke(
-        [SystemMessage(sys), *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
+        [SystemMessage(sys_prompt), *state.messages],
+        config,
     )
 
     return {"messages": [msg]}
@@ -42,19 +58,19 @@ async def store_memory(
     state: State, config: RunnableConfig, *, store: BaseStore
 ) -> dict:
     """Extract the user's state from the conversation and update the memory."""
-    configurable = configuration.Configuration.from_runnable_config(config)
-
-    sys = configurable.system_prompt.format(time=datetime.now().isoformat())
+    sys_prompt = config["configurable"]["system_prompt"].format(
+        time=datetime.now().isoformat()
+    )
 
     msg = await model_orchestrator.bind_tools([tools.Delegate, tools.Memory]).ainvoke(
-        [SystemMessage(sys), *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
+        [SystemMessage(sys_prompt), *state.messages],
+        config,
     )
 
     return {"messages": [msg]}
 
 
-def delegate_to(
+async def delegate_to(
     state: State, config: RunnableConfig, store: BaseStore
 ) -> Literal[
     "__end__",
@@ -78,7 +94,7 @@ def delegate_to(
             if tool_call["args"]["to"] == "orchestrator":
                 return orchestrate.__name__
             elif tool_call["args"]["to"] == "requirements":
-                return stubs.requirements.__name__
+                return "requirements"
             elif tool_call["args"]["to"] == "architect":
                 return stubs.architect.__name__
             elif tool_call["args"]["to"] == "coder":
@@ -93,33 +109,98 @@ def delegate_to(
                 raise ValueError
 
 
-# Create the graph + all nodes
-builder = StateGraph(State, config_schema=configuration.Configuration)
+def create_requirements_node(
+    requirements_graph: RequirementsGathererGraph, recursion_limit: int = 100
+):
+    async def requirements(state: State, config: RunnableConfig, store: BaseStore):
+        tool_call = state.messages[-1].tool_calls[0]
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = recursion_limit
 
-# Define the flow of the memory extraction process
-builder.add_node(orchestrate)
-# builder.add_node(store_memory)
-builder.add_node(stubs.requirements)
-builder.add_node(stubs.architect)
-builder.add_node(stubs.coder)
-builder.add_node(stubs.tester)
-builder.add_node(stubs.reviewer)
-builder.add_node(stubs.memorizer)
+        result = await requirements_graph.ainvoke(
+            RequirementsState(
+                messages=[HumanMessage(content=tool_call["args"]["content"])]
+            ),
+            config_with_recursion,
+        )
 
-builder.add_edge(START, orchestrate.__name__)
-builder.add_conditional_edges(
-    orchestrate.__name__,
-    delegate_to,
-)
-builder.add_edge(stubs.requirements.__name__, orchestrate.__name__)
-builder.add_edge(stubs.architect.__name__, orchestrate.__name__)
-builder.add_edge(stubs.coder.__name__, orchestrate.__name__)
-builder.add_edge(stubs.tester.__name__, orchestrate.__name__)
-builder.add_edge(stubs.reviewer.__name__, orchestrate.__name__)
-builder.add_edge(stubs.memorizer.__name__, orchestrate.__name__)
+        return {
+            "messages": [
+                ToolMessage(
+                    content=result["summary"],
+                    tool_call_id=tool_call["id"],
+                )
+            ]
+        }
 
-graph = builder.compile()
-graph.name = "Orchestrator"
+    return requirements
 
 
-__all__ = ["graph"]
+class OrchestratorGraph(AgentGraph):
+    """Orchestrator graph."""
+
+    def __init__(
+        self,
+        config: config.Configuration = config.Configuration(),
+        checkpointer: Checkpointer = None,
+        store: Optional[BaseStore] = None,
+        stub_config: dict[str, bool] = {
+            "requirements": True,
+            "architect": True,
+            "coder": True,
+            "tester": True,
+            "reviewer": True,
+        },
+    ):
+        """Initialize."""
+        self._requirements_graph = (
+            stubs.RequirementsGathererStub(config, checkpointer, store)
+            if stub_config["requirements"]
+            else RequirementsGathererGraph(config, checkpointer, store)
+        )
+
+        super().__init__(config, checkpointer, store)
+        self._name = "Orchestrator"
+        self._config = Configuration(**asdict(config))
+
+    def create_builder(self) -> StateGraph:
+        """Create a graph builder."""
+        # Create the graph + all nodes
+        builder = StateGraph(State, config_schema=Configuration)
+        requirements = create_requirements_node(self._requirements_graph)
+
+        # Define the flow of the memory extraction process
+        builder.add_node(orchestrate)
+        builder.add_node(requirements)
+        builder.add_node(stubs.architect)
+        builder.add_node(stubs.coder)
+        builder.add_node(stubs.tester)
+        builder.add_node(stubs.reviewer)
+        builder.add_node(stubs.memorizer)
+
+        builder.add_edge(START, orchestrate.__name__)
+        builder.add_conditional_edges(
+            orchestrate.__name__,
+            delegate_to,
+        )
+        builder.add_edge(requirements.__name__, orchestrate.__name__)
+        builder.add_edge(stubs.architect.__name__, orchestrate.__name__)
+        builder.add_edge(stubs.coder.__name__, orchestrate.__name__)
+        builder.add_edge(stubs.tester.__name__, orchestrate.__name__)
+        builder.add_edge(stubs.reviewer.__name__, orchestrate.__name__)
+        builder.add_edge(stubs.memorizer.__name__, orchestrate.__name__)
+
+        return builder
+
+
+graph = OrchestratorGraph(
+    stub_config={
+        "requirements": False,
+        "architect": True,
+        "coder": True,
+        "tester": True,
+        "reviewer": True,
+    }
+).compiled_graph
+
+__all__ = ["OrchestratorGraph"]
