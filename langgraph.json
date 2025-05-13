@@ -7,7 +7,7 @@
     "coder_new_pr": "./src/coder/lg_server.py:graph_new_pr",
     "coder_change_request": "./src/coder/lg_server.py:graph_change_request",
     "tester": "./src/tester/graph.py:graph",
-    "code_reviewer": "./src/code_reviewer/graph.py:non_github_code_reviewer_config",
+    "code_reviewer": "./src/code_reviewer/lg_server.py:graph_non_github",
     "requirement_gatherer": "./src/requirement_gatherer/graph.py:graph",
     "task_manager": "./src/task_manager/graph.py:graph",
     "architect": "./src/architect/graph.py:graph"

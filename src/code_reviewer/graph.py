@@ -47,7 +47,7 @@ class CodeReviewerInstanceConfig:
     github_tools: List[str]
 
     def graph_builder(self, github_toolset: list[Tool]):
-        builder = _graph_builder(self.filter_tools(github_toolset), self.system_prompt)
+        builder = graph_builder(self.filter_tools(github_toolset), self.system_prompt)
         builder.name = self.name
         return builder
 
@@ -75,16 +75,6 @@ def non_github_code_reviewer_config():
         github_tools=[],
     )
 
-async def call_tools(state: State) -> dict:
-    """Check if the last message contains tool calls and call them."""
-
-    system_msg = SystemMessage(content=SYSTEM_PROMPT)
-    messages = [system_msg] + state["messages"]
-    messages_after_invoke = await llm.bind_tools(self.github_tools).ainvoke(
-        messages
-    )
-    return {"messages": messages_after_invoke}
-
 class CallModel:
     def __init__(self, github_tools: list[Tool], system_prompt: str):
         self.github_tools = github_tools
@@ -102,8 +92,10 @@ def graph_builder(github_toolset: list[Tool], system_prompt: str):
     """Return code_reviewer graph builder."""
     builder = StateGraph(State, config_schema=configuration.Configuration)
 
+    tool_node = ToolNode(tools=github_toolset)
+
     builder.add_node("call_model", CallModel(github_toolset, system_prompt))
-    builder.add_node("tools", call_tools)
+    builder.add_node("tools", tool_node)
 
     builder.add_edge("__start__", "call_model")
     builder.add_conditional_edges("call_model", tools_condition)
@@ -111,6 +103,5 @@ def graph_builder(github_toolset: list[Tool], system_prompt: str):
     return builder
 
 __all__ = [
-    "graph_builder",
     "non_github_code_reviewer_config",
 ]
