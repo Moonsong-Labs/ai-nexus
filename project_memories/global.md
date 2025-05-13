@@ -7,7 +7,7 @@
 **Core Mission:** To develop a system for managing and orchestrating a team of AI agents capable of designing, developing, and maintaining technical projects. An initial focus is on an agent named "Cursor" which operates with a memory that resets between sessions, necessitating a robust external "Memory Bank" system for continuity. AI Nexus aims to be a platform for developing and managing such AI agents.
 
 **Key Concepts:**
-1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy) working collaboratively.
+1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager) working collaboratively.
 2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is now `langmem`, providing semantic search capabilities over stored memories, replacing the previous conceptual Markdown-based "Memory Bank" and direct `upsert_memory` tool usage for agents based on the template.
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
 4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools or custom tools like `file_dump`).
@@ -66,7 +66,7 @@ This file outlines the overarching standards and technological choices for the A
 
 ## 4. General Agent Architecture (based on `src/agent_template/` and common patterns)
 
-Most agents in AI Nexus follow a common structural and operational pattern, largely derived from `src/agent_template/`. *Note: Some agents, like the Tester or Coder, may deviate significantly from this template's graph logic or tool usage.*
+Most agents in AI Nexus follow a common structural and operational pattern, largely derived from `src/agent_template/`. *Note: Some agents, like the Tester, Coder, or Task Manager, may deviate significantly from this template's graph logic or tool usage.*
 
 *   **Typical Agent Directory Structure:**
     *   `__init__.py`: Exposes the agent's graph.
@@ -279,6 +279,22 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
     *   `tools.py`: Defines utility tools like `file_dump`. `upsert_memory` is removed. Memory tools come from `Agent`.
     *   `agent.py`: Contains the `Agent` class instance for this agent.
 
+#### 5.8. Task Manager (`src/task_manager/`) (NEW)
+*   **Role:** Manages tasks, initially focused on identifying necessary input documents for its work (e.g., `prd.md`, `techstack.md`, `split_criteria.md`).
+*   **Structure:** Appears to follow an older agent structure, not the latest `agent_template` with the `Agent` class and `langmem`.
+    *   `configuration.py`:
+        *   Defines `TASK_MANAGER_MODEL = "google_genai:gemini-2.5-flash-preview-04-17"`.
+        *   Standard `Configuration` dataclass using this model by default.
+        *   Imports `prompts` from `task_manager` module.
+    *   `graph.py`:
+        *   Initializes LLM using `init_chat_model(model=configuration.TASK_MANAGER_MODEL)`.
+        *   Defines graph nodes: `call_model`, `store_memory`, `route_message`, `process_tools`.
+        *   Likely uses an `upsert_memory` tool via the `process_tools` node and `store_memory` node for memory operations.
+        *   Exports `graph` (compiled graph instance) and `builder` (StateGraph builder).
+    *   `prompts.py`: Implied to exist within `src/task_manager/` for system/other prompts.
+    *   `state.py`: Implied to exist, defining the agent's state (likely including `messages`).
+    *   `tools.py`: Implied to exist, likely defining an `upsert_memory` tool.
+
 
 ## 6. Testing Framework (`tests/`)
 
@@ -314,6 +330,13 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   Creates the LangSmith dataset.
         *   Adds examples (input-output pairs) to the dataset.
 
+*   **`tests/datasets/task_manager_dataset.py` (NEW):**
+    *   Defines `TASK_MANAGER_DATASET_NAME = "task-manager-requirements"`.
+    *   `create_dataset()` function:
+        *   Initializes `Client()`.
+        *   Creates a LangSmith dataset.
+        *   Adds examples to the dataset, focusing on the Task Manager's ability to identify its required input documents (e.g., `prd.md`, `techstack.md`, `split_criteria.md`).
+
 *   **`tests/integration_tests/`:**
     *   **`test_graph.py`:**
         *   `test_memory_storage`: Basic test for the `agent_template` graph's memory storage.
@@ -344,6 +367,12 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   The `evaluate_code` function orchestrates the evaluation using `openevals.utils._arun_evaluator`.
         *   The `invoke_agent` function runs the Coder graph with mocked GitHub tools and specific starting code state.
         *   The `test_coder_creates_rest_api` test demonstrates this custom evaluation flow.
+    *   **`test_task_manager.py` (NEW):**
+        *   Tests the Task Manager agent against the `TASK_MANAGER_DATASET_NAME` LangSmith dataset.
+        *   Compiles the Task Manager graph using `graph_builder.compile(checkpointer=MemorySaver())`.
+        *   Defines a custom `create_task_manager_graph_caller` function to adapt dataset inputs and invoke the graph.
+        *   Uses `LLMJudge().create_correctness_evaluator(plaintext=True)` for evaluation.
+        *   Runs `client.aevaluate()` with `num_repetitions=4`.
 
 *   **`tests/testing/__init__.py`:**
     *   `get_logger()`: Utility to create a Python logger with a default format.
@@ -369,7 +398,7 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   Compares `outputs['output']` (actual agent response) with `reference_outputs['message']['content']` (expected response from dataset).
 
 *   **Evaluation Approaches:**
-    *   **LangSmith Datasets + LLM Judge:** Used for Requirement Gatherer, Tester (simple case), Grumpy. Relies on `client.aevaluate()` and evaluators defined in `tests/testing/evaluators.py`.
+    *   **LangSmith Datasets + LLM Judge:** Used for Requirement Gatherer, Tester (simple case), Grumpy, Task Manager. Relies on `client.aevaluate()` and evaluators defined in `tests/testing/evaluators.py`.
     *   **Custom `openevals` Framework:** Implemented in `tests/integration_tests/test_coder.py` for the Coder agent. Involves custom prompts, input/output structures, and direct use of `openevals` utilities with an LLM judge defined within the test file.
 *   **`tests/testing/formatter.py` (Implied by PR usage):**
     *   Provides utility functions for formatting and printing evaluation results.
@@ -403,6 +432,9 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     *   `make test-requirement-gatherer`: Runs Requirement Gatherer integration tests.
     *   `make test-tester`: Runs Tester agent integration tests.
     *   `make test-architect`: Runs Architect agent integration tests.
+    *   `make test-task-manager`: Runs Task Manager integration tests (`uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_task_manager.py`). (NEW)
+    *   `make set-requirement-dataset`: Creates the Requirement Gatherer LangSmith dataset.
+    *   `make set-task-manager-dataset`: Creates the Task Manager LangSmith dataset (`uv run --env-file .env -- python tests/datasets/task_manager_dataset.py`). (NEW)
 *   **Configuration:** `.env` file (copied from `.env.example`) for environment variables.
     *   Required for Google AI services: `GOOGLE_API_KEY` (this is the preferred variable). Alternatively, `GEMINI_API_KEY` can be set; scripts will use `GOOGLE_API_KEY` if present, otherwise they will use `GEMINI_API_KEY`.
     *   Optional for Coder agent: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_REPOSITORY`.
@@ -437,7 +469,7 @@ ai-nexus/
 ├── .github/
 │   └── workflows/
 │       └── checks.yml
-├── Makefile                      # Task runner (Added test-memory-graph target)
+├── Makefile                      # Task runner (Added test-memory-graph, test-task-manager, set-task-manager-dataset targets)
 ├── README.md                     # Includes NEW section on using semantic memory
 ├── agent_memories/               # Agent-specific static memories (e.g., for Grumpy)
 │   └── grumpy/
@@ -475,6 +507,13 @@ ai-nexus/
 │   │   ├── memory/               # Markdown files defining Orchestrator's rules and team
 │   │   └── stubs/                # Stub implementations for delegated agent calls (for testing/dev)
 │   ├── requirement_gatherer/     # Requirement Gatherer agent: elicits and clarifies requirements
+│   ├── task_manager/             # Task Manager agent (NEW - uses older agent structure)
+│   │   ├── __init__.py           # (Implied)
+│   │   ├── configuration.py      # Defines specific model, standard config
+│   │   ├── graph.py              # Uses older graph structure (call_model, store_memory, etc.)
+│   │   ├── prompts.py            # (Implied)
+│   │   ├── state.py              # (Implied)
+│   │   └── tools.py              # (Implied, likely with upsert_memory)
 │   └── tester/                   # Tester agent: generates tests based on requirements
 │       ├── README.md             # Goal, responsibilities, workflow diagram for Tester
 │       ├── configuration.py      # Default model changed to gemini-2.0-flash-lite
@@ -490,13 +529,15 @@ ai-nexus/
 └── tests/                        # Automated tests
     ├── datasets/                 # Scripts for creating LangSmith datasets
     │   ├── coder_dataset.py      # NEW: Defines LangSmith dataset for Coder agent evaluation
-    │   └── requirement_gatherer_dataset.py
+    │   ├── requirement_gatherer_dataset.py
+    │   └── task_manager_dataset.py # NEW: Defines LangSmith dataset for Task Manager agent
     ├── integration_tests/        # Integration tests for agents and full graph functionality
     │   ├── test_architect_agent.py # Tests for Architect agent
     │   ├── test_coder.py         # REVISED: Uses LangSmith dataset and custom evaluator for Coder agent
     │   ├── test_graph.py         # Tests agent_template memory
     │   ├── test_grumpy_agent.py
     │   ├── test_requirement_gatherer.py
+    │   ├── test_task_manager.py  # NEW: Tests for Task Manager agent
     │   └── test_tester_agent.py  # REWRITTEN: Uses create_async_graph_caller, LLMJudge, custom prompt, specific dataset
     ├── testing/                  # Test utilities, 
     │   ├── __init__.py           # REVISED: create_async_graph_caller updated
