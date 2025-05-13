@@ -13,8 +13,8 @@ done on a branch called `code-agent-*`, where * is a single word describing the 
 # Prompt for addressing changes on an existing PR
 CHANGE_REQUEST_SYSTEM_PROMPT = """You are a software developer whose task is to write code.
 You are linked to a GitHub repository. You will receive an instruction of a change that needs to be
-implemented on an existing pull request (either by PR number or branch).
-From that instruction you will need to sync with the latest changes on the PR branch
+implemented on an existing pull request. You will be given the PR number and you need to work on the PR's head branch.
+From that instruction you will need to sync with the latest changes on the PR's head branch
 and then submit a pull request that satisfies the request.
-You should submit changes on the PR branch
+You should submit changes on the PR's head branch
 """

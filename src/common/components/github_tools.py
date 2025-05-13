@@ -47,7 +47,29 @@ GITHUB_TOOLS = [
     # "overview_of_existing_files_in_main_branch",
     # "overview_of_files_in_current_working_branch",
     # "search_code",
+    # custom tools
+    "get_pull_request_head_branch",
 ]
+
+
+GET_PULL_REQUEST_HEAD_BRANCH_PROMPT = "This tool will fetch the head branch of a specific Pull Request (by PR number). **VERY IMPORTANT**: You must specify the PR number as an integer."
+
+
+class GetPullRequestHeadBranch(BaseTool):
+    """Get the head branch of a specific Pull Request (by PR number)."""
+
+    name: str = "get_pull_request_head_branch"
+    description: str = GET_PULL_REQUEST_HEAD_BRANCH_PROMPT
+    args_schema: Type[BaseModel] = GetPR
+    github_api_wrapper: GitHubAPIWrapper
+
+    def _run(self, pr_number: int) -> str:
+        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
+        return pull_request.head.ref
+
+    async def _arun(self, pr_number: int) -> str:
+        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
+        return pull_request.head.ref
 
 
 def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
@@ -60,7 +82,7 @@ def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
 
     all_github_tools = [
         make_gemini_compatible(tool) for tool in github_toolkit.get_tools()
-    ]
+    ] + [GetPullRequestHeadBranch(github_api_wrapper=github_api_wrapper)]
     github_tools = [tool for tool in all_github_tools if tool.name in GITHUB_TOOLS]
     assert len(github_tools) == len(GITHUB_TOOLS), "Github tool mismatch"
 
@@ -151,6 +173,13 @@ def mock_github_tools(mock_api: MockGithubApi):
         ).as_tool(
             name="list_pull_requests_files",
             description=LIST_PULL_REQUEST_FILES,
+            args_schema=GetPR,
+        ),
+        RunnableLambda(
+            _convert_args_schema_to_string(mock_api.get_pull_request_head_branch, GetPR)
+        ).as_tool(
+            name="get_pull_request_head_branch",
+            description=GET_PULL_REQUEST_HEAD_BRANCH_PROMPT,
             args_schema=GetPR,
         ),
     ]

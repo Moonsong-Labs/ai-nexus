@@ -223,6 +223,12 @@ class MockGithubApi:
 
         return str(pr_files) if pr_files else "No files changed in this pull request"
 
+    def get_pull_request_head_branch(self, pr_number: str) -> str:
+        """Get the head branch of a pull request."""
+        if not self.pull_request:
+            return "No pull request found"
+        return self.pull_request["head"]
+
 
 def maybe_mock_github() -> Union[GitHubAPIWrapper, MockGithubApi]:
     """Get either a real GitHub API wrapper or a mock based on environment variables.

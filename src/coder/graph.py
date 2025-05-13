@@ -80,6 +80,7 @@ def coder_change_request_config():
             "delete_file",
             "get_pull_request",
             "list_pull_requests_files",
+            "get_pull_request_head_branch",
         ],
     )
 
@@ -95,6 +96,7 @@ class CallModel:
         messages_after_invoke = await llm.bind_tools(self.github_tools).ainvoke(
             messages
         )
+        print(messages_after_invoke)
         return {"messages": messages_after_invoke}
 
 
