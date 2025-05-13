@@ -1,4 +1,4 @@
-"""Graphs that extract memories on a schedule."""
+"""Graph definition for the Code Reviewer agent."""
 
 import logging
 from dataclasses import dataclass
@@ -71,10 +71,11 @@ class CodeReviewerInstanceConfig:
             AssertionError: If the number of filtered tools doesn't match github_tools
         """
         filtered_tools = [tool for tool in tools if tool.name in self.github_tools]
-        assert len(filtered_tools) == len(self.github_tools), (
-            f"Tool mismatch. Expected {len(self.github_tools)} tools, got {len(filtered_tools)}. "
-            f"Expected tools: {self.github_tools}, Got tools: {[t.name for t in filtered_tools]}"
-        )
+        if len(filtered_tools) != len(self.github_tools):
+            raise ValueError(
+                f"Tool mismatch. Expected {len(self.github_tools)} tools, got {len(filtered_tools)}. "
+                f"Expected tools: {self.github_tools}, Got tools: {[t.name for t in filtered_tools]}"
+            )
         return filtered_tools
 
 
@@ -95,15 +96,18 @@ class CallModel:
     async def __call__(self, state: State) -> dict:
         system_msg = SystemMessage(content=self.system_prompt)
         messages = [system_msg] + state.messages
-        msg = (
+        diff_feedback: DiffFeedback = (
             await llm.bind_tools(self.github_tools)
             .with_structured_output(DiffFeedback)
             .ainvoke(messages)
         )
-        return {"messages": [{"role": "assistant", "content": str(msg)}]}
+        return {
+            "messages": [{"role": "assistant", "content": diff_feedback.model_dump_json()}],
+            "diff_feedback": diff_feedback,
+        }
 
 
-def graph_builder(github_toolset: list[Tool], system_prompt: str):
+def graph_builder(github_toolset: list[Tool], system_prompt: str) -> StateGraph:
     """Return code_reviewer graph builder."""
     builder = StateGraph(State, config_schema=configuration.Configuration)
 
