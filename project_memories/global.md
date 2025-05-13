@@ -10,9 +10,9 @@
 1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager) working collaboratively.
 2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is now `langmem`, providing semantic search capabilities over stored memories, replacing the previous conceptual Markdown-based "Memory Bank" and direct `upsert_memory` tool usage for agents based on the template.
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
-4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools or custom tools like `file_dump`).
+4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools or custom tools like `file_dump`). Some agents also use structured output.
 5.  **System Prompts:** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols.
-6.  **Configuration Management:** Agents have configurable parameters, including LLM models, system prompts, and memory settings (e.g., `use_static_mem`), managed via `Configuration` dataclasses.
+6.  **Configuration Management:** Agents have configurable parameters, including LLM models, system prompts, and memory settings (e.g., `use_static_mem`), managed via `Configuration` dataclasses or instance-specific configurations (e.g., Coder, Code Reviewer).
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
 8.  **`langmem` Integration:** Provides semantic memory capabilities (storage, search) for agents, typically managed via the `Agent` class and `SemanticMemory` component.
 
@@ -28,6 +28,7 @@ The original "Memory Bank" concept described a system of structured Markdown fil
 *   **Tools:** Agents use `langmem`-provided tools (`manage_memory`, `search_memory`) for interaction, often wrapped within the `SemanticMemory` component (`src/common/components/memory.py`). A custom `memory_dump` tool is also available.
 *   **Static Memories:** The concept of static, pre-loaded knowledge persists. JSON files in `.langgraph/static_memories/` can be loaded into the `BaseStore` under a static namespace if `use_static_mem` is enabled in the agent's configuration.
 *   **Shift:** The shift moves from human-readable Markdown files as the primary memory source to a database/store queried semantically via tools. The core principle of externalized memory remains, but the implementation mechanism has evolved. The specific file structure (`projectbrief.md`, `productContext.md`, etc.) described previously is not directly implemented by the `langmem` system, although the *types* of information they represent might be stored as individual memories.
+*   **Note:** Some agents (e.g., Code Reviewer after recent refactor) may not use `langmem` or any persistent memory system, relying on conversation state or structured inputs/outputs for their tasks.
 
 
 ## 3. Project-Level Standards & Goals (`project_memories/PRD.md`)
@@ -66,7 +67,7 @@ This file outlines the overarching standards and technological choices for the A
 
 ## 4. General Agent Architecture (based on `src/agent_template/` and common patterns)
 
-Most agents in AI Nexus follow a common structural and operational pattern, largely derived from `src/agent_template/`. *Note: Some agents, like the Tester, Coder, or Task Manager, may deviate significantly from this template's graph logic or tool usage.*
+Most agents in AI Nexus follow a common structural and operational pattern, largely derived from `src/agent_template/`. *Note: Some agents, like the Tester, Coder, Code Reviewer, or Task Manager, may deviate significantly from this template's graph logic or tool usage, particularly regarding memory integration.*
 
 *   **Typical Agent Directory Structure:**
     *   `__init__.py`: Exposes the agent's graph.
@@ -164,6 +165,20 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
     *   **`create_memory_store()`:** Creates an `InMemoryStore` configured with `GoogleGenerativeAIEmbeddings`.
     *   **`CategoryMemory(BaseModel)`:** Pydantic model defining the structure for memories stored via `manage_memory` tool (`content: str`, `category: Literal["knowledge", "rule", "procedure"]`, `timestamp: str`).
 
+*   **`src/common/components/github_tools.py` (NEW - MOVED from `src/coder/tools.py`):**
+    *   `GITHUB_TOOLS`: A list of tool names (e.g., `"create_branch"`, `"get_contents"`, `"get_pull_request"`) used to filter tools obtained from `GitHubToolkit` or mock GitHub tools.
+    *   `get_github_tools(github_source: Union[GitHubAPIWrapper, MockGithubApi]) -> list[Tool]`:
+        *   If `github_source` is `MockGithubApi`, calls `mock_github_tools`.
+        *   If `github_source` is `GitHubAPIWrapper`, gets tools from `GitHubToolkit.from_github_api_wrapper().get_tools()`.
+        *   Applies `make_gemini_compatible` to each tool.
+        *   Filters the tools, returning only those whose names are present in the `GITHUB_TOOLS` list.
+    *   `mock_github_tools(mock_api: MockGithubApi) -> list[Tool]`: Creates mocked versions of GitHub tools.
+
+*   **`src/common/components/github_mocks.py` (NEW - MOVED from `src/coder/mocks.py`):**
+    *   `MockGithubApi`: Class that mocks GitHub API interactions in memory.
+        *   Methods include: `set_active_branch`, `create_branch`, `get_files_from_directory`, `create_pull_request`, `create_file`, `update_file`, `delete_file`, `read_file`, `get_pull_request`, `list_pull_requests_files`.
+    *   `maybe_mock_github() -> Union[GitHubAPIWrapper, MockGithubApi]`: Utility function to return a real `GitHubAPIWrapper` or `MockGithubApi` based on environment variable settings.
+
 *   **`prompts.py` (`src/agent_template/prompts.py`):**
     *   `SYSTEM_PROMPT` updated to instruct the agent to inform the user when memories are retrieved: `"When using the memory tools for search, always tell the user that those memories were retrieved from my semantic memory store like saying 'I retrieved the following memories from my semantic memory store: {memories}'"`
 
@@ -216,22 +231,8 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
     *   `NEW_PR_SYSTEM_PROMPT`: System prompt for the `coder_new_pr` flow. Instructs the agent on creating a new branch (`code-agent-*`) and submitting a PR.
     *   `CHANGE_REQUEST_SYSTEM_PROMPT`: System prompt for the `coder_change_request` flow. Instructs the agent on applying changes to an existing PR branch.
     *   The previous generic `SYSTEM_PROMPT` has been replaced by these more specific prompts.
-*   **`tools.py` (`src/coder/tools.py`):**
-    *   `GITHUB_TOOLS`: A list of tool names (e.g., `"create_branch"`, `"get_contents"`, `"get_pull_request"`) used to filter tools obtained from `GitHubToolkit` (for real API) or `mock_github_tools`. **Updated** to include tools for PR inspection like `"get_pull_request"` and `"list_pull_requests_files"`.
-    *   `get_github_tools(github_source: Union[GitHubAPIWrapper, MockGithubApi]) -> list[Tool]`:
-        *   If `github_source` is `MockGithubApi`, calls `mock_github_tools`.
-        *   If `github_source` is `GitHubAPIWrapper`, gets tools from `GitHubToolkit.from_github_api_wrapper().get_tools()`.
-        *   Applies `make_gemini_compatible` to each tool.
-        *   Filters the tools, returning only those whose names are present in the `GITHUB_TOOLS` list.
-    *   `mock_github_tools(mock_api: MockGithubApi) -> list[Tool]`:
-        *   Creates mocked versions of GitHub tools.
-        *   Tools created include: `create_file`, `read_file`, `update_file`, `delete_file`, `create_pull_request`, `create_a_new_branch`, `set_active_branch`.
-        *   The tool for getting directory/file contents is named **`get_files_from_a_directory`** (wraps `mock_api.get_files_from_directory`).
-        *   **NEW Mocked Tools:** `get_pull_request`, `list_pull_requests_files` (wrapping corresponding `MockGithubApi` methods).
-*   **`mocks.py` (`src/coder/mocks.py`):**
-    *   `MockGithubApi`:
-        *   Methods: `set_active_branch`, `create_branch`, `_get_files_recursive`, `get_files_from_directory`, `create_pull_request`, `create_file`, `update_file`, `delete_file`, `read_file`.
-        *   **NEW Methods:** `get_pull_request`, `list_pull_requests_files`.
+*   **`tools.py` (`src/coder/tools.py`): DELETED / MOVED.** GitHub tool definitions and related logic (e.g., `GITHUB_TOOLS` list, `get_github_tools`, `mock_github_tools`) have been moved to `src/common/components/github_tools.py`.
+*   **`mocks.py` (`src/coder/mocks.py`): DELETED / MOVED.** The `MockGithubApi` class has been moved to `src/common/components/github_mocks.py`.
 *   **`graph.py` (`src/coder/graph.py`):**
     *   Defines `CoderInstanceConfig(Dataclass)`:
         *   Attributes: `name: str`, `system_prompt: str`, `github_tools: List[str]` (list of specific tool names for this instance).
@@ -253,24 +254,41 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
     *   Exposes two compiled graph instances for LangGraph Server:
         *   `graph_new_pr = coder_new_pr_config().graph_builder(github_tools).compile()`
         *   `graph_change_request = coder_change_request_config().graph_builder(github_tools).compile()`
-    *   `get_github_source() -> Union[GitHubAPIWrapper, MockGithubApi]`:
-        *   Dynamically selects the GitHub tool source.
-        *   Uses `GitHubAPIWrapper` if `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, and `GITHUB_REPOSITORY` environment variables are set (logs "Using live GitHub API toolkit").
-        *   Otherwise, falls back to `MockGithubApi` (logs "Using mock GitHub API toolkit").
-    *   `github_tools` are initialized using `get_github_tools(get_github_source())`.
+    *   **REVISED:** Now uses `maybe_mock_github` from `src/common/components/github_mocks.py` to get the GitHub source, and `get_github_tools` from `src/common/components/github_tools.py` to initialize `github_tools`. The local `get_github_source()` function is removed.
 *   **`state.py` (`src/coder/state.py`):**
     *   `class State(TypedDict): messages: Annotated[list[AnyMessage], add_messages]` (Remains the same).
 *   **`README.md` (`src/coder/README.md`):** (No changes mentioned in PR, assumed same).
 
 #### 5.4. Code Reviewer (`src/code_reviewer/`)
-*   **Role:** Expert code reviewer, makes suggestions to maintain a high-quality codebase. Does NOT modify code/assets directly.
-*   **`system_prompt.md` (`src/code_reviewer/system_prompt.md`):** (Remains the same).
-*   **Structure:** Follows the `agent_template` pattern.
-    *   `configuration.py`: Standard, uses `prompts.SYSTEM_PROMPT`. Default model likely updated. Includes `use_static_mem`.
-    *   `graph.py`: Now uses the `Agent` class, `ToolNode`, and `tools_condition` flow. Relies on `langmem` tools and `file_dump` provided by the `Agent` class, replacing `upsert_memory`.
-    *   `state.py`: Standard `State` with `messages` and `user_id`.
-    *   `tools.py`: Defines utility tools like `file_dump`. `upsert_memory` is removed. Memory tools come from `Agent`.
-    *   `agent.py`: Contains the `Agent` class instance for this agent.
+*   **Role:** Expert code reviewer, makes suggestions to maintain a high-quality codebase. Does NOT modify code/assets directly. Now uses structured output for feedback.
+*   **`system_prompt.md` (`src/code_reviewer/system_prompt.md`):** (No changes mentioned in PR for content, assumed same).
+*   **Structure:** Significantly refactored. Does not follow the `agent_template`'s `Agent` class and `langmem` integration in this version. Its previous custom memory handling (`upsert_memory`) has been removed.
+    *   `__init__.py`: Exports `graph_non_github`.
+    *   `configuration.py`: Standard `Configuration` dataclass. Default model likely updated. Includes `use_static_mem` (though not currently used by the refactored graph).
+    *   `graph.py`:
+        *   **NEW:** Defines Pydantic models for structured output:
+            *   `DiffHunkFeedback(BaseModel)`: `change_required: bool`, `file: str`, `offset: int`, `comment: str`.
+            *   `DiffFeedback(BaseModel)`: `requests_changes: bool`, `overall_comment: str`, `feedback: List[DiffHunkFeedback]`.
+        *   **NEW:** `CodeReviewerInstanceConfig(Dataclass)`:
+            *   Attributes: `name: str`, `system_prompt: str`, `github_tools: List[str]`.
+            *   Methods: `graph_builder(self, github_toolset: list[Tool])`, `filter_tools(self, tools: List[Tool])`.
+        *   **NEW:** `non_github_code_reviewer_config()`: Factory function returning a `CodeReviewerInstanceConfig` for non-GitHub workflows (empty `github_tools`).
+        *   **NEW:** `CallModel` class:
+            *   `__init__(self, github_tools: list[Tool], system_prompt: str)`.
+            *   `__call__(self, state: State) -> dict`: Constructs messages, binds `github_tools` to LLM, and uses `.with_structured_output(DiffFeedback)` to get structured feedback. Returns a dict including `{"role": "assistant", "content": diff_feedback.model_dump_json()}` and `{"diff_feedback": diff_feedback}`.
+        *   **REVISED:** `graph_builder(github_toolset: list[Tool], system_prompt: str) -> StateGraph`:
+            *   Builds a `StateGraph(State)`.
+            *   Adds `call_model` node (using `CallModel` instance).
+            *   Adds `ToolNode` for `github_toolset`.
+            *   Flow: `__start__` -> `call_model` -> (conditional `tools_condition`: `tools` if tool call, `END` otherwise) -> `call_model` (if from `tools`).
+        *   **REMOVED:** Previous `call_model`, `store_memory`, `route_message` functions. No longer uses `upsert_memory` or performs direct memory searches.
+    *   `lg_server.py` (NEW):
+        *   Uses `maybe_mock_github` and `get_github_tools` from common components.
+        *   Compiles and exposes `graph_non_github = non_github_code_reviewer_config().graph_builder(github_tools).compile()`.
+    *   `state.py`: Standard `State` with `messages`. (Note: `diff_feedback` is returned by the `call_model` node but not explicitly added to the `State` dataclass in this PR).
+    *   `tools.py`: **DELETED**. (Previously contained `upsert_memory`).
+    *   `utils.py`: **DELETED**. (Previously contained `split_model_and_provider`).
+    *   `agent.py`: Not added in this PR; does not use the `Agent` class from `agent_template`.
 
 #### 5.5. Tester (`src/tester/`)
 *   **Role:** Generates tests based on requirements, asks clarifying questions. Uses structured output. (Note: The Tester agent's graph and tools are distinct from the `agent_template` and do not directly use `langmem` for memory in the same way).
@@ -388,8 +406,8 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   Uses `LLMJudge` from `tests.testing.evaluators` to create a `correctness_evaluator` with a specific prompt for judging Grumpy's output.
         *   The `create_graph_caller` utility is used to wrap the Grumpy agent's graph for evaluation.
     *   **`test_coder.py`:**
-        *   Contains integration tests for the Coder agent's GitHub interactions using `MockGithubApi`.
-        *   Tests now instantiate the graph using `coder_new_pr_config().graph_builder(github_tools).compile()`.
+        *   Contains integration tests for the Coder agent's GitHub interactions using `MockGithubApi` (now imported from `common.components.github_mocks`).
+        *   Tests now instantiate the graph using `coder_new_pr_config().graph_builder(github_tools).compile()`. `github_tools` are now imported from `common.components.github_tools`.
         *   The custom evaluation framework using `openevals` has been moved to `tests/integration_tests/eval_coder.py`.
     *   **`eval_coder.py` (`tests/integration_tests/eval_coder.py`) (NEW):**
         *   Defines a custom evaluation framework for the Coder agent (specifically the `coder_new_pr` flow) using `openevals`.
@@ -399,8 +417,8 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   `evaluate_code_scorer`: Async function that formats inputs and invokes the `judge_llm`.
         *   `evaluate_code`: Async function that uses `openevals.utils._arun_evaluator` with `evaluate_code_scorer` to perform evaluation.
         *   `invoke_agent(inputs: CodeEvaluatorInputs) -> dict`:
-            *   Sets up `MockGithubApi` with `inputs["starting_code"]`.
-            *   Compiles the `coder_new_pr` graph: `coder_new_pr_config().graph_builder(github_tools).compile()`.
+            *   Sets up `MockGithubApi` (imported from `common.components.github_mocks`) with `inputs["starting_code"]`.
+            *   Compiles the `coder_new_pr` graph: `coder_new_pr_config().graph_builder(github_tools).compile()`. `github_tools` are imported from `common.components.github_tools`.
             *   Invokes the graph with `inputs["user_input"]`.
         *   `test_coder_run_eval_dataset()`: Pytest async test that runs `langsmith.aevaluate` using `invoke_agent` against the `CODER_DATASET_NAME`, with `evaluate_code` as the evaluator.
     *   **`test_task_manager.py` (NEW):**
@@ -409,6 +427,12 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   Defines a custom `create_task_manager_graph_caller` function to adapt dataset inputs and invoke the graph.
         *   Uses `LLMJudge().create_correctness_evaluator(plaintext=True)` for evaluation.
         *   Runs `client.aevaluate()` with `num_repetitions=4`.
+    *   **`test_code_reviewer_agent.py`:**
+        *   **REVISED:** Tests the Code Reviewer agent.
+        *   Uses `non_github_code_reviewer_config().graph_builder([]).compile(checkpointer=memory_saver)` to compile the graph for non-GitHub scenarios.
+        *   Corrected evaluation key to `reference_outputs["messages"][0]["content"]` (from `reference_outputs["message"][0]["content"]`).
+        *   Added `if __name__ == "__main__":` block for direct test execution.
+    *   **`test_architect_agent.py`:** Minor fix: indentation in `aevaluate` calls.
 
 *   **`tests/testing/__init__.py`:**
     *   `get_logger()`: Utility to create a Python logger with a default format.
@@ -434,7 +458,7 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
         *   Compares `outputs['output']` (actual agent response) with `reference_outputs['message']['content']` (expected response from dataset).
 
 *   **Evaluation Approaches:**
-    *   **LangSmith Datasets + LLM Judge:** Used for Requirement Gatherer, Tester (simple case), Grumpy, Task Manager. Relies on `client.aevaluate()` and evaluators defined in `tests/testing/evaluators.py`.
+    *   **LangSmith Datasets + LLM Judge:** Used for Requirement Gatherer, Tester (simple case), Grumpy, Task Manager, Code Reviewer. Relies on `client.aevaluate()` and evaluators defined in `tests/testing/evaluators.py`.
     *   **Custom `openevals` Framework:** Implemented in `tests/integration_tests/eval_coder.py` for the Coder agent's `coder_new_pr` flow. Involves custom prompts, input/output structures, and direct use of `openevals` utilities with an LLM judge defined within the test file. The test itself (`test_coder_run_eval_dataset`) uses `langsmith.aevaluate` to run these custom evaluations against a dataset.
 *   **`tests/testing/formatter.py` (Implied by PR usage):**
     *   Provides utility functions for formatting and printing evaluation results.
@@ -468,9 +492,9 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     *   `make test-requirement-gatherer`: Runs Requirement Gatherer integration tests.
     *   `make test-tester`: Runs Tester agent integration tests.
     *   `make test-architect`: Runs Architect agent integration tests.
-    *   `make test-task-manager`: Runs Task Manager integration tests (`uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_task_manager.py`). (NEW)
+    *   `make test-task-manager`: Runs Task Manager integration tests (`uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_task_manager.py`).
     *   `make set-requirement-dataset`: Creates the Requirement Gatherer LangSmith dataset.
-    *   `make set-task-manager-dataset`: Creates the Task Manager LangSmith dataset (`uv run --env-file .env -- python tests/datasets/task_manager_dataset.py`). (NEW)
+    *   `make set-task-manager-dataset`: Creates the Task Manager LangSmith dataset (`uv run --env-file .env -- python tests/datasets/task_manager_dataset.py`).
 *   **Configuration:** `.env` file (copied from `.env.example`) for environment variables.
     *   Required for Google AI services: `GOOGLE_API_KEY` (this is the preferred variable). Alternatively, `GEMINI_API_KEY` can be set; scripts will use `GOOGLE_API_KEY` if present, otherwise they will use `GEMINI_API_KEY`.
     *   Optional for Coder agent: `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_REPOSITORY`.
@@ -485,7 +509,7 @@ The project uses `pytest` for testing and integrates with LangSmith for evaluati
     *   Integration tests (`make test_integration`) are commented out in the `checks.yml` file, indicating they might be run separately or are pending full CI integration.
 *   **LangGraph Studio:**
     *   The project can be opened in LangGraph Studio for visualization, interaction, and debugging.
-    *   `langgraph.json` can be used to set the default graph to open in Studio. It now includes entries for the `architect` graph, and **has been updated to reflect the Coder agent's split into `coder_new_pr` and `coder_change_request` graphs.**
+    *   `langgraph.json` can be used to set the default graph to open in Studio. It now includes entries for the `architect` graph, and has been updated to reflect the Coder agent's split into `coder_new_pr` and `coder_change_request` graphs, and the Code Reviewer agent's graph path.
     *   The README provides a badge/link to open the project directly in LangGraph Studio using a GitHub URL.
 *   **Adding New Agents:**
     1.  Copy the `src/agent_template/` directory and rename it.
@@ -512,7 +536,7 @@ ai-nexus/
 │       ├── review-coding.md      # Context for Grumpy's code review
 │       ├── review-designing.md   # Context for Grumpy's design review
 │       └── role.md               # Core operational rules and Mermaid diagram for Grumpy
-├── langgraph.json                # LangGraph Studio configuration (UPDATED: Coder agent split into coder_new_pr, coder_change_request)
+├── langgraph.json                # LangGraph Studio configuration (UPDATED: Coder agent split, Code Reviewer path)
 ├── project_memories/             # Project-wide standards, global context
 │   ├── PRD.md                    # Product Requirements Document: standards, tech stack, goals
 │   └── global.md                 # High-level project mission, "Cursor" Memory Bank concept
@@ -532,17 +556,29 @@ ai-nexus/
 │   │   ├── output.py             # Pydantic models for Architect's structured output
 │   │   └── prompts/v0.1.md       # Detailed system prompt for Architect (v0.1)
 │   ├── code_reviewer/            # Code Reviewer agent: reviews code for quality
-│   │   └── system_prompt.md      # System prompt for Code Reviewer
+│   │   ├── __init__.py           # UPDATED: Exports graph_non_github
+│   │   ├── configuration.py      # Standard configuration
+│   │   ├── graph.py              # REVISED: Uses CodeReviewerInstanceConfig, structured output (DiffFeedback), no direct memory ops
+│   │   ├── lg_server.py          # NEW: Exposes compiled Code Reviewer graph (graph_non_github)
+│   │   ├── prompts.py            # Contains SYSTEM_PROMPT
+│   │   ├── state.py              # Standard state (messages)
+│   │   ├── system_prompt.md      # System prompt for Code Reviewer
+│   │   ├── tools.py              # DELETED
+│   │   └── utils.py              # DELETED
 │   ├── coder/                    # Coder agent: writes code, interacts with GitHub (Now split into new_pr and change_request flows)
 │   │   ├── __init__.py           # Exports graph_new_pr, graph_change_request
 │   │   ├── graph.py              # Defines CoderInstanceConfig, _graph_builder, and config factories for new_pr and change_request flows
-│   │   ├── lg_server.py          # NEW: Exposes compiled Coder graphs (graph_new_pr, graph_change_request) for LangGraph Server, handles dynamic GitHub source
-│   │   ├── mocks.py              # Mock GitHub API for testing (UPDATED: new mock methods for PR details)
+│   │   ├── lg_server.py          # REVISED: Uses common components for GitHub source/tools
+│   │   ├── mocks.py              # DELETED (Moved to common/components/github_mocks.py)
 │   │   ├── prompts.py            # UPDATED: NEW_PR_SYSTEM_PROMPT, CHANGE_REQUEST_SYSTEM_PROMPT
 │   │   ├── state.py              # Defines Coder agent state
-│   │   ├── tools.py              # Defines GitHub tools (UPDATED: new tools for PR details, GITHUB_TOOLS list, get_github_tools function)
+│   │   ├── tools.py              # DELETED (Moved to common/components/github_tools.py)
 │   │   └── README.md             # Setup instructions for GitHub App
 │   ├── common/                   # Common utilities shared across agents
+│   │   ├── components/           # NEW: Shared components like memory, GitHub tools
+│   │   │   ├── memory.py         # SemanticMemory class and related functions
+│   │   │   ├── github_mocks.py   # NEW (Moved from coder/mocks.py): MockGithubApi, maybe_mock_github
+│   │   │   └── github_tools.py   # NEW (Moved from coder/tools.py): GitHub tool definitions and helpers
 │   │   └── utils/                # Shared utility functions
 │   ├── grumpy/                   # Grumpy agent: reviews design/coding tasks based on strict rules
 │   ├── orchestrator/             # Orchestrator agent: delegates tasks to other agents
@@ -574,9 +610,10 @@ ai-nexus/
     │   ├── requirement_gatherer_dataset.py
     │   └── task_manager_dataset.py # Defines LangSmith dataset for Task Manager agent
     ├── integration_tests/        # Integration tests for agents and full graph functionality
-    │   ├── test_architect_agent.py # Tests for Architect agent
-    │   ├── test_coder.py         # REVISED: Basic integration tests for Coder, uses coder_new_pr_config. Advanced eval moved.
-    │   ├── eval_coder.py         # NEW: Custom evaluation framework for Coder agent (coder_new_pr flow) using openevals and LangSmith.
+    │   ├── test_architect_agent.py # Tests for Architect agent (minor indentation fix)
+    │   ├── test_coder.py         # REVISED: Updated imports for common GitHub components
+    │   ├── eval_coder.py         # REVISED: Updated import for common MockGithubApi
+    │   ├── test_code_reviewer_agent.py # REVISED: Uses new graph config, corrected eval key
     │   ├── test_graph.py         # Tests agent_template memory
     │   ├── test_grumpy_agent.py
     │   ├── test_requirement_gatherer.py
