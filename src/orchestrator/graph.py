@@ -94,7 +94,7 @@ async def delegate_to(
             if tool_call["args"]["to"] == "orchestrator":
                 return orchestrate.__name__
             elif tool_call["args"]["to"] == "requirements":
-                return stubs.requirements.__name__
+                return "requirements"
             elif tool_call["args"]["to"] == "architect":
                 return stubs.architect.__name__
             elif tool_call["args"]["to"] == "coder":
@@ -109,7 +109,7 @@ async def delegate_to(
                 raise ValueError
 
 
-def create_requirements(
+def create_requirements_node(
     requirements_graph: RequirementsGathererGraph, recursion_limit: int = 100
 ):
     async def requirements(state: State, config: RunnableConfig, store: BaseStore):
@@ -144,10 +144,19 @@ class OrchestratorGraph(AgentGraph):
         config: config.Configuration = config.Configuration(),
         checkpointer: Checkpointer = None,
         store: Optional[BaseStore] = None,
+        stub_config: dict[str, bool] = {
+            "requirements": True,
+            "architect": True,
+            "coder": True,
+            "tester": True,
+            "reviewer": True,
+        },
     ):
         """Initialize."""
-        self._requirements_graph = RequirementsGathererGraph(
-            config, checkpointer, store
+        self._requirements_graph = (
+            stubs.RequirementsGathererStub(config, checkpointer, store)
+            if stub_config["requirements"]
+            else RequirementsGathererGraph(config, checkpointer, store)
         )
 
         super().__init__(config, checkpointer, store)
@@ -158,13 +167,11 @@ class OrchestratorGraph(AgentGraph):
         """Create a graph builder."""
         # Create the graph + all nodes
         builder = StateGraph(State, config_schema=Configuration)
+        requirements = create_requirements_node(self._requirements_graph)
 
         # Define the flow of the memory extraction process
         builder.add_node(orchestrate)
-        # builder.add_node(store_memory)
-        # builder.add_node(stubs.requirements)
-        builder.add_node(create_requirements(self._requirements_graph))
-        # builder.add_node(requirements)
+        builder.add_node(requirements)
         builder.add_node(stubs.architect)
         builder.add_node(stubs.coder)
         builder.add_node(stubs.tester)
@@ -176,7 +183,7 @@ class OrchestratorGraph(AgentGraph):
             orchestrate.__name__,
             delegate_to,
         )
-        builder.add_edge(stubs.requirements.__name__, orchestrate.__name__)
+        builder.add_edge(requirements.__name__, orchestrate.__name__)
         builder.add_edge(stubs.architect.__name__, orchestrate.__name__)
         builder.add_edge(stubs.coder.__name__, orchestrate.__name__)
         builder.add_edge(stubs.tester.__name__, orchestrate.__name__)

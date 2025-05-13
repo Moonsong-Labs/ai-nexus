@@ -2,12 +2,18 @@
 
 # ruff: noqa: D107 D101 D102
 
-from typing import List
+from typing import Any, List, Optional
 
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import (
+    ToolMessage,
+)
 from langchain_core.runnables import RunnableConfig
+from langgraph.graph import StateGraph
 from langgraph.store.base import BaseStore
+from langgraph.types import Checkpointer
 
+from common import config
+from common.graph import AgentGraph
 from orchestrator.state import State
 
 
@@ -70,17 +76,22 @@ model_reviewer_messages = MessageWheel(
 )
 
 
-def requirements(state: State, config: RunnableConfig, store: BaseStore):
-    """Call requirements."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content=model_requirements_messages.next(),
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
+class RequirementsGathererStub(AgentGraph):
+    def __init__(
+        self,
+        config: config.Configuration = config.Configuration(),
+        checkpointer: Checkpointer = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__(config, checkpointer, store)
+        self._name = "Requirements Gatherer"
+
+    def create_builder(self) -> StateGraph:
+        return None
+
+    async def ainvoke(self, state: Any, config: RunnableConfig | None = None):
+        """Async invoke."""
+        return {"summary": model_requirements_messages.next()}
 
 
 def architect(state: State, config: RunnableConfig, store: BaseStore):
