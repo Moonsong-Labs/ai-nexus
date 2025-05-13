@@ -16,7 +16,7 @@ llm = init_chat_model("google_genai:gemini-2.0-flash")
 
 
 @dataclass
-class CodeInstanceConfig:
+class CoderInstanceConfig:
     """Configuration for a coder instance."""
 
     name: str
