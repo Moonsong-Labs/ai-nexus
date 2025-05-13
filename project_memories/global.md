@@ -257,7 +257,19 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
     *   `agent.py`: Contains the `Agent` class instance for this agent.
 
 #### 5.5. Tester (`src/tester/`)
-*   (No changes mentioned in PR - uses structured output, no memory tools. Unaffected by `langmem` integration).
+*   **Role:** Generates tests based on requirements, asks clarifying questions. Uses structured output. (Note: The Tester agent's graph and tools are distinct from the `agent_template` and do not directly use `langmem` for memory in the same way).
+*   **`test-agent-system-prompt.md` (`src/tester/test-agent-system-prompt.md`):** REVISED. The system prompt has been significantly updated to be more succinct, assertive, and provide clearer operational guidelines.
+    *   **Core Principle:** ONLY generate tests based on explicit requirements; NEVER invent rules or make assumptions.
+    *   **Process:**
+        1.  Analyze requirements for completeness.
+        2.  ALWAYS ask clarifying questions for undefined behavior *before* test generation.
+        3.  Generate tests after clarification, grouped by category, linked to source requirement ID.
+    *   **Questioning Guidelines:**
+        *   **Ask when:** Field validation rules undefined, error handling unspecified, uniqueness constraints missing, response formats/status codes unclear, edge cases unaddressed, auth/authz ambiguous.
+        *   **Do NOT ask when:** Detail is purely internal implementation, question is about non-functional UI styling, or info is inferable from standard API conventions.
+        *   **Format:** One specific issue per question, include unique ID referencing the requirement, keep questions short and direct.
+    *   **Key Sections Added/Revised:** "Role", "Process", "When to Ask Questions", "Questions Format", "Test Examples", "Workflow Checklist", "Key Rules", "Completion Verification".
+    *   **Emphasis:** Rigorous analysis, proactive clarification of ambiguities, and strict adherence to defined requirements.
 
 #### 5.6. Requirement Gatherer (`src/requirement_gatherer/`)
 *   **Role:** Elicits, clarifies, and refines project goals, needs, and constraints.
@@ -520,7 +532,7 @@ ai-nexus/
 │       ├── graph.py              # REVISED: Uses structured output, multi-stage workflow (analyze/generate), no memory store interaction
 │       ├── output.py             # Pydantic models for Tester's structured output
 │       ├── state.py              # Standard state (messages)
-│       ├── test-agent-system-prompt.md # REVISED: Simplified workflow, new question guidelines, removed test feedback schema
+│       ├── test-agent-system-prompt.md # REVISED: System prompt made more succinct, assertive, with clearer guidelines on asking questions, and new workflow/rule sections.
 │       ├── test-prompts/         # Example requirements for Tester
 │       │   ├── web-api-simple.md # NEW: Simpler web API example
 │       │   └── web-api.md
