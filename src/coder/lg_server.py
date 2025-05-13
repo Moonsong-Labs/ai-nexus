@@ -33,7 +33,7 @@ def get_github_source() -> Union[GitHubAPIWrapper, MockGithubApi]:
 
     if any(os.getenv(var) for var in required_vars):
         logger.warning(
-            "Some but not all required GitHub environment variables are set. Falling back mock GitHub toolset."
+            "Some but not all required GitHub environment variables are set. Falling back to mock GitHub toolset."
         )
 
     logger.debug("Using mock GitHub API toolkit")
