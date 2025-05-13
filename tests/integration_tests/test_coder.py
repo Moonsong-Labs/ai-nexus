@@ -3,7 +3,7 @@ import uuid
 import pytest
 
 from coder.graph import coder_new_pr_config
-from coder.mocks import MockGithubApi
+from common.components.github_mocks import MockGithubApi
 from common.components.github_tools import get_github_tools
 
 

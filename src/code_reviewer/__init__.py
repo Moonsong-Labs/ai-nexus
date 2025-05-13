@@ -1,7 +1,7 @@
 """Enrichment for a pre-defined schema."""
 
 from code_reviewer.graph import graph_builder
-from coder.mocks import MockGithubApi
+from common.components.github_mocks import MockGithubApi
 from common.components.github_tools import get_github_tools
 
 mock_api = MockGithubApi()

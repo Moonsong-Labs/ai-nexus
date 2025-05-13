@@ -14,7 +14,7 @@ from openevals.types import EvaluatorResult
 from openevals.utils import _arun_evaluator
 
 from coder.graph import coder_new_pr_config
-from coder.mocks import MockGithubApi
+from common.components.github_mocks import MockGithubApi
 from coder.state import State
 from coder.tools import get_github_tools
 
