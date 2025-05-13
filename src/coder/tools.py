@@ -8,6 +8,7 @@ from langchain_community.agent_toolkits.github.toolkit import (
     CreatePR,
     DeleteFile,
     DirectoryPath,
+    GetPR,
     GitHubToolkit,
     ReadFile,
     UpdateFile,
@@ -18,6 +19,8 @@ from langchain_community.tools.github.prompt import (
     CREATE_PULL_REQUEST_PROMPT,
     DELETE_FILE_PROMPT,
     GET_FILES_FROM_DIRECTORY_PROMPT,
+    GET_PR_PROMPT,
+    LIST_PULL_REQUEST_FILES,
     READ_FILE_PROMPT,
     SET_ACTIVE_BRANCH_PROMPT,
     UPDATE_FILE_PROMPT,
@@ -38,6 +41,8 @@ GITHUB_TOOLS = [
     "update_file",
     "read_file",
     "delete_file",
+    "get_pull_request",
+    "list_pull_requests_files",
     # TODO: evaluate adding these tools as well
     # "overview_of_existing_files_in_main_branch",
     # "overview_of_files_in_current_working_branch",
@@ -133,6 +138,20 @@ def mock_github_tools(mock_api: MockGithubApi):
             _convert_args_schema_to_string(mock_api.delete_file, DeleteFile)
         ).as_tool(
             name="delete_file", description=DELETE_FILE_PROMPT, args_schema=DeleteFile
+        ),
+        RunnableLambda(
+            _convert_args_schema_to_string(mock_api.get_pull_request, GetPR)
+        ).as_tool(
+            name="get_pull_request",
+            description=GET_PR_PROMPT,
+            args_schema=GetPR,
+        ),
+        RunnableLambda(
+            _convert_args_schema_to_string(mock_api.list_pull_requests_files, GetPR)
+        ).as_tool(
+            name="list_pull_requests_files",
+            description=LIST_PULL_REQUEST_FILES,
+            args_schema=GetPR,
         ),
     ]
 
