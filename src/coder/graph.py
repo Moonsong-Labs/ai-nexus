@@ -50,7 +50,7 @@ class CoderInstanceConfig:
 
 def coder_new_pr_config():
     """Instance config for Coder | New PR. Invoked when directed to create a new PR."""
-    return CodeInstanceConfig(
+    return CoderInstanceConfig(
         name="Coder | New PR",
         system_prompt=NEW_PR_SYSTEM_PROMPT,
         github_tools=[
@@ -68,7 +68,7 @@ def coder_new_pr_config():
 
 def coder_change_request_config():
     """Instance config for Coder | Change Request. Invoked when directed to make a changes to an existing PR."""
-    return CodeInstanceConfig(
+    return CoderInstanceConfig(
         name="Coder | Change Request",
         system_prompt=CHANGE_REQUEST_SYSTEM_PROMPT,
         github_tools=[
