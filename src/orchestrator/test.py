@@ -42,8 +42,9 @@ def print_messages_any(messages: list[dict]):
             # print(msg["tool_calls"])
             for tool_call in msg["tool_calls"]:
                 tool = f"[{tool_call['name']}]"
-                next_tool_name = tool_call["args"]["to"]
+                next_tool_name = None
                 if tool_call["name"] == "Delegate":
+                    next_tool_name = tool_call["args"]["to"]
                     print(
                         f"{'    ' * 6}└── {colored(tool, 'cyan'):20}: {colored(tool_call['args']['to'], 'light_cyan')}"
                     )
@@ -74,7 +75,16 @@ if __name__ == "__main__":
         # )
 
         orchestrator = OrchestratorGraph(
-            Configuration(), checkpointer=InMemorySaver(), store=InMemoryStore()
+            Configuration(),
+            checkpointer=InMemorySaver(),
+            store=InMemoryStore(),
+            stub_config={
+                "requirements": True,
+                "architect": True,
+                "coder": True,
+                "tester": True,
+                "reviewer": True,
+            },
         )
 
         result = asyncio.run(
@@ -83,6 +93,8 @@ if __name__ == "__main__":
                 config=RunnableConfig(configurable={"thread_id": str(uuid.uuid4())}),
             )
         )
+
+        print(result["messages"])
 
         class _CustomEncoder(json.JSONEncoder):
             def default(self, obj):

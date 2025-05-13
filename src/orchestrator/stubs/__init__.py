@@ -91,7 +91,10 @@ class RequirementsGathererStub(AgentGraph):
 
     async def ainvoke(self, state: Any, config: RunnableConfig | None = None):
         """Async invoke."""
-        return {"summary": model_requirements_messages.next()}
+        return {
+            "messages": state.messages,
+            "summary": model_requirements_messages.next(),
+        }
 
 
 def architect(state: State, config: RunnableConfig, store: BaseStore):

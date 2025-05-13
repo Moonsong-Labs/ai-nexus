@@ -193,6 +193,14 @@ class OrchestratorGraph(AgentGraph):
         return builder
 
 
-graph = OrchestratorGraph().compiled_graph
+graph = OrchestratorGraph(
+    stub_config={
+        "requirements": False,
+        "architect": True,
+        "coder": True,
+        "tester": True,
+        "reviewer": True,
+    }
+).compiled_graph
 
 __all__ = ["OrchestratorGraph"]

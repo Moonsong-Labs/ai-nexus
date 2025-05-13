@@ -20,7 +20,7 @@ from coder.tools import get_github_tools
 
 EVAL_PROMPT = """You are an expert code reviewer.
 Provided a starting code, user input and a set of expectations, your job is to grade the quality of a coder agent's
-changes when acomplishing a required task.
+changes when accomplishing a required task.
 The code is submitted in the form of a GitHub pull request. You will get a list of in order messages and tool calls
 the coder made
 
