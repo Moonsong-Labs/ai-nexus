@@ -49,6 +49,7 @@ GITHUB_TOOLS = [
     # "search_code",
     # custom tools
     "get_pull_request_head_branch",
+    "comment_on_issue",
 ]
 
 
