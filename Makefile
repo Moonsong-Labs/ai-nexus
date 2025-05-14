@@ -42,6 +42,9 @@ test_watch:
 test-task-manager:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_task_manager.py
 
+test-coder:
+	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_coder.py
+
 test_unit:
 	uv run pytest tests/unit_tests
 test_integration:
