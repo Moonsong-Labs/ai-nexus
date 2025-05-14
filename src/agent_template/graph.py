@@ -3,6 +3,7 @@
 import logging
 from typing import Any, Callable, Coroutine, Dict, Optional
 
+from langchain.chat_models import init_chat_model
 from langchain_core.language_models import LanguageModelInput
 from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
@@ -16,8 +17,6 @@ from agent_template.prompts import SYSTEM_PROMPT
 from agent_template.state import State
 from common.config import BaseConfiguration
 from common.graph import AgentGraph
-from langchain.chat_models import init_chat_model
-
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +42,12 @@ class AgentTemplateGraph(AgentGraph):
         config = (
             Configuration(**base_config.__dict__) if base_config else Configuration()
         )
-        
+
         # Set specific configurations for this agent
         config.name = "Agent Template"
         config.memory.use_memory = True
         config.system_prompt = SYSTEM_PROMPT
-        
+
         super().__init__(config, checkpointer, store)
 
     def _create_call_model(
@@ -88,7 +87,7 @@ class AgentTemplateGraph(AgentGraph):
 
         # Add nodes to the graph
         builder.add_node("call_model", self._create_call_model(llm))
-        
+
         if all_tools:
             tool_node = ToolNode(all_tools, name="tools")
             builder.add_node("tools", tool_node)
