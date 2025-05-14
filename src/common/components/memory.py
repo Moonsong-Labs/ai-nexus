@@ -41,7 +41,7 @@ MEMORY_CATEGORIES = [
 class MemoryConfiguration:
     """Configuration for semantic memory capabilities."""
 
-    use_memory: bool = True
+    use_memory: bool = False
     load_static_memories: bool = True
     user_id: str = "default"
 
