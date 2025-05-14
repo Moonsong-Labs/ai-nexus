@@ -1,7 +1,7 @@
 ---
-description: Always read all files in project_memories for every interaction
+description: "Always read all files in project_memories for every interaction"
 globs:
-  - project_memories/**/*
+  - "project_memories/**/*"
 alwaysApply: true
 ---
 
