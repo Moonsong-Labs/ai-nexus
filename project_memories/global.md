@@ -152,8 +152,19 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
     *   `utils.py`: Standard `split_model_and_provider`, `init_chat_model`.
 
 #### 5.3. Coder (`src/coder/`)
-
-*   (No changes mentioned in PR - assumed same as previous state)
+*   **Role:** Software developer agent responsible for writing and modifying code in a GitHub repository. It can create new pull requests or implement changes on existing ones.
+*   **Graph Logic (`src/coder/graph.py`):**
+    *   Defines configurations for different coding tasks, e.g., `coder_new_pr_config()` for new PRs and `coder_change_request_config()` for modifying existing PRs.
+    *   The `coder_change_request_config()` now allows the agent to use the `get_pull_request_head_branch` tool among its available GitHub tools.
+*   **Prompts (`src/coder/prompts.py`):**
+    *   `CHANGE_REQUEST_SYSTEM_PROMPT`: Updated to instruct the agent that when implementing changes on an existing pull request, it will be given the PR number and needs to work on the PR's head branch. It should sync with the latest changes on the PR's head branch and submit changes there.
+*   **Tools:**
+    *   Utilizes a suite of GitHub tools provided by `src/common/components/github_tools.py`. This suite is configured via the `GITHUB_TOOLS` list in the same file.
+    *   A new tool `get_pull_request_head_branch` (implemented as `GetPullRequestHeadBranch` class) has been added to this suite. This tool allows the agent to fetch the head branch name of a pull request given its number. It is available in both live (via `GitHubAPIWrapper`) and mock (via `MockGithubApi`) environments.
+    *   The mock GitHub API (`src/common/components/github_mocks.py`) has been updated:
+        *   The `get_pull_request` method now returns a simplified dictionary containing essential PR details (title, number, body, comments, commits).
+        *   A `get_pull_request_head_branch` method was added to support mocking the new tool.
+*   (Other files like `__init__.py`, `lg_server.py`, `mocks.py`, `state.py`, `tools.py` specific to the coder, and `README.md` are as previously described in the project structure, if detailed.)
 
 #### 5.4. Code Reviewer (`src/code_reviewer/`)
 *   (No changes mentioned in PR - assumed same as previous state, follows `agent_template` and uses `langmem`)
@@ -206,6 +217,8 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 *   **`tests/integration_tests/test_requirement_gatherer.py`:**
     *   Updated to use the new `RequirementsGathererGraph`.
     *   Still uses `create_async_graph_caller` and `LLMJudge` for evaluation against LangSmith datasets.
+*   **`tests/integration_tests/test_coder.py`:**
+    *   Added a new test `test_coder_changes_server_port_on_existing_pr`. This test verifies that the Coder agent, using `coder_change_request_config`, correctly applies changes to the head branch of an existing pull request. It utilizes the `MockGithubApi` for setting up the test scenario.
 *   **`tests/unit_tests/test_configuration.py`:**
     *   The previous test `test_configuration_from_none()` related to `orchestrator.configuration.Configuration` is removed as that file is deleted. A dummy test `test_foo()` might be present.
 *   **`src/orchestrator/test.py` (Local test script):**
@@ -255,14 +268,18 @@ ai-nexus/
 │   │   └── system_prompt.md
 │   ├── coder/
 │   │   ├── __init__.py
-│   │   ├── graph.py
+│   │   ├── graph.py              # UPDATED: coder_change_request_config includes new tool
 │   │   ├── lg_server.py
 │   │   ├── mocks.py
-│   │   ├── prompts.py
+│   │   ├── prompts.py            # UPDATED: CHANGE_REQUEST_SYSTEM_PROMPT modified
 │   │   ├── state.py
 │   │   ├── tools.py
 │   │   └── README.md
 │   ├── common/
+│   │   ├── components/
+│   │   │   ├── github_mocks.py   # UPDATED: Mock API updated for new tool and PR info
+│   │   │   ├── github_tools.py   # UPDATED: Added GetPullRequestHeadBranch tool
+│   │   │   └── memory.py
 │   │   ├── config.py             # REVISED: Defines BaseConfiguration
 │   │   ├── graph.py              # REVISED: AgentGraph __init__ updated
 │   │   └── utils/
@@ -295,7 +312,7 @@ ai-nexus/
     │   └── task_manager_dataset.py
     ├── integration_tests/
     │   ├── test_architect_agent.py
-    │   ├── test_coder.py
+    │   ├── test_coder.py           # UPDATED: New test added for PR head branch changes
     │   ├── eval_coder.py
     │   ├── test_graph.py
     │   ├── test_grumpy_agent.py
