@@ -10,8 +10,9 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Literal, Optional, Protocol
+from typing import List, Literal, Optional
 
+from dataclasses import dataclass
 from langchain_core.tools import Tool
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langgraph.store.base import BaseStore
@@ -36,11 +37,13 @@ MEMORY_CATEGORIES = [
 ]
 
 
-class ConfigurationProtocol(Protocol):
-    """Protocol defining the minimum configuration interface required."""
-
-    use_static_mem: bool
-    user_id: str
+@dataclass(kw_only=True)
+class MemoryConfiguration:
+    """Configuration for semantic memory capabilities."""
+    
+    use_memory: bool = True
+    load_static_memories: bool = True
+    user_id: str = "default"
 
 
 def load_static_memories(store: BaseStore, user_id: str = "default") -> int:
@@ -103,14 +106,14 @@ class SemanticMemory:
         self,
         agent_name: str = "default",
         store: Optional[BaseStore] = None,
-        config: Optional[ConfigurationProtocol] = None,
+        memory_config: Optional[MemoryConfiguration] = None,
     ):
         """Initialize the semantic memory.
 
         Args:
             agent_name: The agent name to use for memory namespace.
             store: Optional BaseStore to use. If None, a new one will be created.
-            config: Configuration object with memory settings.
+            memory_config: Optional memory configuration. If None, default values are used.
         """
         self.agent_name = agent_name
         self.store = store
@@ -119,21 +122,18 @@ class SemanticMemory:
             "memories",
             "semantic",
         )
-        self.initialize(config)
+        self.memory_config = memory_config or MemoryConfiguration()
+        self.initialize()
 
-    def initialize(self, config: Optional[ConfigurationProtocol] = None) -> None:
-        """Initialize the memory store and load static memories if configured.
-
-        Args:
-            config: Configuration object with memory enablement flags.
-        """
+    def initialize(self) -> None:
+        """Initialize the memory store and load static memories if configured."""
         # Initialize the memory store with embeddings
         if self.store is None:
             self.store = create_memory_store()
 
         # Load static memories if configured
-        if config and hasattr(config, "use_static_mem") and config.use_static_mem:
-            user_id = getattr(config, "user_id", "default")
+        if self.memory_config.load_static_memories:
+            user_id = self.memory_config.user_id
             load_static_memories(self.store, user_id)
             logger.info(f"Loaded static memories for user {user_id}")
 

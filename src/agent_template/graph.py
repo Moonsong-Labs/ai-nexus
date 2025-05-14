@@ -1,45 +1,94 @@
-"""Graphs that extract memories on a schedule."""
+"""Graph implementation for agent template using AgentGraph."""
 
 import logging
+from typing import Any, Callable, Coroutine, Dict, List, Optional
 
+from langchain_core.messages import BaseMessage, SystemMessage
+from langchain_core.runnables import Runnable, RunnableConfig
+from langchain_core.language_models import LanguageModelInput
+from langchain_core.tools import Tool
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.store.base import BaseStore
+from langgraph.types import Checkpointer
 
-from agent_template.agent import Agent
 from agent_template.configuration import Configuration
 from agent_template.state import State
+from common.config import BaseConfiguration
+from common.graph import AgentGraph
 
 logger = logging.getLogger(__name__)
 
 
-def graph_builder(config: Configuration) -> StateGraph:
-    # Create the graph + all nodes
-    builder = StateGraph(State)
+class AgentTemplateGraph(AgentGraph):
+    """Agent template graph implementation extending AgentGraph."""
 
-    # Create the agent instance
-    agent = Agent(config)
-    agent.initialize(config)
+    def __init__(
+        self,
+        *,
+        base_config: Optional[BaseConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        """Initialize AgentTemplateGraph.
+        
+        Args:
+            base_config: Optional BaseConfiguration instance.
+            checkpointer: Optional Checkpointer instance.
+            store: Optional BaseStore instance.
+        """
+        # Create config with any custom fields needed
+        config = Configuration(**base_config.__dict__) if base_config else Configuration()
+        super().__init__(config, checkpointer, store)
+        self._name = "Agent Template"
 
-    # Add nodes to the graph
-    builder.add_node("call_model", agent.__call__)
-
-    tool_node = ToolNode(agent.get_tools(), name="tools")
-    builder.add_node("tools", tool_node)
-
-    # Define the flow
-    builder.add_edge("__start__", "call_model")
-    builder.add_conditional_edges("call_model", tools_condition)
-    builder.add_edge("tools", "call_model")
-    builder.add_edge("call_model", END)
-
-    return builder
-
-
-default_config = Configuration()
-default_config.use_static_mem = True
-
-graph = graph_builder(default_config).compile()
-graph.name = "Agent Template"
+    def _create_call_model(
+        self, 
+        llm: Runnable[LanguageModelInput, BaseMessage]
+    ) -> Callable[..., Coroutine[Any, Any, Dict]]:
+        """Create a function that calls the model.
+        
+        This example shows how to override the parent method while still using
+        its implementation. Agents can customize this method to create specialized
+        model calling behavior.
+        
+        Args:
+            llm: A runnable language model
+            
+        Returns:
+            A coroutine function that processes the state and invokes the model
+        """
+        # Simply call the parent implementation
+        return super()._create_call_model(llm)
 
 
-__all__ = ["graph"]
+    def create_builder(self) -> StateGraph:
+        """Create a graph builder."""
+        # Create the graph
+        builder = StateGraph(State)
+
+        # Add nodes to the graph
+        builder.add_node("call_model", self._create_call_model(self._llm))
+
+        # Get all tools (utility tools and possibly memory tools)
+        all_tools = []
+        if self._memory:
+            all_tools += self._memory.get_tools()
+
+        tool_node = ToolNode(all_tools, name="tools")
+        builder.add_node("tools", tool_node)
+
+        # Define the flow
+        builder.add_edge("__start__", "call_model")
+        builder.add_conditional_edges("call_model", tools_condition)
+        builder.add_edge("tools", "call_model")
+        builder.add_edge("call_model", END)
+
+        return builder
+
+
+# For langsmith and backwards compatibility
+graph = AgentTemplateGraph().compiled_graph
+
+
+__all__ = ["AgentTemplateGraph", "graph"]

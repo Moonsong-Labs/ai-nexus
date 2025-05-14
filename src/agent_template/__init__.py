@@ -1,5 +1,7 @@
-"""Enrichment for a pre-defined schema."""
+"""Agent template module."""
 
-from agent_template.graph import graph
+from agent_template.configuration import Configuration
+from agent_template.graph import AgentTemplateGraph, graph
+from agent_template.state import State
 
-__all__ = ["graph"]
+__all__ = ["Configuration", "AgentTemplateGraph", "graph", "State"]

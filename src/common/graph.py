@@ -2,16 +2,25 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import asdict
-from typing import Any, Optional
+from typing import Any, List, Optional, TypeVar, Callable, Coroutine, Dict
 
-from langchain_core.runnables import RunnableConfig
+from langchain.chat_models import init_chat_model
+from langchain_core.language_models.base import BaseLanguageModel
+from langchain_core.runnables import RunnableConfig, Runnable
+from langchain_core.language_models import LanguageModelInput
+from langchain_core.messages import BaseMessage, SystemMessage
+from langchain_core.tools import Tool
 from langgraph.graph import StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
 from common.config import BaseConfiguration
+from common.components.memory import SemanticMemory
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AgentGraph(ABC):
     """Agent graph."""
@@ -23,12 +32,32 @@ class AgentGraph(ABC):
         store: Optional[BaseStore] = None,
     ):
         """Initialize."""
-        self._name = "Orchestrator"
+        self._name = "BaseAgent"
         self._base_config = base_config or BaseConfiguration()
         self._checkpointer = checkpointer
         self._store = store
         self._builder = None
         self._compiled_graph = None
+
+        # Initialize llm
+        self._llm = init_chat_model(self._base_config.model)
+
+        # Initialize semantic memory only if use_memory is True
+        self._memory = None
+        if self._base_config.memory.use_memory:
+            self._memory = SemanticMemory(
+                agent_name=self._name,
+                store=store,
+                memory_config=self._base_config.memory
+            )
+            if self._memory:
+                self.bind_tools(self._memory.get_tools())
+
+
+    @property
+    def memory(self) -> Optional[SemanticMemory]:
+        """Return the semantic memory component."""
+        return self._memory
 
     @property
     def builder(self):
@@ -49,6 +78,47 @@ class AgentGraph(ABC):
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
         pass
+    
+    def bind_tools(self, tools: List[Tool]) -> None:
+        """Bind a list of tools to the language model.
+        
+        Args:
+            tools: List of tools to bind to the language model
+        """
+        if tools and self._llm:
+            self._llm = self._llm.bind_tools(tools)
+
+        
+    def _create_call_model(
+        self, 
+        llm: Runnable[LanguageModelInput, BaseMessage]
+    ) -> Callable[..., Coroutine[Any, Any, Dict]]:
+        """Create a function that calls the model.
+        
+        This is a basic implementation that derived classes can override.
+        
+        Args:
+            llm_with_tools: A runnable language model with tools bound to it
+            
+        Returns:
+            A coroutine function that processes the state and invokes the model
+        """
+        async def call_model(state: Any, config: RunnableConfig, *, store: BaseStore = None) -> Dict:
+            """Call the model with the current state."""
+            # Get system prompt from config if available
+            configurable = config.get("configurable", {})
+            if "system_prompt" not in configurable:
+                logger.warning("No system_prompt found in configuration. Using default prompt.")
+                system_prompt = "You are a helpful AI assistant."
+            else:
+                system_prompt = configurable.get("system_prompt")
+            
+            msg = await llm.ainvoke(
+                [{"role": "system", "content": system_prompt}, *state.messages],
+            )
+            return {"messages": [msg]}
+            
+        return call_model
 
     @property
     def compiled_graph(self) -> CompiledStateGraph:
