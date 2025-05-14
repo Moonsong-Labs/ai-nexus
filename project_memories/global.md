@@ -12,10 +12,13 @@
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
 4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`).
 5.  **System Prompts:** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols.
-6.  **Configuration Management:** Agents have configurable parameters, including LLM models, system prompts, and memory settings (e.g., `use_static_mem`), managed via `Configuration` dataclasses (either from `agent_template` or the new common `src/common/config.py`).
+6.  **Configuration Management:** Agents have configurable parameters, including LLM models, system prompts, and memory settings (e.g., `use_static_mem`). This is managed via:
+    *   `Configuration` dataclasses from `agent_template`.
+    *   A common `BaseConfiguration` in `src/common/config.py`.
+    *   Agent-specific `Configuration` dataclasses (e.g., in `src/orchestrator/configuration.py`, `src/requirement_gatherer/configuration.py`) that subclass `BaseConfiguration`.
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
 8.  **`langmem` Integration:** Provides semantic memory capabilities (storage, search) for agents, typically managed via the `Agent` class and `SemanticMemory` component for agents following the `agent_template`. Other agents like Requirement Gatherer might implement memory tools differently.
-9.  **`AgentGraph` (NEW):** A common base class (`src/common/graph.py`) for defining agent graphs, promoting modularity. Used by Orchestrator and Requirement Gatherer.
+9.  **`AgentGraph` (NEW):** A common base class (`src/common/graph.py`) for defining agent graphs, promoting modularity. Used by Orchestrator and Requirement Gatherer. Its `__init__` method now takes `base_config: BaseConfiguration`.
 
 
 ## 2. The Memory Bank System (Shift from Conceptual to `langmem`)
@@ -29,7 +32,7 @@ Other agents, like the Requirement Gatherer, now use custom tools (e.g., `memori
 *   **Namespace:** Memories are typically namespaced by `("memories", "semantic", user_id)` or `("memories", "static", user_id)`.
 *   **Tools:**
     *   `agent_template` based agents: Use `langmem`-provided tools (`manage_memory`, `search_memory`) via `SemanticMemory`. A custom `memory_dump` tool is also available.
-    *   Requirement Gatherer: Uses a custom `memorize` tool (defined in `src/requirement_gatherer/tools.py` but functionally similar to `agent_template`'s old `upsert_memory` or `langmem`'s `manage_memory`).
+    *   Requirement Gatherer: Uses a custom `memorize` tool (defined in `src/requirement_gatherer/tools.py`, refactored from a previous `upsert_memory` function in the same file) for storing memories.
 *   **Static Memories:** The concept of static, pre-loaded knowledge persists. JSON files in `.langgraph/static_memories/` can be loaded into the `BaseStore` under a static namespace if `use_static_mem` is enabled in the agent's configuration.
 *   **Shift:** The shift moves from human-readable Markdown files as the primary memory source to a database/store queried semantically via tools. The core principle of externalized memory remains, but the implementation mechanism has evolved. The specific file structure (`projectbrief.md`, `productContext.md`, etc.) described previously is not directly implemented by the `langmem` system, although the *types* of information they represent might be stored as individual memories.
 
@@ -64,7 +67,7 @@ This file outlines the overarching standards and technological choices for the A
     *   **openevals:** Used for custom evaluation logic, particularly for the Coder agent.
 *   **Version Control:** Git.
 *   **LLM Models:**
-    *   **`gemini-1.5-flash-latest` / `gemini-2.5-flash-preview-04-17` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (`agent_template` default updated to `gemini-2.5-flash-preview-04-17`). Orchestrator and Requirement Gatherer default to `google_genai:gemini-2.0-flash`.
+    *   **`gemini-1.5-flash-latest` / `gemini-2.5-flash-preview-04-17` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (`agent_template` default updated to `gemini-2.5-flash-preview-04-17`). Orchestrator and Requirement Gatherer default to `google_genai:gemini-2.0-flash` via `BaseConfiguration`.
     *   **`gemini-1.5-pro-latest` (or similar pro variants):** Preferred for complex tasks needing reasoning.
 
 
@@ -95,41 +98,44 @@ A newer pattern utilizes a common base class for more modular graph definitions.
     from dataclasses import dataclass
 
     @dataclass(kw_only=True)
-    class Configuration:
+    class BaseConfiguration: # RENAMED from Configuration
         user_id: str = "default"
-        model: str = "google_genai:gemini-2.0-flash" # Default model for this common config
+        model: str = "google_genai:gemini-2.0-flash"
         provider: str | None = None
         # Agent-specific prompts or other configs are added in subclasses
     ```
 *   **`src/common/graph.py` (NEW):**
     *   Defines an abstract base class `AgentGraph(ABC)`.
-    *   `__init__(config: Configuration, checkpointer, store)`: Initializes with common config, optional checkpointer and store.
+    *   `__init__(base_config: BaseConfiguration, checkpointer, store)`: Initializes with common config (type updated to `BaseConfiguration`), optional checkpointer and store.
     *   `create_builder() -> StateGraph` (abstract method): To be implemented by subclasses to define the graph.
     *   `compiled_graph`: Property to get or compile the graph.
     *   `ainvoke(state, config)`: Invokes the compiled graph, merging instance config with call-time config.
 
-Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and define their specific `Configuration` (subclassing `common.config.Configuration`) and graph structure.
+Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and define their specific `Configuration` (subclassing `common.config.BaseConfiguration` in their respective new `configuration.py` files) and graph structure. Graph construction is more modular, often using factory functions to create nodes and tools.
 
 
 ## 5. Specific Agent Details
 
 #### 5.1. Orchestrator (`src/orchestrator/`)
-*   **Architecture:** Now uses the `AgentGraph` pattern. `OrchestratorGraph` in `src/orchestrator/graph.py` subclasses `common.graph.AgentGraph`.
-*   **Configuration (`src/orchestrator/graph.py`):**
-    *   Defines its own `Configuration` dataclass, subclassing `common.config.Configuration`.
+*   **Architecture:** Uses the `AgentGraph` pattern. `OrchestratorGraph` in `src/orchestrator/graph.py` subclasses `common.graph.AgentGraph`.
+*   **Configuration (`src/orchestrator/configuration.py` - NEW FILE, REPLACING INLINE CONFIG):**
+    *   Defines its own `Configuration` dataclass in `src/orchestrator/configuration.py`, subclassing `common.config.BaseConfiguration`.
     *   `system_prompt: str = prompts.get_prompt()` (which now formats current `time` into the prompt).
-    *   The dedicated `src/orchestrator/configuration.py` file has been DELETED.
+    *   The dedicated `src/orchestrator/configuration.py` file from a previous state was deleted, but this PR re-introduces it with the new structure.
+    *   **`src/orchestrator/graph.py` now defines `AgentsConfig` dataclass** to manage agent stubs (e.g., `requirements.use_stub`) and agent-specific features (e.g., `requirements.use_human_ai`).
 *   **Graph Logic (`src/orchestrator/graph.py`):**
-    *   The `orchestrate` node uses the system prompt from the config (including current time).
-    *   The `delegate_to` routing function is updated.
-    *   Integrates other agent graphs/stubs, for example, it can instantiate and use `RequirementsGathererGraph` (or `RequirementsGathererStub`). The `requirements` node in the orchestrator graph is now a function that invokes the `RequirementsGathererGraph`.
+    *   The `orchestrate` node (created by `_create_orchestrate` factory) uses the system prompt from the config (including current time). LLM is initialized within `create_builder`.
+    *   The `delegate_to` routing function (created by `_create_delegate_to` factory) is updated.
+    *   Integrates other agent graphs/stubs; for example, it can instantiate and use `RequirementsGathererGraph` (or `RequirementsGathererStub`) based on `AgentsConfig`. The `requirements` node is created by `_create_requirements_node` factory.
 *   **Prompts (`src/orchestrator/prompts.py`):**
     *   `ORCHESTRATOR_SYSTEM_PROMPT` (and the one constructed by `get_prompt()`) now includes a `{time}` placeholder, formatted with the current time during graph execution.
     *   `src/orchestrator/memory/team.md`: Updated to specify that the `Delegate` tool usage MUST include the `content` field for the delegated task.
 *   **Tools (`src/orchestrator/tools.py`):**
     *   The `Delegate` tool's Pydantic model now includes a mandatory `content: str` field.
+    *   The `store_memory` tool is still bound to the LLM used by the `orchestrate` node. The `delegate_to` logic can route to a memorizer stub if `store_memory` tool is called.
 *   **Stubs (`src/orchestrator/stubs/__init__.py`):**
-    *   `RequirementsGathererStub` now subclasses `common.graph.AgentGraph`.
+    *   `RequirementsGathererStub` now subclasses `common.graph.AgentGraph` and its `__init__` takes `config: Optional[BaseConfiguration]`.
+*   **State (`src/orchestrator/state.py`):** Docstring updated.
 
 #### 5.2. Architect (`src/architect/`)
 
@@ -156,31 +162,32 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 *   (No changes mentioned in PR - assumed same as previous state, custom graph, revised prompt)
 
 #### 5.6. Requirement Gatherer (`src/requirement_gatherer/`)
-*   **Architecture:** Major refactor. Now uses the `AgentGraph` pattern. `RequirementsGathererGraph` in `src/requirement_gatherer/graph.py` subclasses `common.graph.AgentGraph`.
-*   **Configuration (`src/requirement_gatherer/graph.py`):**
-    *   Defines its own `Configuration` dataclass, subclassing `common.config.Configuration`.
+*   **Architecture:** Major refactor. Uses the `AgentGraph` pattern. `RequirementsGathererGraph` in `src/requirement_gatherer/graph.py` subclasses `common.graph.AgentGraph`.
+*   **Configuration (`src/requirement_gatherer/configuration.py` - NEW FILE, REPLACING INLINE CONFIG):**
+    *   Defines its own `Configuration` dataclass in `src/requirement_gatherer/configuration.py`, subclassing `common.config.BaseConfiguration`.
     *   `gatherer_system_prompt: str = prompts.SYSTEM_PROMPT`.
-    *   The dedicated `src/requirement_gatherer/configuration.py` file has been DELETED.
+    *   The dedicated `src/requirement_gatherer/configuration.py` file from a previous state was deleted, but this PR re-introduces it with the new structure.
+    *   `RequirementsGathererGraph.__init__` now accepts `use_human_ai` parameter to control human feedback simulation.
 *   **Graph Logic (`src/requirement_gatherer/graph.py`):**
-    *   The graph now consists of a `call_model` node and a `ToolNode` ("tools").
+    *   The graph consists of a `call_model` node (created by `_create_call_model` factory) and a `ToolNode` ("tools"). LLM and tools are initialized within `create_builder`.
     *   `call_model`: Retrieves memories, formats them into the system prompt (which includes current time), and invokes an LLM bound with new tools.
     *   `ToolNode`: Executes tools like `human_feedback`, `memorize`, `summarize`.
-    *   Routing: `START` -> `call_model`. `call_model` routes to `tools` if tool calls are present, or back to `call_model` or `END` if a summary is generated. `tools` routes back to `call_model`.
+    *   Routing: `START` -> `call_model`. `call_model` routes to `tools` if tool calls are present, or back to `call_model` or `END` if a summary is generated. `tools` routes back to `call_model`. This logic is encapsulated in a route function created by `_create_gather_requirements` factory.
     *   The previous `call_evaluator_model` and `Veredict`-based flow is REMOVED.
 *   **State (`src/requirement_gatherer/state.py`):**
-    *   `State` dataclass now has `messages: Annotated[list[AnyMessage], add_messages]` and `summary: str = ""`.
+    *   `State` dataclass now has `messages: Annotated[list[AnyMessage], add_messages]` and `summary: str = ""`. Docstring updated.
     *   The `veredict` field has been REMOVED.
-*   **Tools (`src/requirement_gatherer/tools.py` and `graph.py`):**
-    *   New tools are defined and used in `graph.py`:
-        *   `human_feedback(question: str, ...)`: Tool to request feedback from a human. Prints the question and simulates a user reply. Returns a `Command` to update state.
-        *   `memorize(content: str, context: str, ...)`: Tool to upsert a memory. Uses `store.aput` with `("memories", user_id)`. Functionally similar to the old `upsert_memory` or `langmem`'s `manage_memory`.
-        *   `summarize(summary: str, ...)`: Tool to indicate the agent has produced a final summary. Updates state with the summary.
-    *   The `upsert_memory` tool is still defined in `tools.py` but the graph uses the new `memorize` tool.
-    *   A `finalize` tool is defined in `tools.py` but not currently used in the graph.
+*   **Tools (`src/requirement_gatherer/tools.py`):**
+    *   Tools are now more modular and defined in `tools.py`:
+        *   `human_feedback`: Tool created by `create_human_feedback_tool(use_human_ai=False)` factory. Can request feedback from a human (via `interrupt`) or simulate human responses using an AI if `use_human_ai` is true. Prints interaction to console.
+        *   `memorize(content: str, context: str, ...)`: Tool to upsert a memory. Uses `store.aput` with `("memories", user_id)`. This tool is a refactoring of the previous `upsert_memory` function from this file.
+        *   `summarize(summary: str, ...)`: Tool to indicate the agent has produced a final summary. Updates state with the summary and prints to console.
+    *   The `upsert_memory` function in `src/requirement_gatherer/tools.py` has been refactored and renamed to the `memorize` tool.
+    *   A `finalize` tool is no longer present.
 *   **Prompts (`src/requirement_gatherer/prompts.py`):**
     *   `SYSTEM_PROMPT` has been significantly REVISED:
         *   Emphasizes using the `human_feedback` tool for asking questions ("MUST NEVER directly ask a question to the user").
-        *   Instructs to use the `memorize` tool for documentation (replacing `upsert_memory`).
+        *   Instructs to use the `memorize` tool for documentation.
         *   Instructs to use the `summarize` tool when no questions are pending and a report is generated.
         *   Details a new workflow involving these tools.
         *   The `EVALUATOR_SYSTEM_PROMPT` has been REMOVED.
@@ -201,12 +208,15 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
     *   Still uses `create_async_graph_caller` and `LLMJudge` for evaluation against LangSmith datasets.
 *   **`tests/unit_tests/test_configuration.py`:**
     *   The previous test `test_configuration_from_none()` related to `orchestrator.configuration.Configuration` is removed as that file is deleted. A dummy test `test_foo()` might be present.
+*   **`src/orchestrator/test.py` (Local test script):**
+    *   Updated to instantiate `OrchestratorGraph` using `AgentsConfig` and `BaseConfiguration`.
+    *   Demonstrates setting `agents_config.requirements.use_stub = False` and `agents_config.requirements.use_human_ai = True`.
 
 
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`)
 
 *   (No significant changes to the overall workflow mentioned in PR, Makefile targets for specific agent tests might be affected if agent names/structures change significantly, but core `make` commands remain.)
-*   **Ruff Linting:** `pyproject.toml` updated with per-file ignores for `T201` (print statements) in `src/orchestrator/{graph,test}.py` and `src/requirement_gatherer/graph.py`.
+*   **Ruff Linting:** `pyproject.toml` updated with per-file ignores for `T201` (print statements) in `src/orchestrator/{graph,test}.py` and `src/requirement_gatherer/graph.py` and `src/requirement_gatherer/tools.py`.
 
 
 ## 8. Overall Project Structure Summary
@@ -228,7 +238,7 @@ ai-nexus/
 │   └── global.md
 ├── pyproject.toml                # UPDATED: Ruff per-file ignores
 ├── scripts/
-│   └── generate_project_memory.sh # Minor change
+│   └── generate_project_memory.sh
 ├── src/
 │   ├── agent_template/
 │   │   ├── __init__.py
@@ -253,29 +263,29 @@ ai-nexus/
 │   │   ├── tools.py
 │   │   └── README.md
 │   ├── common/
-│   │   ├── config.py             # NEW: Common Configuration dataclass
-│   │   ├── graph.py              # NEW: AgentGraph base class
+│   │   ├── config.py             # REVISED: Defines BaseConfiguration
+│   │   ├── graph.py              # REVISED: AgentGraph __init__ updated
 │   │   └── utils/
 │   ├── grumpy/
 │   ├── orchestrator/
 │   │   ├── __init__.py
-│   │   ├── configuration.py      # DELETED
-│   │   ├── graph.py              # REVISED: Uses AgentGraph, new Configuration, integrates ReqGathererGraph, prompt includes time
+│   │   ├── configuration.py      # NEW (re-added with new structure): Specific Configuration subclassing BaseConfiguration
+│   │   ├── graph.py              # REVISED: Uses new Configuration, AgentsConfig, factory functions for nodes
 │   │   ├── memory/
 │   │   │   └── team.md           # UPDATED: Delegate tool must include content
 │   │   ├── prompts.py            # UPDATED: System prompt includes {time}
-│   │   ├── state.py
+│   │   ├── state.py              # REVISED: Docstring
 │   │   ├── stubs/
-│   │   │   └── __init__.py       # UPDATED: RequirementsGathererStub uses AgentGraph
-│   │   ├── test.py               # NEW: Local test script for orchestrator
+│   │   │   └── __init__.py       # UPDATED: RequirementsGathererStub __init__ takes BaseConfiguration
+│   │   ├── test.py               # REVISED: Uses AgentsConfig, BaseConfiguration
 │   │   └── tools.py              # UPDATED: Delegate tool requires 'content'
 │   ├── requirement_gatherer/
 │   │   ├── __init__.py
-│   │   ├── configuration.py      # DELETED
-│   │   ├── graph.py              # REVISED: Uses AgentGraph, new Configuration, new tools (human_feedback, memorize, summarize), new flow
+│   │   ├── configuration.py      # NEW (re-added with new structure): Specific Configuration subclassing BaseConfiguration
+│   │   ├── graph.py              # REVISED: Uses new Configuration, factory functions for nodes, new tool usage
 │   │   ├── prompts.py            # REVISED: System prompt updated for new tools/workflow, evaluator prompt removed
-│   │   ├── state.py              # REVISED: 'veredict' removed, 'summary' added
-│   │   └── tools.py              # REVISED: Defines memorize, human_feedback, summarize; upsert_memory still present but new tools used in graph
+│   │   ├── state.py              # REVISED: 'veredict' removed, 'summary' added, docstring
+│   │   └── tools.py              # REVISED: Defines create_human_feedback_tool, memorize (refactored from upsert_memory), summarize
 │   ├── task_manager/
 │   └── tester/
 └── tests/
