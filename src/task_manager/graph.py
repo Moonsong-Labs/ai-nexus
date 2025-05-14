@@ -62,11 +62,8 @@ def _create_call_model(
         # Invoke the language model with the prepared prompt and tools
         msg = await llm_with_tools.ainvoke(
             [SystemMessage(content=sys_prompt), *state.messages],
-            config=config,
+            config={**config, "recursion_limit": 100},
         )
-
-        # print(f"CALL_MODEL_REUSULT:\n{msg}")
-
         return {"messages": [msg]}
 
     return call_model
