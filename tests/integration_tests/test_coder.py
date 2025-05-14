@@ -136,7 +136,6 @@ async def test_coder_changes_server_port_on_existing_pr():
     update_ops = [op for op in mock_api.operations if op["type"] == "update"]
     assert len(update_ops) > 0, "No update operation found"
 
-    print(update_ops)
     server_update = next(op for op in update_ops if op["args"]["path"] == "server.py")
     assert "port=8080" in server_update["args"]["new_content"]
     assert "port=8000" not in server_update["args"]["new_content"]
