@@ -25,6 +25,7 @@ from task_manager.state import State
 
 logger = logging.getLogger(__name__)
 
+TASK_MANAGER_RECURSION_LIMIT = 100
 
 def _create_call_model(
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
@@ -42,6 +43,8 @@ def _create_call_model(
             query=str([m.content for m in state.messages[-3:]]),
             limit=10,
         )
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = TASK_MANAGER_RECURSION_LIMIT
 
         # Format memories for inclusion in the prompt
         formatted = "\n".join(
@@ -62,7 +65,7 @@ def _create_call_model(
         # Invoke the language model with the prepared prompt and tools
         msg = await llm_with_tools.ainvoke(
             [SystemMessage(content=sys_prompt), *state.messages],
-            config={**config, "recursion_limit": 100},
+            config_with_recursion,
         )
         return {"messages": [msg]}
 
