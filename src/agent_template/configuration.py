@@ -1,14 +1,9 @@
 """Define the configurable parameters for the agent."""
 
-import os
-from dataclasses import dataclass, field, fields
-from typing import Any, Optional
-
-from typing_extensions import Annotated
+from dataclasses import dataclass
 
 from agent_template import prompts
 from common.config import BaseConfiguration
-from common.components.memory import MemoryConfiguration
 
 AGENT_NAME = "base_agent"
 

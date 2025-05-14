@@ -1,12 +1,11 @@
 """Graph implementation for agent template using AgentGraph."""
 
 import logging
-from typing import Any, Callable, Coroutine, Dict, List, Optional
+from typing import Any, Callable, Coroutine, Dict, Optional
 
-from langchain_core.messages import BaseMessage, SystemMessage
-from langchain_core.runnables import Runnable, RunnableConfig
 from langchain_core.language_models import LanguageModelInput
-from langchain_core.tools import Tool
+from langchain_core.messages import BaseMessage
+from langchain_core.runnables import Runnable
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
@@ -31,36 +30,36 @@ class AgentTemplateGraph(AgentGraph):
         store: Optional[BaseStore] = None,
     ):
         """Initialize AgentTemplateGraph.
-        
+
         Args:
             base_config: Optional BaseConfiguration instance.
             checkpointer: Optional Checkpointer instance.
             store: Optional BaseStore instance.
         """
         # Create config with any custom fields needed
-        config = Configuration(**base_config.__dict__) if base_config else Configuration()
+        config = (
+            Configuration(**base_config.__dict__) if base_config else Configuration()
+        )
         super().__init__(config, checkpointer, store)
         self._name = "Agent Template"
 
     def _create_call_model(
-        self, 
-        llm: Runnable[LanguageModelInput, BaseMessage]
+        self, llm: Runnable[LanguageModelInput, BaseMessage]
     ) -> Callable[..., Coroutine[Any, Any, Dict]]:
         """Create a function that calls the model.
-        
+
         This example shows how to override the parent method while still using
         its implementation. Agents can customize this method to create specialized
         model calling behavior.
-        
+
         Args:
             llm: A runnable language model
-            
+
         Returns:
             A coroutine function that processes the state and invokes the model
         """
         # Simply call the parent implementation
         return super()._create_call_model(llm)
-
 
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""

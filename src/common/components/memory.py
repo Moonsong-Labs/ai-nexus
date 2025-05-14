@@ -8,11 +8,11 @@ and managing memory storage with proper namespacing for different users.
 import json
 import logging
 import os
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import List, Literal, Optional
 
-from dataclasses import dataclass
 from langchain_core.tools import Tool
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langgraph.store.base import BaseStore
@@ -40,7 +40,7 @@ MEMORY_CATEGORIES = [
 @dataclass(kw_only=True)
 class MemoryConfiguration:
     """Configuration for semantic memory capabilities."""
-    
+
     use_memory: bool = True
     load_static_memories: bool = True
     user_id: str = "default"

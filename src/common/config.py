@@ -1,10 +1,12 @@
 """Define the configurable parameters for the agents."""
+
 import os
 from dataclasses import dataclass, field, fields
 from typing import Any, Optional
 
-from common.components.memory import MemoryConfiguration
 from langchain_core.runnables import RunnableConfig
+
+from common.components.memory import MemoryConfiguration
 
 
 @dataclass(kw_only=True)
@@ -16,11 +18,10 @@ class BaseConfiguration:
     provider: str | None = None
     memory: MemoryConfiguration = field(default_factory=MemoryConfiguration)
 
-
     @classmethod
     def from_runnable_config(
         cls, config: Optional[RunnableConfig] = None
-    ) -> "Configuration":
+    ) -> "BaseConfiguration":
         """Create a Configuration instance from a RunnableConfig."""
         configurable = (
             config["configurable"] if config and "configurable" in config else {}
