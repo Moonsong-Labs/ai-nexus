@@ -38,9 +38,6 @@ class AgentGraph(ABC):
         self._builder = None
         self._compiled_graph = None
 
-        # Initialize llm
-        self._llm = init_chat_model(self._base_config.model)
-
         # Initialize semantic memory only if use_memory is True
         self._memory = None
         if self._base_config.memory.use_memory:
@@ -49,8 +46,6 @@ class AgentGraph(ABC):
                 store=store,
                 memory_config=self._base_config.memory,
             )
-            if self._memory:
-                self.bind_tools(self._memory.get_tools())
 
     @property
     def memory(self) -> Optional[SemanticMemory]:
@@ -76,15 +71,6 @@ class AgentGraph(ABC):
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
         pass
-
-    def bind_tools(self, tools: List[Tool]) -> None:
-        """Bind a list of tools to the language model.
-
-        Args:
-            tools: List of tools to bind to the language model
-        """
-        if tools and self._llm:
-            self._llm = self._llm.bind_tools(tools)
 
     def _create_call_model(
         self, llm: Runnable[LanguageModelInput, BaseMessage]

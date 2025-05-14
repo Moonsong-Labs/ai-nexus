@@ -16,6 +16,8 @@ from agent_template.prompts import SYSTEM_PROMPT
 from agent_template.state import State
 from common.config import BaseConfiguration
 from common.graph import AgentGraph
+from langchain.chat_models import init_chat_model
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +43,13 @@ class AgentTemplateGraph(AgentGraph):
         config = (
             Configuration(**base_config.__dict__) if base_config else Configuration()
         )
+        
+        # Set specific configurations for this agent
+        config.name = "Agent Template"
+        config.memory.use_memory = True
+        config.system_prompt = SYSTEM_PROMPT
+        
         super().__init__(config, checkpointer, store)
-        self._name = "Agent Template"
-        self._base_config.system_prompt = SYSTEM_PROMPT
 
     def _create_call_model(
         self, llm: Runnable[LanguageModelInput, BaseMessage]
@@ -68,22 +74,32 @@ class AgentTemplateGraph(AgentGraph):
         # Create the graph
         builder = StateGraph(State)
 
-        # Add nodes to the graph
-        builder.add_node("call_model", self._create_call_model(self._llm))
+        # Initialize the LLM here instead of in __init__
+        llm = init_chat_model(self._base_config.model)
 
-        # Get all tools (utility tools and possibly memory tools)
+        # Get all tools
         all_tools = []
         if self._memory:
             all_tools += self._memory.get_tools()
 
-        tool_node = ToolNode(all_tools, name="tools")
-        builder.add_node("tools", tool_node)
+        # Bind tools to the LLM if there are any
+        if all_tools:
+            llm = llm.bind_tools(all_tools)
 
-        # Define the flow
-        builder.add_edge("__start__", "call_model")
-        builder.add_conditional_edges("call_model", tools_condition)
-        builder.add_edge("tools", "call_model")
-        builder.add_edge("call_model", END)
+        # Add nodes to the graph
+        builder.add_node("call_model", self._create_call_model(llm))
+        
+        if all_tools:
+            tool_node = ToolNode(all_tools, name="tools")
+            builder.add_node("tools", tool_node)
+
+            # Define the flow
+            builder.add_edge("__start__", "call_model")
+            builder.add_conditional_edges("call_model", tools_condition)
+            builder.add_edge("tools", "call_model")
+        else:
+            builder.add_edge("__start__", "call_model")
+            builder.add_edge("call_model", END)
 
         return builder
 
