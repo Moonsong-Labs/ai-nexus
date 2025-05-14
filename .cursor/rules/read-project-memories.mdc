@@ -3,11 +3,4 @@ description:
 globs: 
 alwaysApply: true
 ---
----
-description: Always read all files in project_memories for every interaction
-globs:
-  - project_memories/**/*
-alwaysApply: true
----
-
 For every interaction, ensure all files in the project_memories directory are read and available as context.
