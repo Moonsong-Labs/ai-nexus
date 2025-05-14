@@ -42,7 +42,7 @@ test_watch:
 test-task-manager:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_task_manager.py
 
-test-coder:
+test_coder:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_coder.py
 
 test_unit:
