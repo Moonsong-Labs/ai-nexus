@@ -65,6 +65,7 @@ This file outlines the overarching standards and technological choices for the A
     *   **Mypy:** Conducts static type checking (currently not enforced in CI/default linting pass).
     *   **codespell:** Checks for spelling mistakes.
     *   **openevals:** Used for custom evaluation logic, particularly for the Coder agent.
+    *   **debugpy:** (NEW) Development dependency for remote debugging support.
 *   **Version Control:** Git.
 *   **LLM Models:**
     *   **`gemini-1.5-flash-latest` / `gemini-2.5-flash-preview-04-17` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (`agent_template` default updated to `gemini-2.5-flash-preview-04-17`). Orchestrator and Requirement Gatherer default to `google_genai:gemini-2.0-flash` via `BaseConfiguration`.
@@ -228,7 +229,11 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`)
 
-*   (No significant changes to the overall workflow mentioned in PR, Makefile targets for specific agent tests might be affected if agent names/structures change significantly, but core `make` commands remain.)
+*   **Development Workflow & Build:**
+    *   **Make:** Used as a task runner to automate common commands.
+        *   `make run`: (UPDATED) Now includes `--debug-port 2025` to enable remote debugging by default when running `langgraph dev`.
+    *   **gcloud:** Deployment of services.
+    *   **Remote Debugging:** (NEW) Supported via `debugpy`. A VSCode launch configuration (`.vscode/launch.json`) is provided to attach a remote debugger to the process started by `make run`.
 *   **Ruff Linting:** `pyproject.toml` updated with per-file ignores for `T201` (print statements) in `src/orchestrator/{graph,test}.py` and `src/requirement_gatherer/graph.py` and `src/requirement_gatherer/tools.py`.
 
 
@@ -238,10 +243,12 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 ai-nexus/
 ├── .env.example
 ├── .gitignore
+├── .vscode/                      # NEW
+│   └── launch.json               # NEW: VSCode launch configuration for remote debugging
 ├── .github/
 │   └── workflows/
 │       └── checks.yml
-├── Makefile
+├── Makefile                      # UPDATED: 'make run' includes --debug-port
 ├── README.md
 ├── agent_memories/
 │   └── grumpy/
@@ -249,7 +256,7 @@ ai-nexus/
 ├── project_memories/
 │   ├── PRD.md
 │   └── global.md
-├── pyproject.toml                # UPDATED: Ruff per-file ignores
+├── pyproject.toml                # UPDATED: Ruff per-file ignores, debugpy dependency
 ├── scripts/
 │   └── generate_project_memory.sh
 ├── src/
