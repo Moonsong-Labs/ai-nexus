@@ -1,82 +1,126 @@
-"""Task Manager graph."""
+"""Graphs that extract memories on a schedule."""
 
 import logging
+from dataclasses import asdict
 from datetime import datetime
+from typing import Any, Coroutine, Optional
 
 from langchain.chat_models import init_chat_model
-from langchain_core.runnables import RunnableConfig
-from langgraph.graph import END, StateGraph
+from langchain_core.language_models import LanguageModelInput
+from langchain_core.messages import (
+    BaseMessage,
+    SystemMessage,
+)
+from langchain_core.runnables import Runnable, RunnableConfig
+from langgraph.graph import START, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.store.base import BaseStore
+from langgraph.types import Checkpointer
 
-from task_manager import configuration, tools, utils
+from common.config import BaseConfiguration
+from common.graph import AgentGraph
+from task_manager import tools
+from task_manager.configuration import Configuration, TASK_MANAGER_MODEL
 from task_manager.state import State
 
 logger = logging.getLogger(__name__)
 
-# Initialize the language model
-llm = init_chat_model(model=configuration.TASK_MANAGER_MODEL)
+
+def _create_call_model(
+    llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
+) -> Coroutine[Any, Any, dict]:
+    async def call_model(
+        state: State, config: RunnableConfig, *, store: BaseStore
+    ) -> dict:
+        """Extract the user's state from the conversation and update the memory."""
+        # configurable = configuration.Configuration.from_runnable_config(config)
+
+        user_id = config["configurable"]["user_id"]
+        # Retrieve the most recent memories for context
+        memories = await store.asearch(
+            ("memories", user_id),
+            query=str([m.content for m in state.messages[-3:]]),
+            limit=10,
+        )
+
+        # Format memories for inclusion in the prompt
+        formatted = "\n".join(
+            f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
+        )
+        if formatted:
+            formatted = f"""
+    <memories>
+    {formatted}
+    </memories>"""
+
+        # Prepare the system prompt with user memories and current time
+        # This helps the model understand the context and temporal relevance
+        sys_prompt = config["configurable"]["task_manager_system_prompt"].format(
+            user_info=formatted, time=datetime.now().isoformat()
+        )
+
+        # Invoke the language model with the prepared prompt and tools
+        msg = await llm_with_tools.ainvoke(
+            [SystemMessage(content=sys_prompt), *state.messages],
+            config=config,
+        )
+
+        # print(f"CALL_MODEL_REUSULT:\n{msg}")
+
+        return {"messages": [msg]}
+
+    return call_model
+
+class TaskManagerGraph(AgentGraph):
+    """Task manager graph."""
+
+    _config: Configuration
+
+    def __init__(
+        self,
+        *,
+        use_human_ai=False,
+        base_config: Optional[BaseConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        """Initialize TaskManagerGraph.
+
+        Args:
+            config: Optional Configuration instance.
+            checkpointer: Optional Checkpointer instance.
+            store: Optional BaseStore instance.
+        """
+        super().__init__(base_config, checkpointer, store)
+        self._name = "Task Manager"
+        self._config = Configuration(**asdict(self._base_config))
+        self._use_human_ai = use_human_ai
+
+    def create_builder(self) -> StateGraph:
+        """Create a graph builder."""
+        # Initialize the language model and the tools
+        all_tools = [
+            tools.read_file,
+            tools.create_file,
+            tools.list_files,
+        ]
+
+        llm = init_chat_model(model=TASK_MANAGER_MODEL).bind_tools(all_tools)
+        tool_node = ToolNode(all_tools, name="tools")
+        call_model = _create_call_model(llm)
+
+        builder = StateGraph(State, config_schema=Configuration)
+        builder.add_node(call_model)
+        builder.add_node(tool_node.name, tool_node)
+
+        builder.add_edge(START, call_model.__name__)
+        builder.add_conditional_edges(call_model.__name__, tools_condition)
+        builder.add_edge(tool_node.name, call_model.__name__)
+
+        return builder
 
 
-async def call_model(state: State, config: RunnableConfig) -> dict:
-    """Process user input and generate tasks."""
-    configurable = configuration.Configuration.from_runnable_config(config)
+# For langsmith
+graph = TaskManagerGraph().compiled_graph
 
-    # Check if the last user message is the TEST command
-    if state.messages and hasattr(state.messages[-1], "content"):
-        # In LangChain, HumanMessage objects represent user messages
-        user_message = state.messages[-1].content
-        logger.debug(f"Processing user message: {user_message}")
-
-    # Prepare the system prompt with current time
-    sys = configurable.system_prompt.format(
-        user_info="", time=datetime.now().isoformat()
-    )
-
-    # Invoke the language model with the prepared prompt and tools
-    msg = await llm.bind_tools(
-        [tools.read_file, tools.create_file, tools.list_files]
-    ).ainvoke(
-        [{"role": "system", "content": sys}, *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
-    )
-
-    return {"messages": [msg]}
-
-
-def process_tools(state: State):
-    """Determine whether to process tool calls or end the conversation.
-
-    If the last message contains tool calls, route to tools node.
-    Otherwise, end the conversation (END).
-    """
-    msg = state.messages[-1]
-    if hasattr(msg, "tool_calls") and msg.tool_calls:
-        logger.info("Tool calls detected, routing to tools")
-        return "tools"
-
-    # If no tool calls, end conversation
-    logger.info("No tool calls, ending conversation")
-    return END
-
-
-# Create the graph + all nodes
-builder = StateGraph(State, config_schema=configuration.Configuration)
-tool_node = ToolNode([tools.read_file, tools.create_file, tools.list_files])
-
-# Define the flow of the task manager process
-builder.add_node(call_model)
-builder.add_edge("__start__", "call_model")
-builder.add_node("tools", tool_node)
-# builder.add_conditional_edges("call_model", process_tools, ["tools", END])
-builder.add_conditional_edges(
-    "call_model",
-    # If the latest message (result) from assistant is a tool call -> tools_condition routes to tools
-    # If the latest message (result) from assistant is a not a tool call -> tools_condition routes to END
-    tools_condition,
-)
-builder.add_edge("tools", "call_model")
-graph = builder.compile()
-graph.name = "Task Manager"
-
-
-__all__ = ["graph", "builder"]
+__all__ = [TaskManagerGraph.__name__, "graph"]
