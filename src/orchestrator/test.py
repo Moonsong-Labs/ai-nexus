@@ -15,6 +15,7 @@ from langchain_core.messages import (
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
+from langgraph.types import Command
 from langsmith import RunTree
 from langsmith.client import Client
 from langsmith.evaluation import EvaluationResult
@@ -60,16 +61,24 @@ def print_messages_any(messages: list[dict]):
 if __name__ == "__main__":
     args = sys.argv[1:]
     mode: Literal["exec", "read"] = "read"
-    if len(args) > 0:
-        mode = args[0]
-    else:
+    human_or_ai: Literal["human", "ai"] = "human"
+
+    if len(args) < 1:
         print("need an argument: exec|read")
         exit(1)
+    else:
+        mode = args[0]
+        if mode == "exec":
+            if len(args) < 2:
+                print("need an argument: human|ai")
+                exit(1)
+            else:
+                human_or_ai = args[1]
 
     if mode == "exec":
         agents_config = AgentsConfig()
         agents_config.requirements.use_stub = False
-        agents_config.requirements.use_human_ai = True
+        agents_config.requirements.use_human_ai = human_or_ai == "ai"
         orchestrator = OrchestratorGraph(
             agents_config=agents_config,
             base_config=BaseConfiguration(),
@@ -77,12 +86,30 @@ if __name__ == "__main__":
             store=InMemoryStore(),
         )
 
-        result = asyncio.run(
-            orchestrator.ainvoke(
+        async def _exec():
+            config = RunnableConfig(configurable={"thread_id": str(uuid.uuid4())})
+            result = await orchestrator.ainvoke(
                 State(messages=HumanMessage(content="I want to build a website")),
-                config=RunnableConfig(configurable={"thread_id": str(uuid.uuid4())}),
+                config=config,
             )
-        )
+
+            # Handle interrupts
+            while True:
+                graph_state = await orchestrator.compiled_graph.aget_state(config)
+                if graph_state.interrupts:
+                    interrupt = graph_state.interrupts[0]
+                    response = input(
+                        f"\n{'-' * 50}\n{colored('requirements', 'green')}: {colored(interrupt.value['query'], 'light_grey')}\n\n{colored('Answer', 'yellow')}: "
+                    )
+                    result = await orchestrator.ainvoke(
+                        Command(resume=response), config=config
+                    )
+                else:
+                    break
+
+            return result
+
+        result = asyncio.run(_exec())
 
         # print(result["messages"])
 
