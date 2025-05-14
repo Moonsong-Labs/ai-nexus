@@ -92,7 +92,7 @@ def _create_delegate_to(orchestrate: Coroutine[Any, Any, dict]):
     return delegate_to
 
 
-def create_requirements_node(
+def _create_requirements_node(
     requirements_graph: RequirementsGathererGraph, recursion_limit: int = 100
 ):
     async def requirements(state: State, config: RunnableConfig, store: BaseStore):
@@ -173,7 +173,7 @@ class OrchestratorGraph(AgentGraph):
                 store=self._store,
             )
         )
-        requirements = create_requirements_node(requirements_graph)
+        requirements = _create_requirements_node(requirements_graph)
         delegate_to = _create_delegate_to(orchestrate)
 
         # Create the graph + all nodes
