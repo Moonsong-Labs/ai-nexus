@@ -7,7 +7,7 @@ from typing import Any, Callable, Coroutine, Dict, List, Optional
 
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import LanguageModelInput
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, SystemMessage
 from langchain_core.runnables import Runnable, RunnableConfig
 from langchain_core.tools import Tool
 from langgraph.graph import StateGraph
@@ -94,7 +94,7 @@ class AgentGraph(ABC):
         This is a basic implementation that derived classes can override.
 
         Args:
-            llm_with_tools: A runnable language model with tools bound to it
+            llm: A runnable language model
 
         Returns:
             A coroutine function that processes the state and invokes the model
@@ -115,9 +115,8 @@ class AgentGraph(ABC):
                 )
                 system_prompt = "You are a helpful AI assistant."
 
-            msg = await llm.ainvoke(
-                [{"role": "system", "content": system_prompt}, *state.messages],
-            )
+            system = SystemMessage(content=system_prompt)
+            msg = await llm.ainvoke([system, *state.messages])
             return {"messages": [msg]}
 
         return call_model
