@@ -204,9 +204,9 @@ JSON_PAYLOAD=$(jq -n \
                   '{
                      "contents": [{"parts": [{"text": $prompt_text}]}],
                      "generationConfig": {
-                       "temperature": 0.2,
-                       "topK": 40,
-                       "topP": 0.95,
+                       "temperature": 0.1,
+                       "topK": 20,
+                       "topP": 0.90,
                        "maxOutputTokens": 50000
                      },
                      "safetySettings": [
