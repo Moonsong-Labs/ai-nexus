@@ -96,7 +96,6 @@ class CallModel:
         messages_after_invoke = await llm.bind_tools(self.github_tools).ainvoke(
             messages
         )
-        print(messages_after_invoke)
         return {"messages": messages_after_invoke}
 
 
