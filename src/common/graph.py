@@ -67,7 +67,7 @@ class AgentGraph(ABC):
     def _merge_config(self, config: RunnableConfig | None = None):
         if config is not None:
             new_config = RunnableConfig(**config)
-            for k, v in asdict(self._config).items():
+            for k, v in asdict(self._base_config).items():
                 if k not in new_config["configurable"]:
                     new_config["configurable"][k] = v
         return new_config
@@ -104,15 +104,16 @@ class AgentGraph(ABC):
             state: Any, config: RunnableConfig, *, store: BaseStore = None
         ) -> Dict:
             """Call the model with the current state."""
-            # Get system prompt from config if available
-            configurable = config.get("configurable", {})
-            if "system_prompt" not in configurable:
-                logger.warning(
-                    "No system_prompt found in configuration. Using default prompt."
+            # Get system prompt from config
+            # After _merge_config, "system_prompt" should always be a key in configurable,
+            # potentially with a value of None if explicitly set.
+            system_prompt = self._base_config.system_prompt
+
+            if system_prompt is None:
+                logger.info(
+                    "system_prompt was None in the configuration. Using default prompt."
                 )
                 system_prompt = "You are a helpful AI assistant."
-            else:
-                system_prompt = configurable.get("system_prompt")
 
             msg = await llm.ainvoke(
                 [{"role": "system", "content": system_prompt}, *state.messages],

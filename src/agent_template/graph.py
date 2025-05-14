@@ -12,6 +12,7 @@ from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
 from agent_template.configuration import Configuration
+from agent_template.prompts import SYSTEM_PROMPT
 from agent_template.state import State
 from common.config import BaseConfiguration
 from common.graph import AgentGraph
@@ -42,6 +43,7 @@ class AgentTemplateGraph(AgentGraph):
         )
         super().__init__(config, checkpointer, store)
         self._name = "Agent Template"
+        self._base_config.system_prompt = SYSTEM_PROMPT
 
     def _create_call_model(
         self, llm: Runnable[LanguageModelInput, BaseMessage]

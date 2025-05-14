@@ -16,6 +16,7 @@ class BaseConfiguration:
     user_id: str = "default"
     model: str = "google_genai:gemini-2.0-flash"
     provider: str | None = None
+    system_prompt: Optional[str] = None
     memory: MemoryConfiguration = field(default_factory=MemoryConfiguration)
 
     @classmethod
