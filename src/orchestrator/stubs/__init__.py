@@ -12,7 +12,7 @@ from langgraph.graph import StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from common import config
+from common.config import BaseConfiguration
 from common.graph import AgentGraph
 from orchestrator.state import State
 
@@ -79,10 +79,12 @@ model_reviewer_messages = MessageWheel(
 class RequirementsGathererStub(AgentGraph):
     def __init__(
         self,
-        config: config.Configuration = config.Configuration(),
-        checkpointer: Checkpointer = None,
+        *,
+        config: Optional[BaseConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
+        config = config or BaseConfiguration()
         super().__init__(config, checkpointer, store)
         self._name = "Requirements Gatherer"
 

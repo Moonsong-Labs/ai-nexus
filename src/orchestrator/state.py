@@ -1,6 +1,4 @@
-"""Define the shared values."""
-
-from __future__ import annotations
+"""State for the graph."""
 
 from dataclasses import dataclass
 
