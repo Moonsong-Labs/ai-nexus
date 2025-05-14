@@ -13,7 +13,7 @@ deps: sync
 	uv pip install -e .[dev]
 
 run: deps
-	uv run --env-file .env -- langgraph dev --allow-blocking
+	uv run --env-file .env -- langgraph dev --allow-blocking --debug-port 2025
 
 # Define a variable for the test file path.
 UNIT_TEST_FILE ?= tests/unit_tests/
