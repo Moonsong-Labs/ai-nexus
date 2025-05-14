@@ -7,7 +7,7 @@ from typing import List
 import pytest
 
 from agent_template.configuration import Configuration
-from agent_template.graph import graph_builder as base_graph_builder
+from agent_template.graph import AgentTemplateGraph
 
 # Get the logger
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ logger.setLevel(logging.DEBUG)
 )
 async def test_memory_storage(conversation: List[str], expected_category: str):
     config = Configuration()
-    graph = base_graph_builder(config).compile()
+    graph = AgentTemplateGraph(base_config=config).compiled_graph
 
     # Track if we found the expected category
     category_found = False
@@ -106,7 +106,7 @@ async def test_memory_dump():
     # Create a temporary directory for the memory dump
     with tempfile.TemporaryDirectory() as temp_dir:
         config = Configuration()
-        graph = base_graph_builder(config).compile()
+        graph = AgentTemplateGraph(base_config=config).compiled_graph
 
         # Step 1: Store a memory
         store_memory_msg = "The Python programming language was created by Guido van Rossum and released in 1991."
