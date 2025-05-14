@@ -105,16 +105,10 @@ class CallModel:
     async def __call__(self, state: State) -> dict:
         system_msg = SystemMessage(content=self.system_prompt)
         messages = [system_msg] + state.messages
-        diff_feedback = (
-            await llm.bind_tools(self.github_tools)
-            .ainvoke(messages)
+        messages_after_invoke = await llm.bind_tools(self.github_tools).ainvoke(
+            messages
         )
-        return {
-            "messages": [
-                {"role": "assistant", "content": str(diff_feedback)}
-            ],
-            "diff_feedback": diff_feedback,
-        }
+        return {"messages": messages_after_invoke}
 
 
 def graph_builder(github_toolset: list[Tool], system_prompt: str) -> StateGraph:
