@@ -217,6 +217,7 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 
 *   (No significant changes to the overall workflow mentioned in PR, Makefile targets for specific agent tests might be affected if agent names/structures change significantly, but core `make` commands remain.)
 *   **Ruff Linting:** `pyproject.toml` updated with per-file ignores for `T201` (print statements) in `src/orchestrator/{graph,test}.py` and `src/requirement_gatherer/graph.py` and `src/requirement_gatherer/tools.py`.
+*   **Project Memory Update Script (`scripts/update_project_memory_from_pr.sh`):** The LLM generation parameters (`temperature` from `0.2` to `0.1`, `topK` from `40` to `20`, `topP` from `0.95` to `0.90`) used by this script (which updates this condensed memory based on PRs) were adjusted to reduce output randomness.
 
 
 ## 8. Overall Project Structure Summary
@@ -239,6 +240,7 @@ ai-nexus/
 ├── pyproject.toml                # UPDATED: Ruff per-file ignores
 ├── scripts/
 │   └── generate_project_memory.sh
+│   └── update_project_memory_from_pr.sh  # UPDATED: LLM generation parameters
 ├── src/
 │   ├── agent_template/
 │   │   ├── __init__.py
