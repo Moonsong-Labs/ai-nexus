@@ -10,7 +10,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from common.config import Configuration
+from common.config import BaseConfiguration
 
 
 class AgentGraph(ABC):
@@ -18,21 +18,23 @@ class AgentGraph(ABC):
 
     def __init__(
         self,
-        config: Configuration,
+        base_config: BaseConfiguration,
         checkpointer: Checkpointer = None,
         store: Optional[BaseStore] = None,
     ):
         """Initialize."""
         self._name = "Orchestrator"
-        self._config = config
+        self._base_config = base_config or BaseConfiguration()
         self._checkpointer = checkpointer
         self._store = store
+        self._builder = None
         self._compiled_graph = None
-        self._builder = self.create_builder()
 
     @property
     def builder(self):
         """Return the builder."""
+        if self._builder is None:
+            self._builder = self.create_builder()
         return self._builder
 
     def _merge_config(self, config: RunnableConfig | None = None):
@@ -56,7 +58,7 @@ class AgentGraph(ABC):
             use_store: Whether to use checkpointer and store
         """
         if self._compiled_graph is None:
-            self._compiled_graph = self._builder.compile(
+            self._compiled_graph = self.builder.compile(
                 name=self._name, checkpointer=self._checkpointer, store=self._store
             )
         return self._compiled_graph

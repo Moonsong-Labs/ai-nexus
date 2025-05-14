@@ -1,7 +1,5 @@
 """Define the shared values."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from langchain_core.messages import AnyMessage
@@ -16,7 +14,7 @@ class State:
     messages: Annotated[list[AnyMessage], add_messages]
     """The messages in the conversation."""
     summary: str = ""
-    # verdict: Literal["Completed", "needs_more"] = "needs_more"
+    """The requirements summary."""
 
 
 __all__ = [

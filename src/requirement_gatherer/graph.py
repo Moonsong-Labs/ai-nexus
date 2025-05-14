@@ -1,249 +1,130 @@
 """Graphs that extract memories on a schedule."""
 
 import logging
-import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from datetime import datetime
-from typing import Optional
+from typing import Any, Coroutine, Optional
 
 from langchain.chat_models import init_chat_model
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg, InjectedToolCallId, tool
+from langchain_core.language_models import LanguageModelInput
+from langchain_core.messages import (
+    BaseMessage,
+    SystemMessage,
+)
+from langchain_core.runnables import Runnable, RunnableConfig
 from langgraph.graph import END, START, StateGraph
-from langgraph.prebuilt import InjectedState, InjectedStore, ToolNode
+from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
-from langgraph.types import Checkpointer, Command
-from termcolor import colored
-from typing_extensions import Annotated
+from langgraph.types import Checkpointer
 
-from common import config
+from common.config import BaseConfiguration
 from common.graph import AgentGraph
-from requirement_gatherer import prompts
+from requirement_gatherer import tools
+from requirement_gatherer.configuration import Configuration
 from requirement_gatherer.state import State
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass(kw_only=True)
-class Configuration(config.Configuration):
-    """Main configuration class for the memory graph system."""
+def _create_call_model(
+    llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
+) -> Coroutine[Any, Any, dict]:
+    async def call_model(
+        state: State, config: RunnableConfig, *, store: BaseStore
+    ) -> dict:
+        """Extract the user's state from the conversation and update the memory."""
+        # configurable = configuration.Configuration.from_runnable_config(config)
 
-    gatherer_system_prompt: str = prompts.SYSTEM_PROMPT
+        user_id = config["configurable"]["user_id"]
+        # Retrieve the most recent memories for context
+        memories = await store.asearch(
+            ("memories", user_id),
+            query=str([m.content for m in state.messages[-3:]]),
+            limit=10,
+        )
 
+        # Format memories for inclusion in the prompt
+        formatted = "\n".join(
+            f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
+        )
+        if formatted:
+            formatted = f"""
+    <memories>
+    {formatted}
+    </memories>"""
 
-demo_user = init_chat_model()
+        # Prepare the system prompt with user memories and current time
+        # This helps the model understand the context and temporal relevance
+        sys_prompt = config["configurable"]["gatherer_system_prompt"].format(
+            user_info=formatted, time=datetime.now().isoformat()
+        )
 
+        # Invoke the language model with the prepared prompt and tools
+        msg = await llm_with_tools.ainvoke(
+            [SystemMessage(content=sys_prompt), *state.messages],
+            config=config,
+        )
 
-@tool("human_feedback", parse_docstring=True)
-async def human_feedback(
-    question: str,
-    tool_call_id: Annotated[str, InjectedToolCallId],
-    state: Annotated[State, InjectedState],
-    config: RunnableConfig,
-) -> Command:
-    """Request feedback from a human.
+        # print(f"CALL_MODEL_REUSULT:\n{msg}")
 
-    Args:
-        question: The question to ask.
+        return {"messages": [msg]}
 
-    Returns:
-        A Command to update the state with the human response.
-    """
-    content = ""
-    if state.messages[-1].content:
-        content = f"\n\n{colored(state.messages[-1].content, 'light_grey')}"
-    print(
-        f"\n{'=' * 50} {'QUESTION':^10} {'=' * 50}\n{question}{content}\n{'=' * 112}\n"
-    )
-
-    sys = """You are an end-user that wants to create a software product. Your requirements are simple but specific.
-You will be reply to any questions as per the following rubric:
-
-<Rubric>
-  - You MUST always reply with an answer
-  - You must NEVER reply with a question
-
-  A correct reply:
-  - Provides accurate and complete information
-  - Contains no factual errors
-  - Addresses all parts of the question
-  - Is logically consistent
-  - Is less that 2 sentences
-
-  When replying, you should:
-  - Be consistent with the earlier messages
-  - If a new information is asked, create a simple situation
-  - Do NOT let the user know you made a guess
-  - If the conversation is getting long, do NOT add more requirements, if avoidable
-</Rubric>
-
-<Instructions>
-  - Carefully read the input
-  - Based on the input, reply to the question in a simple and consistent way 
-  - If a new information is asked for, reply with the simplest guess but do not inform that it is a guess
-</Instructions>
-
-<Reminder>
-You MUST always reply with an answer
-</Reminder>
-
-<input>
-{input}
-</input>
-    """
-
-    reply = await demo_user.ainvoke(
-        [
-            SystemMessage(content=sys.format(input=state.messages)),
-            HumanMessage(content=question),
-        ],
-        config,
-    )
-
-    print(f"\n{'=' * 50} {'ANSWER':^10} {'=' * 50}\n{reply.content}\n{'=' * 112}\n")
-
-    # user_input = interrupt({"query": msg})
-    # return {"messages": user_input}
-
-    return Command(
-        update={
-            "messages": [ToolMessage(content=reply.content, tool_call_id=tool_call_id)]
-        }
-    )
+    return call_model
 
 
-@tool("memorize", parse_docstring=True)
-async def memorize(
-    content: str,
-    context: str,
-    tool_call_id: Annotated[str, InjectedToolCallId],
-    store: Annotated[BaseStore, InjectedStore],
-    config: Annotated[RunnableConfig, InjectedToolArg],
-    memory_id: Optional[uuid.UUID] = None,
+def _create_gather_requirements(
+    call_model: Coroutine[Any, Any, dict], tool_node: ToolNode
 ):
-    """Upsert a memory in the database.
+    async def gather_requirements(state: State, config: RunnableConfig):
+        if state.messages[-1].tool_calls:
+            return tool_node.name
+        elif state.summary:
+            return END
+        else:
+            return call_model.__name__
 
-    If a memory conflicts with an existing one, then just UPDATE the
-    existing one by passing in memory_id - don't create two memories
-    that are the same. If the user corrects a memory, UPDATE it.
-
-    Args:
-        content: The main content of the memory. For example:
-            "User expressed interest in learning about French."
-        context: Additional context for the memory. For example:
-            "This was mentioned while discussing career options in Europe."
-        memory_id: ONLY PROVIDE IF UPDATING AN EXISTING MEMORY.
-        The memory to overwrite.
-    """
-    mem_id = memory_id or uuid.uuid4()
-    from agent_template.configuration import Configuration
-
-    user_id = Configuration.from_runnable_config(config).user_id
-    await store.aput(
-        ("memories", user_id),
-        key=str(mem_id),
-        value={"content": content, "context": context},
-    )
-    return f"Stored memory {mem_id}"
-
-
-@tool("summarize", parse_docstring=True)
-async def summarize(
-    summary: str,
-    tool_call_id: Annotated[str, InjectedToolCallId],
-):
-    """Summarize the agent output.
-
-    Args:
-        summary: The entire summary.
-    """
-    print("=== Summary ===")
-    print(f"{summary}")
-    print("=================")
-
-    return Command(
-        update={
-            "messages": [
-                ToolMessage(
-                    content=summary,
-                    tool_call_id=tool_call_id,
-                )
-            ],
-            "summary": summary,
-        }
-    )
-
-
-# Initialize the language model and the tools
-all_tools = [human_feedback, memorize, summarize]
-
-llm = init_chat_model()
-llm_with_tools = llm.bind_tools(all_tools)
-tool_node = ToolNode(all_tools, name="tools")
-
-
-async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
-    """Extract the user's state from the conversation and update the memory."""
-    # configurable = configuration.Configuration.from_runnable_config(config)
-
-    user_id = config["configurable"]["user_id"]
-    # Retrieve the most recent memories for context
-    memories = await store.asearch(
-        ("memories", user_id),
-        query=str([m.content for m in state.messages[-3:]]),
-        limit=10,
-    )
-
-    # Format memories for inclusion in the prompt
-    formatted = "\n".join(
-        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
-    )
-    if formatted:
-        formatted = f"""
-<memories>
-{formatted}
-</memories>"""
-
-    # Prepare the system prompt with user memories and current time
-    # This helps the model understand the context and temporal relevance
-    sys_prompt = config["configurable"]["gatherer_system_prompt"].format(
-        user_info=formatted, time=datetime.now().isoformat()
-    )
-
-    # Invoke the language model with the prepared prompt and tools
-    msg = await llm_with_tools.ainvoke(
-        [SystemMessage(content=sys_prompt), *state.messages],
-        config=config,
-    )
-
-    # print(f"CALL_MODEL_REUSULT:\n{msg}")
-
-    return {"messages": [msg]}
-
-
-async def gather_requirements(state: State, config: RunnableConfig):
-    if state.messages[-1].tool_calls:
-        return tool_node.name
-    elif state.summary:
-        return END
-    else:
-        return call_model.__name__
+    return gather_requirements
 
 
 class RequirementsGathererGraph(AgentGraph):
+    """Requirements gatherer graph."""
+
+    _config: Configuration
+
     def __init__(
         self,
-        config: config.Configuration = config.Configuration(),
-        checkpointer: Checkpointer = None,
+        *,
+        use_human_ai=False,
+        base_config: Optional[BaseConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        super().__init__(config, checkpointer, store)
+        """Initialize RequirementsGathererGraph.
+
+        Args:
+            config: Optional Configuration instance.
+            checkpointer: Optional Checkpointer instance.
+            store: Optional BaseStore instance.
+        """
+        super().__init__(base_config, checkpointer, store)
         self._name = "Requirements Gatherer"
-        self._config = Configuration(**asdict(config))
+        self._config = Configuration(**asdict(self._base_config))
+        self._use_human_ai = use_human_ai
 
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
+        # Initialize the language model and the tools
+        all_tools = [
+            tools.create_human_feedback_tool(use_human_ai=self._use_human_ai),
+            tools.memorize,
+            tools.summarize,
+        ]
+
+        llm = init_chat_model().bind_tools(all_tools)
+        tool_node = ToolNode(all_tools, name="tools")
+        call_model = _create_call_model(llm)
+        gather_requirements = _create_gather_requirements(call_model, tool_node)
+
         builder = StateGraph(State, config_schema=Configuration)
         builder.add_node(call_model)
         builder.add_node(tool_node.name, tool_node)
@@ -259,6 +140,7 @@ class RequirementsGathererGraph(AgentGraph):
         return builder
 
 
+# For langsmith
 graph = RequirementsGathererGraph().compiled_graph
 
 __all__ = [RequirementsGathererGraph.__name__, "graph"]

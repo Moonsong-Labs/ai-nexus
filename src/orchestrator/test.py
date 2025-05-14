@@ -21,8 +21,8 @@ from langsmith.evaluation import EvaluationResult
 from pydantic import BaseModel
 from termcolor import colored
 
-from common.config import Configuration
-from orchestrator.graph import OrchestratorGraph
+from common.config import BaseConfiguration
+from orchestrator.graph import AgentsConfig, OrchestratorGraph
 from orchestrator.state import State
 
 
@@ -67,24 +67,14 @@ if __name__ == "__main__":
         exit(1)
 
     if mode == "exec":
-        # result = asyncio.run(
-        #     graph.ainvoke(
-        #         State(messages=HumanMessage(content="I want to build a website")),
-        #         config=RunnableConfig(configurable={"thread_id": str(uuid.uuid4())}),
-        #     )
-        # )
-
+        agents_config = AgentsConfig()
+        agents_config.requirements.use_stub = False
+        agents_config.requirements.use_human_ai = True
         orchestrator = OrchestratorGraph(
-            Configuration(),
+            agents_config=agents_config,
+            base_config=BaseConfiguration(),
             checkpointer=InMemorySaver(),
             store=InMemoryStore(),
-            stub_config={
-                "requirements": True,
-                "architect": True,
-                "coder": True,
-                "tester": True,
-                "reviewer": True,
-            },
         )
 
         result = asyncio.run(
@@ -94,7 +84,7 @@ if __name__ == "__main__":
             )
         )
 
-        print(result["messages"])
+        # print(result["messages"])
 
         class _CustomEncoder(json.JSONEncoder):
             def default(self, obj):
