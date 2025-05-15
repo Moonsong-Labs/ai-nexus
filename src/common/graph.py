@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Optional
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph
@@ -62,6 +62,21 @@ class AgentGraph(ABC):
         """
         return self._agent_config
 
+    def create_runnable_config(
+        self, config: RunnableConfig | None = None
+    ) -> AgentConfiguration:
+        """Return the runnable configuration object.
+
+        Returns:
+            AgentConfiguration: The configuration settings for this agent.
+        """
+        config = config or RunnableConfig()
+        config["configurable"] = {
+            **self._agent_config.langgraph_configurables,
+            **config.get("configurable", {}),
+        }
+        return config
+
     @property
     def memory(self) -> Optional[SemanticMemory]:
         """Returns the semantic memory component if initialized, otherwise None."""
@@ -100,33 +115,3 @@ class AgentGraph(ABC):
                 name=self._name, checkpointer=self._checkpointer, store=self._store
             )
         return self._compiled_graph
-
-    def _merge_config(self, config: RunnableConfig | None) -> RunnableConfig:
-        """Merge the provided configuration with the agent's configuration and langgraph configurables.
-
-        Args:
-            config: The user-supplied RunnableConfig to merge or None.
-
-        Returns:
-            A new RunnableConfig containing the combined langgraph configurables and the full agent configuration under the "agent_config" key.
-        """
-        config = config if config else RunnableConfig()
-        new_config = RunnableConfig(**config)
-        new_config["configurable"] = {
-            **self._agent_config.langgraph_configurables,
-            **config.get("configurable", {}),
-            **{"agent_config": self._agent_config},
-        }
-        return new_config
-
-    async def ainvoke(self, state: Any, config: RunnableConfig | None = None):
-        """Asynchronously invokes the compiled agent graph with the given state and merged configuration.
-
-        Args:
-            state: The initial state to pass to the agent graph.
-            config: Optional runtime configuration to merge with the agent's configuration.
-
-        Returns:
-            The result of the agent graph execution.
-        """
-        return await self.compiled_graph.ainvoke(state, self._merge_config(config))
