@@ -48,9 +48,13 @@ model_requirements_messages = MessageWheel(
         """,
     ]
 )
-model_coder_messages = MessageWheel(
+model_coder_new_pr_messages = MessageWheel(
     [
-        """I have finished coding.""",
+        """I have finished coding the new PR is #69 and the branch is code-agent-new-pr.""",
+    ]
+)
+model_coder_change_request_messages = MessageWheel(
+    [
         """I fixed the required issue.""",
     ]
 )
@@ -122,13 +126,26 @@ def architect(state: State, config: RunnableConfig, store: BaseStore):
     }
 
 
-def coder(state: State, config: RunnableConfig, store: BaseStore):
+def coder_new_pr(state: State, config: RunnableConfig, store: BaseStore):
     """Call code."""
     tool_call_id = state.messages[-1].tool_calls[0]["id"]
     return {
         "messages": [
             ToolMessage(
-                content=model_coder_messages.next(),
+                content=model_coder_new_pr_messages.next(),
+                tool_call_id=tool_call_id,
+            )
+        ]
+    }
+
+
+def coder_change_request(state: State, config: RunnableConfig, store: BaseStore):
+    """Call code."""
+    tool_call_id = state.messages[-1].tool_calls[0]["id"]
+    return {
+        "messages": [
+            ToolMessage(
+                content=model_coder_change_request_messages.next(),
                 tool_call_id=tool_call_id,
             )
         ]

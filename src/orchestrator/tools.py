@@ -18,14 +18,28 @@ class Delegate:
     """
 
     to: Literal[
-        "orchestrator", "requirements", "architect", "coder", "tester", "reviewer"
+        "orchestrator",
+        "requirements",
+        "architect",
+        "coder_new_pr",
+        "coder_change_request",
+        "tester",
+        "reviewer",
     ]
     content: str
 
 
 @tool
 def store_memory(
-    origin: Literal["user", "requirements", "architect", "coder", "tester", "reviewer"],
+    origin: Literal[
+        "user",
+        "requirements",
+        "architect",
+        "coder_new_pr",
+        "coder_change_request",
+        "tester",
+        "reviewer",
+    ],
     content: str,
 ):
     """Use this to memorize, store or remember  instructions."""
@@ -37,5 +51,13 @@ def store_memory(
 class Memory:
     """Tool to update memory."""
 
-    origin: Literal["user", "requirements", "architect", "coder", "tester", "reviewer"]
+    origin: Literal[
+        "user",
+        "requirements",
+        "architect",
+        "coder_new_pr",
+        "coder_change_request",
+        "tester",
+        "reviewer",
+    ]
     content: str

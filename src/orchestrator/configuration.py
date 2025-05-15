@@ -34,7 +34,8 @@ class Configuration(AgentConfiguration):
         default_factory=RequirementsAgentConfig
     )
     architect_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
-    coder_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
+    coder_new_pr_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
+    coder_change_request_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
     tester_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
     reviewer_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
 
