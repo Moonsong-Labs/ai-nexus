@@ -16,9 +16,10 @@
     *   `Configuration` dataclasses from `agent_template`.
     *   A common `BaseConfiguration` in `src/common/config.py`.
     *   Agent-specific `Configuration` dataclasses (e.g., in `src/orchestrator/configuration.py`, `src/requirement_gatherer/configuration.py`) that subclass `BaseConfiguration`.
+    *   A new `AgentConfiguration` from `src/common/configuration.py` (implied) used by the Coder agent.
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
 8.  **`langmem` Integration:** Provides semantic memory capabilities (storage, search) for agents, typically managed via the `Agent` class and `SemanticMemory` component for agents following the `agent_template`. Other agents like Requirement Gatherer might implement memory tools differently.
-9.  **`AgentGraph` (NEW):** A common base class (`src/common/graph.py`) for defining agent graphs, promoting modularity. Used by Orchestrator and Requirement Gatherer. Its `__init__` method now takes `base_config: BaseConfiguration`.
+9.  **`AgentGraph` (NEW):** A common base class (`src/common/graph.py`) for defining agent graphs, promoting modularity. Used by Orchestrator, Requirement Gatherer, and now Coder. Its `__init__` method takes an agent-specific configuration (e.g., `base_config: BaseConfiguration` for Orchestrator/Requirement Gatherer, or `name: str, agent_config: AgentConfiguration` for Coder), and optional `checkpointer` and `store`, suggesting an evolving or flexible signature.
 
 
 ## 2. The Memory Bank System (Shift from Conceptual to `langmem`)
@@ -90,7 +91,7 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
 *   **`src/common/components/memory.py` (NEW):** (As previously described, `SemanticMemory` class, static memory loading, `langmem` tool creation)
 *   **`prompts.py` (`src/agent_template/prompts.py`):** (As previously described, instruction to mention memory retrieval)
 
-**4.2. `AgentGraph` based Architecture (NEW - e.g., Orchestrator, Requirement Gatherer)**
+**4.2. `AgentGraph` based Architecture (NEW - e.g., Orchestrator, Requirement Gatherer, Coder)**
 
 A newer pattern utilizes a common base class for more modular graph definitions.
 
@@ -105,14 +106,19 @@ A newer pattern utilizes a common base class for more modular graph definitions.
         provider: str | None = None
         # Agent-specific prompts or other configs are added in subclasses
     ```
+*   **`src/common/configuration.py` (NEW - Implied by PR):**
+    *   Implied new module defining `AgentConfiguration`. This configuration type is used by the Coder agent when initializing its `AgentGraph` subclasses. Its specific structure and relationship to `BaseConfiguration` (from `common.config.py`) are not detailed in PR#79.
 *   **`src/common/graph.py` (NEW):**
     *   Defines an abstract base class `AgentGraph(ABC)`.
-    *   `__init__(base_config: BaseConfiguration, checkpointer, store)`: Initializes with common config (type updated to `BaseConfiguration`), optional checkpointer and store.
+    *   `__init__(...)`: Initializes the graph. The constructor signature appears to be flexible or evolving:
+        *   Older agent patterns (Orchestrator, Requirement Gatherer) initialize `AgentGraph` subclasses passing their specific configuration which is a subclass of `BaseConfiguration` (from `src/common/config.py`), effectively using `base_config`.
+        *   Newer usage (e.g., Coder agent as per PR#79) involves passing `name: str` and `agent_config: AgentConfiguration` (from `src/common/configuration.py`) to the `AgentGraph` constructor.
+        *   The constructor also takes optional `checkpointer` and `store`.
     *   `create_builder() -> StateGraph` (abstract method): To be implemented by subclasses to define the graph.
     *   `compiled_graph`: Property to get or compile the graph.
     *   `ainvoke(state, config)`: Invokes the compiled graph, merging instance config with call-time config.
 
-Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and define their specific `Configuration` (subclassing `common.config.BaseConfiguration` in their respective new `configuration.py` files) and graph structure. Graph construction is more modular, often using factory functions to create nodes and tools.
+Agents like Orchestrator, Requirement Gatherer, and now Coder subclass `AgentGraph` and define their specific configurations and graph structures. Graph construction is more modular, often using factory functions or direct builder methods.
 
 
 ## 5. Specific Agent Details
@@ -154,9 +160,15 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 
 #### 5.3. Coder (`src/coder/`)
 *   **Role:** Software developer agent responsible for writing and modifying code in a GitHub repository. It can create new pull requests or implement changes on existing ones.
+*   **Architecture:** Now refactored to use the `AgentGraph` pattern for its core graph definitions (`CoderNewPRGraph`, `CoderChangeRequestGraph`).
 *   **Graph Logic (`src/coder/graph.py`):**
-    *   Defines configurations for different coding tasks, e.g., `coder_new_pr_config()` for new PRs and `coder_change_request_config()` for modifying existing PRs.
-    *   The `coder_change_request_config()` now allows the agent to use the `get_pull_request_head_branch` tool among its available GitHub tools.
+    *   The previous configuration functions (`coder_new_pr_config`, `coder_change_request_config`) have been replaced by `AgentGraph` subclasses: `CoderNewPRGraph` and `CoderChangeRequestGraph`.
+    *   These classes define configurations for different coding tasks (new PRs, modifying existing PRs).
+    *   `__init__(self, *, github_tools: List[Tool], agent_config: Optional[AgentConfiguration] = None, checkpointer: Optional[Checkpointer] = None, store: Optional[BaseStore] = None)`: Constructor for these graph classes. `agent_config` is of type `AgentConfiguration` from `common.configuration` (a new implied module/class). They are initialized with a list of GitHub tools.
+    *   `create_builder(self) -> StateGraph`: Implements the abstract method from `AgentGraph` to define the specific graph structure, reusing the logic from the former `coder_*_config()` functions for graph building.
+    *   The `coder_change_request_config()` logic (now part of `CoderChangeRequestGraph`) allows the agent to use the `get_pull_request_head_branch` tool.
+    *   The `CallModel` class and `_graph_builder` helper function are retained for internal graph construction within the `create_builder` methods.
+    *   `__all__` in `src/coder/graph.py` is updated to export the new class names: `CoderNewPRGraph` and `CoderChangeRequestGraph`.
 *   **Prompts (`src/coder/prompts.py`):**
     *   `CHANGE_REQUEST_SYSTEM_PROMPT`: Updated to instruct the agent that when implementing changes on an existing pull request, it will be given the PR number and needs to work on the PR's head branch. It should sync with the latest changes on the PR's head branch and submit changes there.
 *   **Tools:**
@@ -165,7 +177,9 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
     *   The mock GitHub API (`src/common/components/github_mocks.py`) has been updated:
         *   The `get_pull_request` method now returns a simplified dictionary containing essential PR details (title, number, body, comments, commits).
         *   A `get_pull_request_head_branch` method was added to support mocking the new tool.
-*   (Other files like `__init__.py`, `lg_server.py`, `mocks.py`, `state.py`, `tools.py` specific to the coder, and `README.md` are as previously described in the project structure, if detailed.)
+*   **`lg_server.py` (`src/coder/lg_server.py`):**
+    *   Updated to import and instantiate `CoderNewPRGraph` and `CoderChangeRequestGraph` to obtain compiled graphs for serving.
+*   (Other files like `__init__.py`, `mocks.py`, `state.py`, `tools.py` specific to the coder, and `README.md` are as previously described in the project structure, if detailed.)
 
 #### 5.4. Code Reviewer (`src/code_reviewer/`)
 *   (No changes mentioned in PR - assumed same as previous state, follows `agent_template` and uses `langmem`)
@@ -219,8 +233,11 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
     *   Updated to use the new `RequirementsGathererGraph`.
     *   Still uses `create_async_graph_caller` and `LLMJudge` for evaluation against LangSmith datasets.
 *   **`tests/integration_tests/test_coder.py`:**
-    *   Added a new test `test_coder_changes_server_port_on_existing_pr`. This test verifies that the Coder agent, using `coder_change_request_config`, correctly applies changes to the head branch of an existing pull request. It utilizes the `MockGithubApi` for setting up the test scenario.
+    *   Updated to use `CoderNewPRGraph` and `CoderChangeRequestGraph` for instantiating the Coder agent in tests.
+    *   Added a new test `test_coder_changes_server_port_on_existing_pr`. This test verifies that the Coder agent, using `CoderChangeRequestGraph` (which wraps `coder_change_request_config`), correctly applies changes to the head branch of an existing pull request. It utilizes the `MockGithubApi` for setting up the test scenario.
     *   These tests are now executed as part of the CI pipeline in a dedicated "Coder Tests" job (defined in `.github/workflows/checks.yml`), requiring the `GOOGLE_API_KEY` secret.
+*   **`tests/integration_tests/eval_coder.py`:**
+    *   Updated to use `CoderNewPRGraph` for agent instantiation during evaluation.
 *   **`tests/unit_tests/test_configuration.py`:**
     *   The previous test `test_configuration_from_none()` related to `orchestrator.configuration.Configuration` is removed as that file is deleted. A dummy test `test_foo()` might be present.
 *   **`src/orchestrator/test.py` (Local test script):**
@@ -279,8 +296,8 @@ ai-nexus/
 │   │   └── system_prompt.md
 │   ├── coder/
 │   │   ├── __init__.py
-│   │   ├── graph.py              # UPDATED: coder_change_request_config includes new tool
-│   │   ├── lg_server.py
+│   │   ├── graph.py              # UPDATED: Refactored to use AgentGraph subclasses (CoderNewPRGraph, CoderChangeRequestGraph)
+│   │   ├── lg_server.py          # UPDATED: Uses new Coder AgentGraph classes
 │   │   ├── mocks.py
 │   │   ├── prompts.py            # UPDATED: CHANGE_REQUEST_SYSTEM_PROMPT modified
 │   │   ├── state.py
@@ -292,7 +309,8 @@ ai-nexus/
 │   │   │   ├── github_tools.py   # UPDATED: Added GetPullRequestHeadBranch tool
 │   │   │   └── memory.py
 │   │   ├── config.py             # REVISED: Defines BaseConfiguration
-│   │   ├── graph.py              # REVISED: AgentGraph __init__ updated
+│   │   ├── configuration.py      # NEW - Implied: Defines AgentConfiguration used by Coder
+│   │   ├── graph.py              # REVISED: AgentGraph __init__ updated (flexible signature)
 │   │   └── utils/
 │   ├── grumpy/
 │   ├── orchestrator/
@@ -323,8 +341,8 @@ ai-nexus/
     │   └── task_manager_dataset.py
     ├── integration_tests/
     │   ├── test_architect_agent.py
-    │   ├── test_coder.py           # UPDATED: New test added for PR head branch changes; now run in CI
-    │   ├── eval_coder.py
+    │   ├── test_coder.py           # UPDATED: New test added for PR head branch changes; uses new Coder AgentGraph classes; now run in CI
+    │   ├── eval_coder.py           # UPDATED: Uses new Coder AgentGraph class
     │   ├── test_graph.py
     │   ├── test_grumpy_agent.py
     │   ├── test_orchestrator.py    # UPDATED: Uses new OrchestratorGraph
