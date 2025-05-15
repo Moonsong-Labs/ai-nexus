@@ -4,7 +4,7 @@ from langsmith import Client
 from testing import create_async_graph_caller, get_logger
 from testing.evaluators import LLMJudge
 
-from tester.graph import builder as tester_graph_builder
+from deprecated_tester.graph import builder as tester_graph_builder
 
 # Setup basic logging for the test
 logger = get_logger(__name__)
