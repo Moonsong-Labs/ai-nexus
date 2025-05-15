@@ -42,11 +42,11 @@ logger.setLevel(logging.DEBUG)
 async def test_memory_storage(conversation: List[str], expected_category: str):
     """
     Tests that the agent correctly categorizes and stores memory entries based on conversation input.
-    
+
     Args:
         conversation: A list of user messages to send to the agent.
         expected_category: The memory category expected to be assigned ("knowledge", "rule", or "procedure").
-    
+
     Asserts that at least one memory entry with the expected category is found in the agent's response.
     """
     config = Configuration()
@@ -113,7 +113,7 @@ async def test_memory_storage(conversation: List[str], expected_category: str):
 async def test_memory_dump():
     """
     Verifies that the agent's memory dump tool exports stored memories to a non-empty file.
-    
+
     Creates a temporary directory, stores a memory entry, instructs the agent to dump its memories, and asserts that a memory dump file is created and contains data.
     """
     # Create a temporary directory for the memory dump

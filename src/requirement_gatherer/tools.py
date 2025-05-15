@@ -18,9 +18,8 @@ from requirement_gatherer.state import State
 
 # ruff: noqa: T201
 def create_human_feedback_tool(use_human_ai=False) -> BaseTool:
-    """
-    Creates a tool that requests feedback from a human or an AI simulating a human.
-    
+    """Create a tool that requests feedback from a human or an AI simulating a human.
+
     If configured to use a human, the tool prompts the user for input and returns their response. If configured to use an AI, it generates a reply using a chat model with specific instructions for concise and consistent answers. The tool returns a Command that updates the agent's state with the received feedback.
     """
     ai_user = init_chat_model() if use_human_ai else None
@@ -32,14 +31,13 @@ def create_human_feedback_tool(use_human_ai=False) -> BaseTool:
         state: Annotated[State, InjectedState],
         config: RunnableConfig,
     ) -> Command:
-        """
-        Requests feedback on a question from either a human user or an AI simulating a human, based on agent configuration.
-        
+        """Request feedback on a question from either a human user or an AI simulating a human, based on agent configuration.
+
         If configured for human input, prompts the user and captures their response. If configured for AI, generates a reply using an AI model with specific behavioral instructions and updates the agent's state with the response.
-        
+
         Args:
             question: The question to present for feedback.
-        
+
         Returns:
             A Command that updates the agent's state with the feedback response.
         """

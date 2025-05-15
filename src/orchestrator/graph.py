@@ -99,18 +99,18 @@ def _create_delegate_to(orchestrate: Coroutine[Any, Any, dict]):
 def _create_requirements_node(
     requirements_graph: RequirementsGraph, recursion_limit: int = 100
 ):
-    """
-    Creates an asynchronous requirements node for the orchestrator graph.
-    
+    """Create an asynchronous requirements node for the orchestrator graph.
+
     The returned function processes a tool call from the conversation state, invokes the requirements graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
-    
+
     Args:
         requirements_graph: The requirements graph to invoke for requirements gathering.
         recursion_limit: Maximum recursion depth allowed for the requirements graph (default is 100).
-    
+
     Returns:
         An asynchronous function that processes requirements extraction and returns a dictionary with a tool message containing the summary.
     """
+
     async def requirements(state: State, config: RunnableConfig, store: BaseStore):
         tool_call = state.messages[-1].tool_calls[0]
         config_with_recursion = RunnableConfig(**config)
@@ -147,9 +147,8 @@ class OrchestratorGraph(AgentGraph):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        """
-        Initializes the OrchestratorGraph with agent configuration, optional checkpointer, and store.
-        
+        """Initialize the OrchestratorGraph with agent configuration, optional checkpointer, and store.
+
         Args:
             agent_config: Optional configuration for the orchestrator agent. If not provided, a default configuration is used.
             checkpointer: Optional checkpointer for managing workflow state persistence.
@@ -163,9 +162,8 @@ class OrchestratorGraph(AgentGraph):
         )
 
     def create_builder(self) -> StateGraph:
-        """
-        Constructs and returns the orchestrator state graph for project workflow management.
-        
+        """Construct and returns the orchestrator state graph for project workflow management.
+
         Initializes all nodes and edges representing the orchestrator, requirements gathering, and role-specific stubs, wiring them into a StateGraph that defines the control flow for the orchestration process.
         """
         # Initialize the language model to be used for memory extraction

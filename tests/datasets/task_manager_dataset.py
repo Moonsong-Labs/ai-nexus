@@ -6,7 +6,7 @@ TASK_MANAGER_DATASET_NAME = "task-manager-requirements"
 def create_dataset():
     """
     Creates a new dataset in LangSmith and populates it with predefined example entries.
-    
+
     Returns:
         The created dataset object.
     """

@@ -28,13 +28,13 @@ class AgentGraph(ABC):
         store: Optional[BaseStore] = None,
     ):
         """Initialize the AgentGraph with the given name, configuration, and optional persistence.
-        
+
         Args:
             name: The unique name of the agent.
             agent_config: The configuration object specifying agent behavior and memory settings.
             checkpointer: Optional checkpointing mechanism for graph state persistence.
             store: Optional persistent storage for agent data.
-        
+
         If memory is enabled in the agent configuration, initializes the semantic memory component.
         """
         self._name = name
@@ -56,7 +56,7 @@ class AgentGraph(ABC):
     @property
     def agent_config(self) -> AgentConfiguration:
         """Returns the agent's configuration object.
-        
+
         Returns:
             AgentConfiguration: The configuration settings for this agent.
         """
@@ -77,10 +77,10 @@ class AgentGraph(ABC):
     @abstractmethod
     def create_builder(self) -> StateGraph:
         """Create and returns a new StateGraph builder for constructing the agent's state graph.
-        
+
         This method must be implemented by subclasses to provide the specific StateGraph
         builder appropriate for the agent's configuration and requirements.
-        
+
         Returns:
             StateGraph: A builder instance for the agent's state graph.
         """
@@ -89,9 +89,9 @@ class AgentGraph(ABC):
     @property
     def compiled_graph(self) -> CompiledStateGraph:
         """Return the compiled state graph for the agent, creating it if not already compiled.
-        
+
         The graph is compiled using the agent's name, checkpointer, and store, and the result is cached for future calls.
-        
+
         Returns:
             CompiledStateGraph: The compiled state graph instance.
         """
@@ -103,10 +103,10 @@ class AgentGraph(ABC):
 
     def _merge_config(self, config: RunnableConfig | None) -> RunnableConfig:
         """Merge the provided configuration with the agent's configuration and langgraph configurables.
-        
+
         Args:
             config: The user-supplied RunnableConfig to merge or None.
-        
+
         Returns:
             A new RunnableConfig containing the combined langgraph configurables and the full agent configuration under the "agent_config" key.
         """
@@ -120,11 +120,11 @@ class AgentGraph(ABC):
 
     async def ainvoke(self, state: Any, config: RunnableConfig | None = None):
         """Asynchronously invokes the compiled agent graph with the given state and merged configuration.
-        
+
         Args:
             state: The initial state to pass to the agent graph.
             config: Optional runtime configuration to merge with the agent's configuration.
-        
+
         Returns:
             The result of the agent graph execution.
         """

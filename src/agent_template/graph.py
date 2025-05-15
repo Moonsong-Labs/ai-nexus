@@ -24,23 +24,21 @@ logger = logging.getLogger(__name__)
 def _create_call_model(
     llm: Runnable[LanguageModelInput, BaseMessage],
 ) -> Callable[..., Coroutine[Any, Any, Dict]]:
-    """
-    Creates an asynchronous function that invokes a language model with a system prompt and conversation history.
-    
+    """Create an asynchronous function that invokes a language model with a system prompt and conversation history.
+
     The returned coroutine takes the current state and configuration, retrieves the system prompt from the agent configuration (using a default if none is set), constructs a system message, and calls the language model with the system message and the state's messages. The model's response is returned as a dictionary containing the new message.
     """
 
     async def call_model(
         state: Any, config: RunnableConfig, *, store: BaseStore = None
     ) -> Dict:
-        """
-        Invokes the language model with the current conversation state and system prompt.
-        
+        """Invoke the language model with the current conversation state and system prompt.
+
         Args:
             state: The current conversation state, expected to have a 'messages' attribute.
             config: Runnable configuration containing the agent's configuration.
             store: Optional storage backend.
-        
+
         Returns:
             A dictionary containing the model's response message under the 'messages' key.
         """
@@ -74,9 +72,8 @@ class AgentTemplateGraph(AgentGraph):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        """
-        Initializes an AgentTemplateGraph with the specified configuration, checkpointer, and store.
-        
+        """Initialize an AgentTemplateGraph with the specified configuration, checkpointer, and store.
+
         If no agent configuration is provided, a default configuration with memory enabled and a predefined system prompt is used.
         """
         # Create config with any custom fields needed
@@ -92,9 +89,8 @@ class AgentTemplateGraph(AgentGraph):
         )
 
     def create_builder(self) -> StateGraph:
-        """
-        Constructs and configures a StateGraph for the agent, integrating the language model and optional tools.
-        
+        """Construct and configures a StateGraph for the agent, integrating the language model and optional tools.
+
         Returns:
             A StateGraph instance representing the agent's execution flow, with nodes and edges set up for model calls and tool usage as appropriate.
         """

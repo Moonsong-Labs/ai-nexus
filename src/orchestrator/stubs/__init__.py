@@ -84,9 +84,8 @@ class RequirementsGathererStub(AgentGraph):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        """
-        Initializes the RequirementsGathererStub with optional configuration, checkpointer, and store.
-        
+        """Initialize the RequirementsGathererStub with optional configuration, checkpointer, and store.
+
         Args:
             agent_config: Optional agent configuration for the stub.
             checkpointer: Optional checkpointer for state persistence.
@@ -97,9 +96,7 @@ class RequirementsGathererStub(AgentGraph):
         )
 
     def create_builder(self) -> StateGraph:
-        """
-        Returns None to indicate that no builder is provided for this stub implementation.
-        """
+        """Return None to indicate that no builder is provided for this stub implementation."""
         return None
 
     async def ainvoke(self, state: Any, config: RunnableConfig | None = None):
