@@ -124,4 +124,6 @@ class AgentGraph(ABC):
         Returns:
             The result of the agent graph execution.
         """
-        return await self.compiled_graph.ainvoke(state, self.create_runnable_config(config))   
+        return await self.compiled_graph.ainvoke(
+            state, self.create_runnable_config(config)
+        )

@@ -2,10 +2,11 @@
 
 import os
 from dataclasses import dataclass, fields
-from typing import Optional, Any
+from typing import Any, Optional
+
+from langchain_core.runnables import RunnableConfig
 
 from common.configuration import AgentConfiguration
-from langchain_core.runnables import RunnableConfig
 from requirement_gatherer import prompts
 
 
@@ -31,5 +32,6 @@ class Configuration(AgentConfiguration):
         }
 
         return cls(**{k: v for k, v in values.items() if v})
+
 
 __all__ = ["Configuration"]
