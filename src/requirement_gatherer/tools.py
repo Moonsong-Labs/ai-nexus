@@ -136,7 +136,7 @@ async def memorize(
         The memory to overwrite.
     """
     mem_id = memory_id or uuid.uuid4()
-    from agent_template.configuration import Configuration
+    from requirement_gatherer.configuration import Configuration
 
     user_id = Configuration.from_runnable_config(config).user_id
     await store.aput(
