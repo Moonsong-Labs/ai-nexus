@@ -8,32 +8,30 @@
 
 **Key Concepts:**
 1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager) working collaboratively.
-2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is now `langmem`, providing semantic search capabilities over stored memories, replacing the previous conceptual Markdown-based "Memory Bank" and direct `upsert_memory` tool usage for agents based on the template.
+2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is now `langmem`, providing semantic search capabilities over stored memories, replacing the previous conceptual Markdown-based "Memory Bank" and direct `upsert_memory` tool usage for agents based on the template. `SemanticMemory` is configured via `MemoryConfiguration` (part of `BaseConfiguration`).
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
 4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`).
 5.  **System Prompts:** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols.
-6.  **Configuration Management:** Agents have configurable parameters, including LLM models, system prompts, and memory settings (e.g., `use_static_mem`). This is managed via:
+6.  **Configuration Management:** Agents have configurable parameters, including LLM models, system prompts, and memory settings. This is managed via:
     *   `Configuration` dataclasses from `agent_template`.
-    *   A common `BaseConfiguration` in `src/common/config.py`.
+    *   A common `BaseConfiguration` in `src/common/config.py`. `BaseConfiguration` now includes `system_prompt: Optional[str]` and `memory: MemoryConfiguration` (a new dataclass defining memory behavior like `use_memory`, `load_static_memories`, `user_id`).
     *   Agent-specific `Configuration` dataclasses (e.g., in `src/orchestrator/configuration.py`, `src/requirement_gatherer/configuration.py`) that subclass `BaseConfiguration`.
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
-8.  **`langmem` Integration:** Provides semantic memory capabilities (storage, search) for agents, typically managed via the `Agent` class and `SemanticMemory` component for agents following the `agent_template`. Other agents like Requirement Gatherer might implement memory tools differently.
-9.  **`AgentGraph` (NEW):** A common base class (`src/common/graph.py`) for defining agent graphs, promoting modularity. Used by Orchestrator and Requirement Gatherer. Its `__init__` method now takes `base_config: BaseConfiguration`.
+8.  **`langmem` Integration:** Provides semantic memory capabilities (storage, search) for agents. The `SemanticMemory` component (from `src/common/components/memory.py`) is now configured using `MemoryConfiguration` (nested in `BaseConfiguration`) instead of direct config attributes like `use_static_mem`.
+9.  **`AgentGraph` (NEW):** A common base class (`src/common/graph.py`) for defining agent graphs, promoting modularity. Used by Orchestrator and Requirement Gatherer. Its `__init__` method now takes `base_config: BaseConfiguration` and also initializes an internal `SemanticMemory` instance (accessible via a `memory` property) if `base_config.memory.use_memory` is true. It also has a new `_create_call_model` base method for LLM invocation.
 
 
 ## 2. The Memory Bank System (Shift from Conceptual to `langmem`)
 
 The original "Memory Bank" concept described a system of structured Markdown files (`memory-bank/`) for agent knowledge persistence, particularly for the "Cursor" idea. This concept, detailed in `project_memories/global.md`, served as the initial design principle for externalized memory.
 
-**Current Implementation (`langmem` and custom tools):** The project has integrated the `langmem` library to provide a more robust and queryable semantic memory system for agents based on the `agent_template`. These agents utilize `langmem` tools for storing and retrieving memories.
-Other agents, like the Requirement Gatherer, now use custom tools (e.g., `memorize`) that might interact with the same underlying storage mechanism but are defined and invoked differently within their specific graph structure.
-
-*   **Storage:** Memories are stored in a `BaseStore` (e.g., `InMemoryStore` configured with embeddings like `GoogleGenerativeAIEmbeddings`).
-*   **Namespace:** Memories are typically namespaced by `("memories", "semantic", user_id)` or `("memories", "static", user_id)`.
+**Current Implementation (`langmem` and custom tools):** The project has integrated the `langmem` library to provide a more robust and queryable semantic memory system.
+*   **Storage:** Memories are stored in a `BaseStore` (e.g., `InMemoryStore` configured with embeddings like `GoogleGenerativeAIEmbeddings`). `SemanticMemory` initialization and static memory loading are now driven by `MemoryConfiguration` (e.g., `memory_config.use_memory`, `memory_config.load_static_memories`). This `MemoryConfiguration` is typically part of an agent's main `Configuration` (which subclasses `BaseConfiguration`).
+*   **Namespace:** Memories are typically namespaced by `("memories", "semantic", user_id)` or `("memories", "static", user_id)`. The `user_id` for namespacing is sourced from `MemoryConfiguration`.
 *   **Tools:**
-    *   `agent_template` based agents: Use `langmem`-provided tools (`manage_memory`, `search_memory`) via `SemanticMemory`. A custom `memory_dump` tool is also available.
-    *   Requirement Gatherer: Uses a custom `memorize` tool (defined in `src/requirement_gatherer/tools.py`, refactored from a previous `upsert_memory` function in the same file) for storing memories.
-*   **Static Memories:** The concept of static, pre-loaded knowledge persists. JSON files in `.langgraph/static_memories/` can be loaded into the `BaseStore` under a static namespace if `use_static_mem` is enabled in the agent's configuration.
+    *   `agent_template` based agents (now using `AgentTemplateGraph`): Use `langmem`-provided tools (`manage_memory`, `search_memory`) via the `SemanticMemory` instance initialized within `AgentGraph` if memory is enabled. A custom `memory_dump` tool is also available.
+    *   Requirement Gatherer: Uses a custom `memorize` tool (defined in `src/requirement_gatherer/tools.py`) for storing memories.
+*   **Static Memories:** The concept of static, pre-loaded knowledge persists. JSON files in `.langgraph/static_memories/` can be loaded into the `BaseStore` under a static namespace if `load_static_memories` is enabled in the agent's `MemoryConfiguration`. The previous `use_static_mem` boolean directly in agent configurations is replaced by this nested structure.
 *   **Shift:** The shift moves from human-readable Markdown files as the primary memory source to a database/store queried semantically via tools. The core principle of externalized memory remains, but the implementation mechanism has evolved. The specific file structure (`projectbrief.md`, `productContext.md`, etc.) described previously is not directly implemented by the `langmem` system, although the *types* of information they represent might be stored as individual memories.
 
 
@@ -68,7 +66,7 @@ This file outlines the overarching standards and technological choices for the A
     *   **CI Pipeline (`.github/workflows/checks.yml`):** Runs linting (Ruff, codespell), unit tests (`make test_unit`), and Coder integration tests (`make test_coder`). The Coder tests job requires `GOOGLE_API_KEY` as a secret.
 *   **Version Control:** Git.
 *   **LLM Models:**
-    *   **`gemini-1.5-flash-latest` / `gemini-2.5-flash-preview-04-17` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (`agent_template` default updated to `gemini-2.5-flash-preview-04-17`). Orchestrator and Requirement Gatherer default to `google_genai:gemini-2.0-flash` via `BaseConfiguration`.
+    *   **`gemini-1.5-flash-latest` / `gemini-2.5-flash-preview-04-17` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (`agent_template` default updated to `gemini-2.5-flash-preview-04-17` via `BaseConfiguration`). Orchestrator and Requirement Gatherer default to `google_genai:gemini-2.0-flash` via `BaseConfiguration`.
     *   **`gemini-1.5-pro-latest` (or similar pro variants):** Preferred for complex tasks needing reasoning.
 
 
@@ -78,16 +76,31 @@ AI Nexus employs a few architectural patterns for its agents:
 
 **4.1. `agent_template` based Architecture (e.g., Code Reviewer, Grumpy)**
 
-Most agents in AI Nexus follow a common structural and operational pattern, largely derived from `src/agent_template/`. *Note: Some agents, like the Tester, Coder, or Task Manager, may deviate significantly from this template's graph logic or tool usage.*
+This architecture has been significantly refactored. It no longer uses a standalone `Agent` class. Instead, it's based on `AgentTemplateGraph` (`src/agent_template/graph.py`) which subclasses `AgentGraph`.
 
-*   **Typical Agent Directory Structure:** (As previously described)
-*   **`configuration.py` (Typical Structure - `src/agent_template/configuration.py`):** (As previously described, with `use_static_mem` and updated default model)
+*   **Typical Agent Directory Structure:** (As previously described, but `agent.py` is GONE from `src/agent_template/`)
+*   **`configuration.py` (`src/agent_template/configuration.py`):**
+    *   Now subclasses `common.config.BaseConfiguration`.
+    *   Fields like `user_id`, `model` are inherited from `BaseConfiguration`.
+    *   Memory-specific settings are now managed via `BaseConfiguration.memory` (an instance of `MemoryConfiguration`). The `agent_template.Configuration` sets `config.memory.use_memory = True` by default.
+    *   Retains `system_prompt` (defaulting to `prompts.SYSTEM_PROMPT`).
 *   **`state.py` (Typical Structure - `src/agent_template/state.py`):** (As previously described, with `user_id`)
-*   **`agent.py` (NEW - `src/agent_template/agent.py`):** (As previously described, handles LLM interaction and `langmem` via `SemanticMemory`)
-*   **`graph.py` (Core Logic - Revised Flow from `src/agent_template/graph.py`):** (As previously described, uses `Agent` class, `ToolNode`, `tools_condition`)
-*   **`tools.py` (Utility Tools - `src/agent_template/tools.py`):** (As previously described, `file_dump` tool, `upsert_memory` removed)
+*   **`agent.py` (`src/agent_template/agent.py`):** **DELETED**. Logic is now part of `AgentTemplateGraph` and `AgentGraph`.
+*   **`graph.py` (Core Logic - `src/agent_template/graph.py`):**
+    *   Defines `AgentTemplateGraph(AgentGraph)`.
+    *   `__init__` configures its `Configuration` (subclassing `BaseConfiguration`), enabling memory by default (`config.memory.use_memory = True`) and setting its system prompt.
+    *   `create_builder` method initializes the LLM, retrieves tools from its internal `_memory` component (if memory is enabled via `AgentGraph`), binds tools to the LLM, and constructs the graph with `call_model` and `ToolNode`.
+    *   The `call_model` node uses the `_create_call_model` method (can be from `AgentGraph` or overridden).
+    *   The old `graph_builder` function is removed.
+    *   A default `graph` instance is exported, compiled from `AgentTemplateGraph()`.
+*   **`tools.py` (Utility Tools - `src/agent_template/tools.py`):** `file_dump` tool remains. Memory tools (`manage_memory`, `search_memory`) are now provided by the `SemanticMemory` instance within `AgentTemplateGraph` (initialized by `AgentGraph` if memory is enabled).
 *   **`memory.py` (`src/agent_template/memory.py`):** DELETED.
-*   **`src/common/components/memory.py` (NEW):** (As previously described, `SemanticMemory` class, static memory loading, `langmem` tool creation)
+*   **`src/common/components/memory.py` (NEW):**
+    *   `SemanticMemory` class now takes `memory_config: MemoryConfiguration` for its settings.
+    *   A new `MemoryConfiguration` dataclass is defined here (`use_memory`, `load_static_memories`, `user_id`).
+    *   `ConfigurationProtocol` is removed.
+    *   Static memory loading logic updated to use `MemoryConfiguration`.
+    *   `langmem` tool creation (`get_tools`) remains.
 *   **`prompts.py` (`src/agent_template/prompts.py`):** (As previously described, instruction to mention memory retrieval)
 
 **4.2. `AgentGraph` based Architecture (NEW - e.g., Orchestrator, Requirement Gatherer)**
@@ -96,19 +109,26 @@ A newer pattern utilizes a common base class for more modular graph definitions.
 
 *   **`src/common/config.py` (NEW):**
     ```python
-    from dataclasses import dataclass
+    from dataclasses import dataclass, field
+    from common.components.memory import MemoryConfiguration # ADDED
 
     @dataclass(kw_only=True)
-    class BaseConfiguration: # RENAMED from Configuration
-        user_id: str = "default"
+    class BaseConfiguration:
+        user_id: str = "default" # Note: user_id also in MemoryConfiguration for memory namespacing
         model: str = "google_genai:gemini-2.0-flash"
         provider: str | None = None
+        system_prompt: Optional[str] = None # ADDED
+        memory: MemoryConfiguration = field(default_factory=MemoryConfiguration) # ADDED
         # Agent-specific prompts or other configs are added in subclasses
+        # from_runnable_config method ADDED
     ```
 *   **`src/common/graph.py` (NEW):**
     *   Defines an abstract base class `AgentGraph(ABC)`.
-    *   `__init__(base_config: BaseConfiguration, checkpointer, store)`: Initializes with common config (type updated to `BaseConfiguration`), optional checkpointer and store.
+    *   `__init__(base_config: BaseConfiguration, checkpointer, store)`:
+        *   Initializes with common config.
+        *   Now also initializes an internal `SemanticMemory` instance (accessible via a `self.memory` property) if `base_config.memory.use_memory` is true. The `store` passed to `__init__` is used for this `SemanticMemory` instance.
     *   `create_builder() -> StateGraph` (abstract method): To be implemented by subclasses to define the graph.
+    *   `_create_call_model(self, llm)` (NEW method): Provides a basic node function for invoking the LLM with messages from state and the `system_prompt` from `base_config`. This can be overridden by subclasses.
     *   `compiled_graph`: Property to get or compile the graph.
     *   `ainvoke(state, config)`: Invokes the compiled graph, merging instance config with call-time config.
 
@@ -120,9 +140,8 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 #### 5.1. Orchestrator (`src/orchestrator/`)
 *   **Architecture:** Uses the `AgentGraph` pattern. `OrchestratorGraph` in `src/orchestrator/graph.py` subclasses `common.graph.AgentGraph`.
 *   **Configuration (`src/orchestrator/configuration.py` - NEW FILE, REPLACING INLINE CONFIG):**
-    *   Defines its own `Configuration` dataclass in `src/orchestrator/configuration.py`, subclassing `common.config.BaseConfiguration`.
+    *   Defines its own `Configuration` dataclass in `src/orchestrator/configuration.py`, subclassing `common.config.BaseConfiguration`. (Impacted by `BaseConfiguration` changes, e.g., `memory` field).
     *   `system_prompt: str = prompts.get_prompt()` (which now formats current `time` into the prompt).
-    *   The dedicated `src/orchestrator/configuration.py` file from a previous state was deleted, but this PR re-introduces it with the new structure.
     *   **`src/orchestrator/graph.py` now defines `AgentsConfig` dataclass** to manage agent stubs (e.g., `requirements.use_stub`) and agent-specific features (e.g., `requirements.use_human_ai`).
 *   **Graph Logic (`src/orchestrator/graph.py`):**
     *   The `orchestrate` node (created by `_create_orchestrate` factory) uses the system prompt from the config (including current time). LLM is initialized within `create_builder`.
@@ -140,14 +159,13 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 
 #### 5.2. Architect (`src/architect/`)
 
-*   (No changes mentioned in PR - likely still follows the `agent_template` pattern or its previous custom structure. If based on `agent_template`, it would benefit from the `langmem` updates indirectly.)
 *   **Role:** Expert software engineer responsible for architecting a project, not writing code. Receives project needs, coordinates other AI agents. Manages project documentation and defines tasks for other agents.
 *   **Key Prompt (`src/architect/prompts/v0.1.md`):** (As previously described)
 *   **`prompts.py` (`src/architect/prompts.py`):** (As previously described)
 *   **`output.py` (`src/architect/output.py`):** (As previously described)
 *   **Structure:** Follows the `agent_template` pattern with modifications.
     *   `configuration.py`: Standard, uses `prompts.SYSTEM_PROMPT`.
-    *   `graph.py`: Standard `call_model`, `store_memory`, `route_message` flow. Uses `tools.upsert_memory`. *This agent has not been updated to the new `Agent` class / `langmem` tools pattern yet.*
+    *   `graph.py`: Standard `call_model`, `store_memory`, `route_message` flow. Uses `tools.upsert_memory`. *The `agent_template` it was based on has been significantly refactored (removal of `Agent` class, introduction of `AgentTemplateGraph`). If Architect still relies on the old `agent_template` structure, it will require updates to align with `AgentTemplateGraph` or a more custom `AgentGraph` implementation to integrate memory and tools correctly. Its `tools.upsert_memory` is not compatible with the new `SemanticMemory` toolset provided by `AgentGraph` or `AgentTemplateGraph`.*
     *   `state.py`: Standard `State` with `messages`.
     *   `tools.py`: Defines the standard `upsert_memory` tool.
     *   `utils.py`: Standard `split_model_and_provider`, `init_chat_model`.
@@ -168,7 +186,7 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 *   (Other files like `__init__.py`, `lg_server.py`, `mocks.py`, `state.py`, `tools.py` specific to the coder, and `README.md` are as previously described in the project structure, if detailed.)
 
 #### 5.4. Code Reviewer (`src/code_reviewer/`)
-*   (No changes mentioned in PR - assumed same as previous state, follows `agent_template` and uses `langmem`)
+*   Follows the `agent_template` pattern. It will now use the refactored `AgentTemplateGraph`, inheriting its memory capabilities from `AgentGraph` and `SemanticMemory` if configured.
 
 #### 5.5. Tester (`src/tester/`)
 *   (No changes mentioned in PR - assumed same as previous state, custom graph, revised prompt)
@@ -176,9 +194,8 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 #### 5.6. Requirement Gatherer (`src/requirement_gatherer/`)
 *   **Architecture:** Major refactor. Uses the `AgentGraph` pattern. `RequirementsGathererGraph` in `src/requirement_gatherer/graph.py` subclasses `common.graph.AgentGraph`.
 *   **Configuration (`src/requirement_gatherer/configuration.py` - NEW FILE, REPLACING INLINE CONFIG):**
-    *   Defines its own `Configuration` dataclass in `src/requirement_gatherer/configuration.py`, subclassing `common.config.BaseConfiguration`.
+    *   Defines its own `Configuration` dataclass in `src/requirement_gatherer/configuration.py`, subclassing `common.config.BaseConfiguration`. (Impacted by `BaseConfiguration` changes, e.g., `memory` field).
     *   `gatherer_system_prompt: str = prompts.SYSTEM_PROMPT`.
-    *   The dedicated `src/requirement_gatherer/configuration.py` file from a previous state was deleted, but this PR re-introduces it with the new structure.
     *   `RequirementsGathererGraph.__init__` now accepts `use_human_ai` parameter to control human feedback simulation.
 *   **Graph Logic (`src/requirement_gatherer/graph.py`):**
     *   The graph consists of a `call_model` node (created by `_create_call_model` factory) and a `ToolNode` ("tools"). LLM and tools are initialized within `create_builder`.
@@ -192,7 +209,7 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 *   **Tools (`src/requirement_gatherer/tools.py`):**
     *   Tools are now more modular and defined in `tools.py`:
         *   `human_feedback`: Tool created by `create_human_feedback_tool(use_human_ai=False)` factory. Can request feedback from a human (via `interrupt`) or simulate human responses using an AI if `use_human_ai` is true. Prints interaction to console.
-        *   `memorize(content: str, context: str, ...)`: Tool to upsert a memory. Uses `store.aput` with `("memories", user_id)`. This tool is a refactoring of the previous `upsert_memory` function from this file.
+        *   `memorize(content: str, context: str, ...)`: Tool to upsert a memory. Uses `store.aput` with `("memories", user_id)`. This `user_id` would come from its `Configuration` (which inherits `user_id` via `BaseConfiguration.memory.user_id`). This tool is a refactoring of the previous `upsert_memory` function from this file.
         *   `summarize(summary: str, ...)`: Tool to indicate the agent has produced a final summary. Updates state with the summary and prints to console.
     *   The `upsert_memory` function in `src/requirement_gatherer/tools.py` has been refactored and renamed to the `memorize` tool.
     *   A `finalize` tool is no longer present.
@@ -205,7 +222,7 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
         *   The `EVALUATOR_SYSTEM_PROMPT` has been REMOVED.
 
 #### 5.7. Grumpy (`src/grumpy/`)
-*   (No changes mentioned in PR - assumed same as previous state, follows `agent_template` and uses `langmem`)
+*   Follows the `agent_template` pattern. It will now use the refactored `AgentTemplateGraph`, inheriting its memory capabilities from `AgentGraph` and `SemanticMemory` if configured.
 
 #### 5.8. Task Manager (`src/task_manager/`)
 *   (No changes mentioned in PR - assumed same as previous state, older agent structure)
@@ -221,6 +238,8 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 *   **`tests/integration_tests/test_coder.py`:**
     *   Added a new test `test_coder_changes_server_port_on_existing_pr`. This test verifies that the Coder agent, using `coder_change_request_config`, correctly applies changes to the head branch of an existing pull request. It utilizes the `MockGithubApi` for setting up the test scenario.
     *   These tests are now executed as part of the CI pipeline in a dedicated "Coder Tests" job (defined in `.github/workflows/checks.yml`), requiring the `GOOGLE_API_KEY` secret.
+*   **`tests/integration_tests/test_graph.py`:**
+    *   Updated to use `AgentTemplateGraph` and its `base_config` for initialization when testing memory functionalities.
 *   **`tests/unit_tests/test_configuration.py`:**
     *   The previous test `test_configuration_from_none()` related to `orchestrator.configuration.Configuration` is removed as that file is deleted. A dummy test `test_foo()` might be present.
 *   **`src/orchestrator/test.py` (Local test script):**
@@ -253,7 +272,7 @@ ai-nexus/
 │   └── workflows/
 │       └── checks.yml            # UPDATED: Added Coder Tests job
 ├── Makefile                      # UPDATED: Added test_coder target
-├── README.md
+├── README.md                     # UPDATED: Reflects new memory integration methods
 ├── agent_memories/
 │   └── grumpy/
 ├── langgraph.json
@@ -265,10 +284,10 @@ ai-nexus/
 │   └── generate_project_memory.sh
 ├── src/
 │   ├── agent_template/
-│   │   ├── __init__.py
-│   │   ├── agent.py
-│   │   ├── configuration.py
-│   │   ├── graph.py
+│   │   ├── __init__.py           # UPDATED: Exports AgentTemplateGraph, Configuration, State, graph
+│   │   ├── agent.py              # DELETED
+│   │   ├── configuration.py      # UPDATED: Subclasses BaseConfiguration, fields managed by BaseConfiguration.memory
+│   │   ├── graph.py              # UPDATED: Defines AgentTemplateGraph, uses AgentGraph features
 │   │   ├── prompts.py
 │   │   ├── state.py
 │   │   └── tools.py
@@ -290,9 +309,9 @@ ai-nexus/
 │   │   ├── components/
 │   │   │   ├── github_mocks.py   # UPDATED: Mock API updated for new tool and PR info
 │   │   │   ├── github_tools.py   # UPDATED: Added GetPullRequestHeadBranch tool
-│   │   │   └── memory.py
-│   │   ├── config.py             # REVISED: Defines BaseConfiguration
-│   │   ├── graph.py              # REVISED: AgentGraph __init__ updated
+│   │   │   └── memory.py         # UPDATED: SemanticMemory uses MemoryConfiguration, MemoryConfiguration dataclass added
+│   │   ├── config.py             # UPDATED: BaseConfiguration includes system_prompt and memory: MemoryConfiguration
+│   │   ├── graph.py              # UPDATED: AgentGraph initializes SemanticMemory, has memory property and _create_call_model
 │   │   └── utils/
 │   ├── grumpy/
 │   ├── orchestrator/
@@ -325,7 +344,7 @@ ai-nexus/
     │   ├── test_architect_agent.py
     │   ├── test_coder.py           # UPDATED: New test added for PR head branch changes; now run in CI
     │   ├── eval_coder.py
-    │   ├── test_graph.py
+    │   ├── test_graph.py           # UPDATED: Uses AgentTemplateGraph
     │   ├── test_grumpy_agent.py
     │   ├── test_orchestrator.py    # UPDATED: Uses new OrchestratorGraph
     │   ├── test_requirement_gatherer.py # UPDATED: Uses new RequirementsGathererGraph
