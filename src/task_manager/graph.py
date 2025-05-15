@@ -27,6 +27,7 @@ TASK_MANAGER_RECURSION_LIMIT = 100
 
 
 def _create_call_model(
+    agent_config: Configuration,
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
 ) -> Coroutine[Any, Any, dict]:
     """Create an asynchronous function that retrieves recent user memories, formats them into a prompt, and invokes a language model with contextual information.
@@ -66,8 +67,6 @@ def _create_call_model(
     <memories>
     {formatted}
     </memories>"""
-
-        agent_config: Configuration = config["configurable"]["agent_config"]
 
         # Prepare the system prompt with user memories and current time
         # This helps the model understand the context and temporal relevance
@@ -128,7 +127,7 @@ class TaskManagerGraph(AgentGraph):
 
         llm = init_chat_model(model=TASK_MANAGER_MODEL).bind_tools(all_tools)
         tool_node = ToolNode(all_tools, name="tools")
-        call_model = _create_call_model(llm)
+        call_model = _create_call_model(self._agent_config, llm)
 
         builder = StateGraph(State, config_schema=Configuration)
         builder.add_node(call_model)
