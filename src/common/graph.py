@@ -110,7 +110,8 @@ class AgentGraph(ABC):
         Returns:
             A new RunnableConfig containing the combined langgraph configurables and the full agent configuration under the "agent_config" key.
         """
-        new_config = RunnableConfig(**config) if config else RunnableConfig()
+        config = config if config else RunnableConfig()
+        new_config = RunnableConfig(**config)
         new_config["configurable"] = {
             **self._agent_config.langgraph_configurables,
             **config.get("configurable", {}),
