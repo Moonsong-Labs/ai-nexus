@@ -115,11 +115,9 @@ if __name__ == "__main__":
                     recursion_limit=250,
                     configurable={
                         "thread_id": str(uuid.uuid4()),
-                        "user_id": "nish",
                     },
                 )
             )
-            print(config)
             result = await orchestrator.compiled_graph.ainvoke(
                 State(messages=HumanMessage(content="I want to build a website")),
                 config=config,
