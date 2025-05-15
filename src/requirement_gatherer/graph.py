@@ -56,7 +56,9 @@ def _create_call_model(
 
         # Prepare the system prompt with user memories and current time
         # This helps the model understand the context and temporal relevance
-        sys_prompt = config["configurable"]["gatherer_system_prompt"].format(
+        agent_config: Configuration = config["configurable"]["agent_config"]
+
+        sys_prompt = agent_config.gatherer_system_prompt.format(
             user_info=formatted, time=datetime.now().isoformat()
         )
 

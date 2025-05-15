@@ -26,6 +26,4 @@ class AgentConfiguration:
 
         The returned dictionary contains the instance's attributes except for those whose keys are present in the `_LANGGRAPH_CONFIGURABLES` list.
         """
-        return {
-            k: v for k, v in self.__dict__.items() if k not in _LANGGRAPH_CONFIGURABLES
-        }
+        return {k: v for k, v in self.__dict__.items() if k in _LANGGRAPH_CONFIGURABLES}
