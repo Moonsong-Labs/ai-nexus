@@ -40,6 +40,15 @@ logger.setLevel(logging.DEBUG)
     ids=["knowledge", "rule", "procedure"],
 )
 async def test_memory_storage(conversation: List[str], expected_category: str):
+    """
+    Tests that the agent correctly categorizes and stores memory entries based on conversation input.
+    
+    Args:
+        conversation: A list of user messages to send to the agent.
+        expected_category: The memory category expected to be assigned ("knowledge", "rule", or "procedure").
+    
+    Asserts that at least one memory entry with the expected category is found in the agent's response.
+    """
     config = Configuration()
     graph = AgentTemplateGraph(agent_config=config).compiled_graph
 
@@ -102,7 +111,11 @@ async def test_memory_storage(conversation: List[str], expected_category: str):
 
 @pytest.mark.asyncio
 async def test_memory_dump():
-    """Test the memory_dump tool functionality."""
+    """
+    Verifies that the agent's memory dump tool exports stored memories to a non-empty file.
+    
+    Creates a temporary directory, stores a memory entry, instructs the agent to dump its memories, and asserts that a memory dump file is created and contains data.
+    """
     # Create a temporary directory for the memory dump
     with tempfile.TemporaryDirectory() as temp_dir:
         config = Configuration()
