@@ -1,44 +1,19 @@
 """Define the configurable parameters for the agent."""
 
-import os
-from dataclasses import dataclass, field, fields
-from typing import Any, Optional
+from dataclasses import dataclass
 
-from langchain_core.runnables import RunnableConfig
-from typing_extensions import Annotated
-
+from common.config import BaseConfiguration
 from task_manager import prompts
 
 TASK_MANAGER_MODEL = "google_genai:gemini-2.5-flash-preview-04-17"
 
 
 @dataclass(kw_only=True)
-class Configuration:
+class Configuration(BaseConfiguration):
     """Main configuration class for the memory graph system."""
 
-    user_id: str = "default"
-    """The ID of the user to remember in the conversation."""
-    model: Annotated[str, {"__template_metadata__": {"kind": "llm"}}] = field(
-        default=TASK_MANAGER_MODEL,
-        metadata={
-            "description": "The name of the language model to use for the agent. "
-            "Should be in the form: provider/model-name."
-        },
-    )
-    system_prompt: str = prompts.SYSTEM_PROMPT
+    task_manager_system_prompt: str = prompts.SYSTEM_PROMPT
+    model: str = TASK_MANAGER_MODEL
 
-    @classmethod
-    def from_runnable_config(
-        cls, config: Optional[RunnableConfig] = None
-    ) -> "Configuration":
-        """Create a Configuration instance from a RunnableConfig."""
-        configurable = (
-            config["configurable"] if config and "configurable" in config else {}
-        )
-        values: dict[str, Any] = {
-            f.name: os.environ.get(f.name.upper(), configurable.get(f.name))
-            for f in fields(cls)
-            if f.init
-        }
 
-        return cls(**{k: v for k, v in values.items() if v})
+__all__ = ["Configuration"]
