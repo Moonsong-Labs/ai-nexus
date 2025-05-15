@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from coder.graph import coder_change_request_config, coder_new_pr_config
+from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
 from common.components.github_mocks import MockGithubApi
 from common.components.github_tools import get_github_tools
 
@@ -13,7 +13,7 @@ async def test_coder_creates_hello_world():
     github_tools = get_github_tools(mock_api)
 
     # Create and build graph
-    graph = coder_new_pr_config().graph_builder(github_tools).compile()
+    graph = CoderNewPRGraph(github_tools=github_tools).compiled_graph
 
     # Run agent with request to create main.py
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
@@ -52,7 +52,7 @@ async def test_coder_renames_function():
     github_tools = get_github_tools(mock_api)
 
     # Create and build graph
-    graph = coder_new_pr_config().graph_builder(github_tools).compile()
+    graph = CoderNewPRGraph(github_tools=github_tools).compiled_graph
 
     # Run agent with request to rename function
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
@@ -114,7 +114,7 @@ async def test_coder_changes_server_port_on_existing_pr():
     )
 
     # Create and build graph
-    graph = coder_change_request_config().graph_builder(github_tools).compile()
+    graph = CoderChangeRequestGraph(github_tools=github_tools).compiled_graph
 
     # Run agent with request to change port
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}

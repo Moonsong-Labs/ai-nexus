@@ -1,16 +1,20 @@
 """Graphs that extract memories on a schedule."""
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import SystemMessage
 from langchain_core.tools import Tool
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.store.base import BaseStore
+from langgraph.types import Checkpointer
 
 from coder.prompts import CHANGE_REQUEST_SYSTEM_PROMPT, NEW_PR_SYSTEM_PROMPT
 from coder.state import State
+from common.configuration import AgentConfiguration
+from common.graph import AgentGraph
 
 llm = init_chat_model("google_genai:gemini-2.0-flash")
 
@@ -85,6 +89,70 @@ def coder_change_request_config():
     )
 
 
+class CoderNewPRGraph(AgentGraph):
+    """Coder | New PR graph."""
+
+    def __init__(
+        self,
+        *,
+        github_tools: List[Tool],
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        """Initialize CoderNewPRGraph.
+
+        Args:
+            github_tools: Github toolkit to base the agent from
+            agent_config: Optional Configuration instance.
+            checkpointer: Optional Checkpointer instance.
+            store: Optional BaseStore instance.
+        """
+        super().__init__(
+            name="Coder | New PR",
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
+        self._github_tools = github_tools
+
+    def create_builder(self) -> StateGraph:
+        """Create a graph builder."""
+        return coder_new_pr_config().graph_builder(self._github_tools)
+
+
+class CoderChangeRequestGraph(AgentGraph):
+    """Coder | Change Request graph."""
+
+    def __init__(
+        self,
+        *,
+        github_tools: List[Tool],
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        """Initialize CoderChangeRequestGraph.
+
+        Args:
+            github_tools: Github toolkit to base the agent from
+            agent_config: Optional Configuration instance.
+            checkpointer: Optional Checkpointer instance.
+            store: Optional BaseStore instance.
+        """
+        super().__init__(
+            name="Coder | Change Request",
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
+        self._github_tools = github_tools
+
+    def create_builder(self) -> StateGraph:
+        """Create a graph builder."""
+        return coder_change_request_config().graph_builder(self._github_tools)
+
+
 class CallModel:
     def __init__(self, github_tools: list[Tool], system_prompt: str):
         self.github_tools = github_tools
@@ -114,4 +182,4 @@ def _graph_builder(github_toolset: list[Tool], system_prompt: str):
     return builder
 
 
-__all__ = ["coder_new_pr_config", "coder_change_request_config"]
+__all__ = [CoderNewPRGraph.__name__, CoderChangeRequestGraph.__name__]
