@@ -22,9 +22,17 @@ from langsmith.evaluation import EvaluationResult
 from pydantic import BaseModel
 from termcolor import colored
 
-from common.config import BaseConfiguration
-from orchestrator.graph import AgentsConfig, OrchestratorGraph
+from orchestrator.configuration import (
+    Configuration as OrchestratorConfiguration,
+)
+from orchestrator.configuration import (
+    RequirementsAgentConfig,
+    RequirementsConfiguration,
+)
+from orchestrator.graph import OrchestratorGraph
 from orchestrator.state import State
+
+OUTPUT_DUMP_FILE = "dump.json"  # output file for `read` operation
 
 
 def print_messages_any(messages: list[dict]):
@@ -61,6 +69,10 @@ def print_messages_any(messages: list[dict]):
 if __name__ == "__main__":
     args = sys.argv[1:]
     mode: Literal["exec", "read"] = "read"
+    """One of the following modes:
+        * `exec` executes the script and dumps a json file
+        * `read` reads the json file
+    """
     human_or_ai: Literal["human", "ai"] = "human"
 
     if len(args) < 1:
@@ -76,18 +88,22 @@ if __name__ == "__main__":
                 human_or_ai = args[1]
 
     if mode == "exec":
-        agents_config = AgentsConfig()
-        agents_config.requirements.use_stub = False
-        agents_config.requirements.use_human_ai = human_or_ai == "ai"
+        use_human_ai = human_or_ai == "ai"
         orchestrator = OrchestratorGraph(
-            agents_config=agents_config,
-            base_config=BaseConfiguration(),
+            agent_config=OrchestratorConfiguration(
+                requirements_agent=RequirementsAgentConfig(
+                    use_stub=False,
+                    config=RequirementsConfiguration(use_human_ai=use_human_ai),
+                )
+            ),
             checkpointer=InMemorySaver(),
             store=InMemoryStore(),
         )
 
         async def _exec():
-            config = RunnableConfig(configurable={"thread_id": str(uuid.uuid4())})
+            config = RunnableConfig(
+                recursion_limit=100, configurable={"thread_id": str(uuid.uuid4())}
+            )
             result = await orchestrator.ainvoke(
                 State(messages=HumanMessage(content="I want to build a website")),
                 config=config,
@@ -147,12 +163,12 @@ if __name__ == "__main__":
 
         # import json
         result_json = json.dumps(result, cls=_CustomEncoder)
-        with open("dump.json", "w") as f:
+        with open(OUTPUT_DUMP_FILE, "w") as f:
             f.write(result_json)
 
         print_messages_any(json.loads(result_json)["messages"])
     elif mode == "read":
-        with open("dump.json") as f:
+        with open(OUTPUT_DUMP_FILE) as f:
             result = json.load(f)
             print_messages_any(result["messages"])
     else:

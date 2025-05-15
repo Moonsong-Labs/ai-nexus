@@ -1,7 +1,6 @@
 """Graphs that orchestrates a software project."""
 
 import logging
-from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any, Coroutine, Literal, Optional
 
@@ -18,12 +17,17 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from common.config import BaseConfiguration
 from common.graph import AgentGraph
 from orchestrator import stubs, tools
-from orchestrator.configuration import Configuration
+from orchestrator.configuration import (
+    Configuration,
+    RequirementsAgentConfig,
+)
 from orchestrator.state import State
-from requirement_gatherer.graph import RequirementsGathererGraph
+from requirement_gatherer.configuration import (
+    Configuration as RequirementsConfiguration,
+)
+from requirement_gatherer.graph import RequirementsGraph
 from requirement_gatherer.state import State as RequirementsState
 
 logger = logging.getLogger(__name__)
@@ -93,7 +97,7 @@ def _create_delegate_to(orchestrate: Coroutine[Any, Any, dict]):
 
 
 def _create_requirements_node(
-    requirements_graph: RequirementsGathererGraph, recursion_limit: int = 100
+    requirements_graph: RequirementsGraph, recursion_limit: int = 100
 ):
     async def requirements(state: State, config: RunnableConfig, store: BaseStore):
         tool_call = state.messages[-1].tool_calls[0]
@@ -119,42 +123,25 @@ def _create_requirements_node(
     return requirements
 
 
-@dataclass(kw_only=True)
-class AgentConfig:
-    use_stub: bool = True
-
-
-class RequirementsAgentConfig(AgentConfig):
-    use_human_ai: bool = False
-
-
-@dataclass(kw_only=True)
-class AgentsConfig:
-    requirements: RequirementsAgentConfig = field(
-        default_factory=RequirementsAgentConfig
-    )
-    architect: AgentConfig = field(default_factory=AgentConfig)
-    coder: AgentConfig = field(default_factory=AgentConfig)
-    tester: AgentConfig = field(default_factory=AgentConfig)
-    reviewer: AgentConfig = field(default_factory=AgentConfig)
-
-
 class OrchestratorGraph(AgentGraph):
     """Orchestrator graph."""
+
+    _agent_config: Configuration
 
     def __init__(
         self,
         *,
-        agents_config: Optional[AgentsConfig] = None,
-        base_config: Optional[BaseConfiguration] = None,
+        agent_config: Optional[Configuration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
         """Initialize."""
-        super().__init__(base_config, checkpointer, store)
-        self._name = "Orchestrator"
-        self._config = Configuration(**asdict(self._base_config))
-        self._agents_config = agents_config or AgentsConfig()
+        super().__init__(
+            name="Orchestrator",
+            agent_config=agent_config or Configuration(),
+            checkpointer=checkpointer,
+            store=store,
+        )
 
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
@@ -163,12 +150,13 @@ class OrchestratorGraph(AgentGraph):
         orchestrate = _create_orchestrate(llm)
         requirements_graph = (
             stubs.RequirementsGathererStub(
-                config=self._config, checkpointer=self._checkpointer, store=self._store
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
             )
-            if self._agents_config.requirements.use_stub
-            else RequirementsGathererGraph(
-                use_human_ai=self._agents_config.requirements.use_human_ai,
-                base_config=self._base_config,
+            if self._agent_config.requirements_agent.use_stub
+            else RequirementsGraph(
+                agent_config=self._agent_config.requirements_agent.config,
                 checkpointer=self._checkpointer,
                 store=self._store,
             )
@@ -204,9 +192,12 @@ class OrchestratorGraph(AgentGraph):
 
 
 # For langsmith
-_agents_config = AgentsConfig()
-_agents_config.requirements.use_stub = False
-_agents_config.requirements.use_human_ai = False
-graph = OrchestratorGraph(agents_config=_agents_config).compiled_graph
+graph = OrchestratorGraph(
+    agent_config=Configuration(
+        requirements_agent=RequirementsAgentConfig(
+            use_stub=False, config=RequirementsConfiguration(use_human_ai=False)
+        )
+    )
+).compiled_graph
 
 __all__ = ["OrchestratorGraph"]

@@ -12,7 +12,7 @@ from langgraph.graph import StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from common.config import BaseConfiguration
+from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from orchestrator.state import State
 
@@ -80,13 +80,13 @@ class RequirementsGathererStub(AgentGraph):
     def __init__(
         self,
         *,
-        config: Optional[BaseConfiguration] = None,
+        agent_config: Optional[AgentConfiguration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        config = config or BaseConfiguration()
-        super().__init__(config, checkpointer, store)
-        self._name = "Requirements Gatherer"
+        super().__init__(
+            "Requirements Gatherer Stub", agent_config, checkpointer, store
+        )
 
     def create_builder(self) -> StateGraph:
         return None

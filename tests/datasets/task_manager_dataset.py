@@ -38,7 +38,7 @@ def create_dataset():
             },
             "outputs": {
                 "message": {
-                    "content": "You need to provide eight specific files within the project dirctory. These are: projectRequirements.md, techContext.md, systemPatterns.md, testingContext.md, projectbrief.md, featuresContext.md, securityContext.md and progress.md"
+                    "content": "You need to provide eight specific files within the project directory. These are: projectRequirements.md, techContext.md, systemPatterns.md, testingContext.md, projectbrief.md, featuresContext.md, securityContext.md and progress.md"
                 }
             },
         },

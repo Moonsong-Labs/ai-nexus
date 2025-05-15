@@ -12,6 +12,7 @@ from langgraph.store.base import BaseStore
 from langgraph.types import Command, interrupt
 from termcolor import colored
 
+from requirement_gatherer.configuration import Configuration
 from requirement_gatherer.state import State
 
 
@@ -42,8 +43,10 @@ def create_human_feedback_tool(use_human_ai=False) -> BaseTool:
         Returns:
             A Command to update the state with the human response.
         """
+        agent_config: Configuration = config["configurable"]["agent_config"]
+
         # Return prompt if human user is requested
-        if not use_human_ai:
+        if not agent_config.use_human_ai:
             content = question
             if state.messages[-1].content:
                 content = f"{question}\n\n{state.messages[-1].content}"

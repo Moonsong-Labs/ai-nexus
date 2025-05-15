@@ -41,7 +41,7 @@ logger.setLevel(logging.DEBUG)
 )
 async def test_memory_storage(conversation: List[str], expected_category: str):
     config = Configuration()
-    graph = AgentTemplateGraph(base_config=config).compiled_graph
+    graph = AgentTemplateGraph(agent_config=config).compiled_graph
 
     # Track if we found the expected category
     category_found = False
@@ -106,7 +106,7 @@ async def test_memory_dump():
     # Create a temporary directory for the memory dump
     with tempfile.TemporaryDirectory() as temp_dir:
         config = Configuration()
-        graph = AgentTemplateGraph(base_config=config).compiled_graph
+        graph = AgentTemplateGraph(agent_config=config).compiled_graph
 
         # Step 1: Store a memory
         store_memory_msg = "The Python programming language was created by Guido van Rossum and released in 1991."

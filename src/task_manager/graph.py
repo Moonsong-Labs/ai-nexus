@@ -1,7 +1,6 @@
 """Graphs that extract memories on a schedule."""
 
 import logging
-from dataclasses import asdict
 from datetime import datetime
 from typing import Any, Coroutine, Optional
 
@@ -17,7 +16,6 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from common.config import BaseConfiguration
 from common.graph import AgentGraph
 from task_manager import tools
 from task_manager.configuration import TASK_MANAGER_MODEL, Configuration
@@ -58,14 +56,16 @@ def _create_call_model(
     {formatted}
     </memories>"""
 
-        config_with_recursion = RunnableConfig(**config)
-        config_with_recursion["recursion_limit"] = TASK_MANAGER_RECURSION_LIMIT
+        agent_config: Configuration = config["configurable"]["agent_config"]
 
         # Prepare the system prompt with user memories and current time
         # This helps the model understand the context and temporal relevance
-        sys_prompt = config["configurable"]["task_manager_system_prompt"].format(
+        sys_prompt = agent_config.task_manager_system_prompt.format(
             user_info=formatted, time=datetime.now().isoformat()
         )
+
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = TASK_MANAGER_RECURSION_LIMIT
 
         # Invoke the language model with the prepared prompt and tools
         msg = await llm_with_tools.ainvoke(
@@ -85,8 +85,7 @@ class TaskManagerGraph(AgentGraph):
     def __init__(
         self,
         *,
-        use_human_ai=False,
-        base_config: Optional[BaseConfiguration] = None,
+        agent_config: Optional[Configuration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
@@ -97,10 +96,12 @@ class TaskManagerGraph(AgentGraph):
             checkpointer: Optional Checkpointer instance.
             store: Optional BaseStore instance.
         """
-        super().__init__(base_config, checkpointer, store)
-        self._name = "Task Manager"
-        self._config = Configuration(**asdict(self._base_config))
-        self._use_human_ai = use_human_ai
+        super().__init__(
+            name="Task Manager",
+            agent_config=agent_config or Configuration(),
+            checkpointer=checkpointer,
+            store=store,
+        )
 
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
