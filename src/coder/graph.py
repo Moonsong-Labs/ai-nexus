@@ -13,7 +13,7 @@ from langgraph.types import Checkpointer
 
 from coder.prompts import CHANGE_REQUEST_SYSTEM_PROMPT, NEW_PR_SYSTEM_PROMPT
 from coder.state import State
-from common.config import BaseConfiguration
+from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 
 llm = init_chat_model("google_genai:gemini-2.0-flash")
@@ -96,7 +96,7 @@ class CoderNewPRGraph(AgentGraph):
         self,
         *,
         github_tools: List[Tool],
-        base_config: Optional[BaseConfiguration] = None,
+        agent_config: Optional[AgentConfiguration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
@@ -104,12 +104,16 @@ class CoderNewPRGraph(AgentGraph):
 
         Args:
             github_tools: Github toolkit to base the agent from
-            base_config: Optional Configuration instance.
+            agent_config: Optional Configuration instance.
             checkpointer: Optional Checkpointer instance.
             store: Optional BaseStore instance.
         """
-        super().__init__(base_config, checkpointer, store)
-        self._name = "Coder | New PR"
+        super().__init__(
+            name="Coder | New PR",
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
         self._github_tools = github_tools
 
     def create_builder(self) -> StateGraph:
@@ -124,7 +128,7 @@ class CoderChangeRequestGraph(AgentGraph):
         self,
         *,
         github_tools: List[Tool],
-        base_config: Optional[BaseConfiguration] = None,
+        agent_config: Optional[AgentConfiguration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
@@ -132,12 +136,16 @@ class CoderChangeRequestGraph(AgentGraph):
 
         Args:
             github_tools: Github toolkit to base the agent from
-            base_config: Optional Configuration instance.
+            agent_config: Optional Configuration instance.
             checkpointer: Optional Checkpointer instance.
             store: Optional BaseStore instance.
         """
-        super().__init__(base_config, checkpointer, store)
-        self._name = "Coder | Change Request"
+        super().__init__(
+            name="Coder | Change Request",
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
         self._github_tools = github_tools
 
     def create_builder(self) -> StateGraph:
