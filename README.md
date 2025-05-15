@@ -12,36 +12,70 @@ This repo provides a simple ReAct-style agent with a tool to save memories. This
 
 To add semantic memory capability to your existing agent:
 
-1. Import SemanticMemory from the components module:
+1. Create a custom agent by extending the `AgentGraph` base class:
+
 ```python
-from src.common.components.memory import SemanticMemory
+from common.graph import AgentGraph
+from common.config import BaseConfiguration
+from common.components.memory import SemanticMemory
+
+class MyCustomAgent(AgentGraph):
+    def __init__(
+        self,
+        *,
+        base_config: Optional[BaseConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        # Create config with memory settings enabled
+        config = base_config or BaseConfiguration()
+        config.name = "My Custom Agent"
+        config.memory.use_memory = True  # Enable memory
+        config.memory.user_id = "user123"  # Set namespace for memories
+        
+        super().__init__(config, checkpointer, store)
+        
+    def create_builder(self) -> StateGraph:
+        # Create graph builder
+        builder = StateGraph(State)
+        
+        # Initialize LLM
+        llm = init_chat_model(self._base_config.model)
+        
+        # Get memory tools and any other tools needed
+        all_tools = []
+        if self._memory:  # The memory is automatically initialized in the parent class
+            all_tools += self._memory.get_tools()
+            
+        # Add your own custom tools here
+        # all_tools += [my_custom_tool1, my_custom_tool2]
+        
+        # Bind tools to LLM
+        if all_tools:
+            llm = llm.bind_tools(all_tools)
+            
+        # Create graph and add nodes
+        # ...
+        
+        return builder
 ```
 
-2. Initialize the memory with your agent's configuration:
+2. Or simply enable memory in a configuration for an existing agent:
+
 ```python
+from agent_template.configuration import Configuration
+
 # Create configuration with memory settings
-config = Configuration(
-    use_static_mem=True,  # Load static memories if available
-    user_id="user123"     # Set user ID for memory namespace
-)
+config = Configuration()
+config.memory.use_memory = True  # Enable memory
+config.memory.load_static_memories = True  # Load static memories if available
+config.memory.user_id = "user123"  # Set namespace for memories
 
-# Initialize semantic memory
-semantic_memory = SemanticMemory(
-    agent_name="my_agent",  # Used for namespace
-    config=config
-)
+# Initialize your agent with this configuration
+agent = AgentTemplateGraph(base_config=config)
 ```
 
-3. Get memory tools and bind them to your LLM:
-```python
-# Get memory management tools
-memory_tools = semantic_memory.get_tools()
-
-# Bind memory tools to your LLM
-llm = llm.bind_tools(memory_tools)
-```
-
-That's it! Your agent can now create, search, and manage semantic memories.
+That's it! Your agent can now create, search, and manage semantic memories with the built-in tools.
 
 ## Running Locally
 
