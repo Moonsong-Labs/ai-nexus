@@ -16,6 +16,7 @@
     *   `Configuration` dataclasses from `agent_template`.
     *   A common `BaseConfiguration` in `src/common/config.py`.
     *   Agent-specific `Configuration` dataclasses (e.g., in `src/orchestrator/configuration.py`, `src/requirement_gatherer/configuration.py`) that subclass `BaseConfiguration`.
+    *   During graph execution (e.g., via `AgentGraph.ainvoke`), the agent's specific `Configuration` instance is typically passed within the `RunnableConfig` as `run_config["configurable"]["agent_config"]`, allowing nodes to access configuration attributes from this object.
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
 8.  **`langmem` Integration:** Provides semantic memory capabilities (storage, search) for agents, typically managed via the `Agent` class and `SemanticMemory` component for agents following the `agent_template`. Other agents like Requirement Gatherer might implement memory tools differently.
 9.  **`AgentGraph` (NEW):** A common base class (`src/common/graph.py`) for defining agent graphs, promoting modularity. Used by Orchestrator and Requirement Gatherer. Its `__init__` method now takes `base_config: BaseConfiguration`.
@@ -96,7 +97,8 @@ A newer pattern utilizes a common base class for more modular graph definitions.
 
 *   **`src/common/config.py` (NEW):**
     ```python
-    from dataclasses import dataclass
+    from dataclasses import dataclass, field # Assuming field might be used for _LANGGRAPH_CONFIGURABLES
+    from typing import Any, ClassVar # Assuming ClassVar for _LANGGRAPH_CONFIGURABLES
 
     @dataclass(kw_only=True)
     class BaseConfiguration: # RENAMED from Configuration
@@ -104,15 +106,30 @@ A newer pattern utilizes a common base class for more modular graph definitions.
         model: str = "google_genai:gemini-2.0-flash"
         provider: str | None = None
         # Agent-specific prompts or other configs are added in subclasses
+
+        # _LANGGRAPH_CONFIGURABLES: ClassVar[list[str]] = [] # Example, actual definition may vary
+
+        def langgraph_configurables(self) -> dict[str, Any]:
+            """
+            Returns a dictionary of attributes from this configuration instance.
+            This dictionary is intended for use with LangGraph's `configurable_fields`
+            mechanism, allowing specific attributes of the configuration object
+            (e.g., "model", "user_id") to be dynamically overridden per node or per call,
+            if a node is set up to use them.
+            The method was updated to return only attributes whose keys are present
+            in a `_LANGGRAPH_CONFIGURABLES` list (expected to be defined in
+            BaseConfiguration or its subclasses), changing from a previous behavior
+            of excluding certain keys.
+            """
+            # Actual logic: return {k: v for k, v in self.__dict__.items() if k in self._LANGGRAPH_CONFIGURABLES}
+            return {} # Placeholder for condensed memory
     ```
 *   **`src/common/graph.py` (NEW):**
     *   Defines an abstract base class `AgentGraph(ABC)`.
     *   `__init__(base_config: BaseConfiguration, checkpointer, store)`: Initializes with common config (type updated to `BaseConfiguration`), optional checkpointer and store.
     *   `create_builder() -> StateGraph` (abstract method): To be implemented by subclasses to define the graph.
     *   `compiled_graph`: Property to get or compile the graph.
-    *   `ainvoke(state, config)`: Invokes the compiled graph, merging instance config with call-time config.
-
-Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and define their specific `Configuration` (subclassing `common.config.BaseConfiguration` in their respective new `configuration.py` files) and graph structure. Graph construction is more modular, often using factory functions to create nodes and tools.
+    *   `ainvoke(state, config)`: Invokes the compiled graph. The agent's `base_config` (an instance of its specific `Configuration` subclass, e.g., `OrchestratorConfiguration`) is made available to the graph's nodes within the `RunnableConfig` as `run_config["configurable"]["agent_config"]`. Call-time `config` can provide overrides to this structure if supported.
 
 
 ## 5. Specific Agent Details
@@ -125,7 +142,7 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
     *   The dedicated `src/orchestrator/configuration.py` file from a previous state was deleted, but this PR re-introduces it with the new structure.
     *   **`src/orchestrator/graph.py` now defines `AgentsConfig` dataclass** to manage agent stubs (e.g., `requirements.use_stub`) and agent-specific features (e.g., `requirements.use_human_ai`).
 *   **Graph Logic (`src/orchestrator/graph.py`):**
-    *   The `orchestrate` node (created by `_create_orchestrate` factory) uses the system prompt from the config (including current time). LLM is initialized within `create_builder`.
+    *   The `orchestrate` node (created by `_create_orchestrate` factory) accesses its `system_prompt` (which includes current time) from the `agent_config` object (an instance of `orchestrator.Configuration`) available as `run_config["configurable"]["agent_config"]` during graph execution. LLM is initialized within `create_builder`.
     *   The `delegate_to` routing function (created by `_create_delegate_to` factory) is updated.
     *   Integrates other agent graphs/stubs; for example, it can instantiate and use `RequirementsGathererGraph` (or `RequirementsGathererStub`) based on `AgentsConfig`. The `requirements` node is created by `_create_requirements_node` factory.
 *   **Prompts (`src/orchestrator/prompts.py`):**
@@ -182,7 +199,7 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
     *   `RequirementsGathererGraph.__init__` now accepts `use_human_ai` parameter to control human feedback simulation.
 *   **Graph Logic (`src/requirement_gatherer/graph.py`):**
     *   The graph consists of a `call_model` node (created by `_create_call_model` factory) and a `ToolNode` ("tools"). LLM and tools are initialized within `create_builder`.
-    *   `call_model`: Retrieves memories, formats them into the system prompt (which includes current time), and invokes an LLM bound with new tools.
+    *   `call_model`: Retrieves memories. It formats them into the `gatherer_system_prompt` (which includes current time) accessed from the `agent_config` object (an instance of `requirement_gatherer.Configuration`) available as `run_config["configurable"]["agent_config"]`. It then invokes an LLM bound with new tools.
     *   `ToolNode`: Executes tools like `human_feedback`, `memorize`, `summarize`.
     *   Routing: `START` -> `call_model`. `call_model` routes to `tools` if tool calls are present, or back to `call_model` or `END` if a summary is generated. `tools` routes back to `call_model`. This logic is encapsulated in a route function created by `_create_gather_requirements` factory.
     *   The previous `call_evaluator_model` and `Veredict`-based flow is REMOVED.
@@ -291,14 +308,14 @@ ai-nexus/
 │   │   │   ├── github_mocks.py   # UPDATED: Mock API updated for new tool and PR info
 │   │   │   ├── github_tools.py   # UPDATED: Added GetPullRequestHeadBranch tool
 │   │   │   └── memory.py
-│   │   ├── config.py             # REVISED: Defines BaseConfiguration
-│   │   ├── graph.py              # REVISED: AgentGraph __init__ updated
+│   │   ├── config.py             # REVISED: Defines BaseConfiguration, langgraph_configurables method updated
+│   │   ├── graph.py              # REVISED: AgentGraph ainvoke behavior for config updated
 │   │   └── utils/
 │   ├── grumpy/
 │   ├── orchestrator/
 │   │   ├── __init__.py
 │   │   ├── configuration.py      # NEW (re-added with new structure): Specific Configuration subclassing BaseConfiguration
-│   │   ├── graph.py              # REVISED: Uses new Configuration, AgentsConfig, factory functions for nodes
+│   │   ├── graph.py              # REVISED: Uses new Configuration access pattern (via agent_config)
 │   │   ├── memory/
 │   │   │   └── team.md           # UPDATED: Delegate tool must include content
 │   │   ├── prompts.py            # UPDATED: System prompt includes {time}
@@ -310,7 +327,7 @@ ai-nexus/
 │   ├── requirement_gatherer/
 │   │   ├── __init__.py
 │   │   ├── configuration.py      # NEW (re-added with new structure): Specific Configuration subclassing BaseConfiguration
-│   │   ├── graph.py              # REVISED: Uses new Configuration, factory functions for nodes, new tool usage
+│   │   ├── graph.py              # REVISED: Uses new Configuration access pattern (via agent_config)
 │   │   ├── prompts.py            # REVISED: System prompt updated for new tools/workflow, evaluator prompt removed
 │   │   ├── state.py              # REVISED: 'veredict' removed, 'summary' added, docstring
 │   │   └── tools.py              # REVISED: Defines create_human_feedback_tool, memorize (refactored from upsert_memory), summarize
