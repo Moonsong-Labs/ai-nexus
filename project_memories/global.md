@@ -4,7 +4,7 @@
 
 **Project Name:** AI Nexus
 
-**Core Mission:** To develop a system for managing and orchestrating a team of AI agents capable of designing, developing, and maintaining technical projects. An initial focus is on an agent named "Cursor" which operates with a memory that resets between sessions, necessitating a robust external "Memory Bank" system for continuity. AI Nexus aims to be a platform for developing and managing such AI agents.
+**Core Mission:** To develop a system for managing and orchestrating a team of AI agents capable of designing, developing, and maintaining technical projects. An initial focus is on an agent named "Cursor" which operates with a memory that resets between sessions, necessitating a robust external "Memory Bank" system for continuity. A specific rule (`.cursor/rules/read-project-memories.mdc`) now configures Cursor to always read all files within the `project_memories/` directory for every interaction, ensuring this core project context is consistently available to it. AI Nexus aims to be a platform for developing and managing such AI agents.
 
 **Key Concepts:**
 1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager) working collaboratively.
@@ -236,6 +236,9 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 
 ```
 ai-nexus/
+├── .cursor/                      # NEW: Cursor specific rules
+│   └── rules/                    # NEW
+│       └── read-project-memories.mdc # NEW: Rule to always read project_memories
 ├── .env.example
 ├── .gitignore
 ├── .github/
