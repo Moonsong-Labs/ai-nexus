@@ -26,6 +26,7 @@ optional-dependencies.dev = [
     "pytest-dotenv>=0.5.2",
     "langgraph-cli[inmem]>=0.2.7",
     "openevals>=0.0.19",
+    "debugpy>=1.8.14",
 ]
 
 [build-system]
