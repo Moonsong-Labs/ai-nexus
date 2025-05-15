@@ -7,7 +7,7 @@ from typing import Any, Optional
 from langchain_core.runnables import RunnableConfig
 from typing_extensions import Annotated
 
-from tester import prompts
+from deprecated_tester import prompts
 
 
 @dataclass(kw_only=True)

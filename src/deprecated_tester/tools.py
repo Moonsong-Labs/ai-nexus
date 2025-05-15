@@ -7,7 +7,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolArg
 from langgraph.store.base import BaseStore
 
-from tester.configuration import Configuration
+from deprecated_tester.configuration import Configuration
 
 
 async def upsert_memory(

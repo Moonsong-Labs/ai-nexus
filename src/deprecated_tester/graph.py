@@ -10,11 +10,11 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 
-from tester import configuration, utils
-from tester.output import (
+from deprecated_tester import configuration, utils
+from deprecated_tester.output import (
     TesterAgentFinalOutput,
 )
-from tester.state import State
+from deprecated_tester.state import State
 
 logger = logging.getLogger(__name__)
 
