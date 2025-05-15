@@ -1,16 +1,22 @@
 """Common agent graph."""
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import asdict
-from typing import Any, Optional
+from typing import Any, Callable, Coroutine, Dict, Optional
 
-from langchain_core.runnables import RunnableConfig
+from langchain_core.language_models import LanguageModelInput
+from langchain_core.messages import BaseMessage, SystemMessage
+from langchain_core.runnables import Runnable, RunnableConfig
 from langgraph.graph import StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+from common.components.memory import SemanticMemory
 from common.config import BaseConfiguration
+
+logger = logging.getLogger(__name__)
 
 
 class AgentGraph(ABC):
@@ -23,12 +29,26 @@ class AgentGraph(ABC):
         store: Optional[BaseStore] = None,
     ):
         """Initialize."""
-        self._name = "Orchestrator"
+        self._name = "BaseAgent"
         self._base_config = base_config or BaseConfiguration()
         self._checkpointer = checkpointer
         self._store = store
         self._builder = None
         self._compiled_graph = None
+
+        # Initialize semantic memory only if use_memory is True
+        self._memory = None
+        if self._base_config.memory.use_memory:
+            self._memory = SemanticMemory(
+                agent_name=self._name,
+                store=store,
+                memory_config=self._base_config.memory,
+            )
+
+    @property
+    def memory(self) -> Optional[SemanticMemory]:
+        """Return the semantic memory component."""
+        return self._memory
 
     @property
     def builder(self):
@@ -40,7 +60,7 @@ class AgentGraph(ABC):
     def _merge_config(self, config: RunnableConfig | None = None):
         if config is not None:
             new_config = RunnableConfig(**config)
-            for k, v in asdict(self._config).items():
+            for k, v in asdict(self._base_config).items():
                 if k not in new_config["configurable"]:
                     new_config["configurable"][k] = v
         return new_config
@@ -49,6 +69,41 @@ class AgentGraph(ABC):
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
         pass
+
+    def _create_call_model(
+        self, llm: Runnable[LanguageModelInput, BaseMessage]
+    ) -> Callable[..., Coroutine[Any, Any, Dict]]:
+        """Create a function that calls the model.
+
+        This is a basic implementation that derived classes can override.
+
+        Args:
+            llm: A runnable language model
+
+        Returns:
+            A coroutine function that processes the state and invokes the model
+        """
+
+        async def call_model(
+            state: Any, config: RunnableConfig, *, store: BaseStore = None
+        ) -> Dict:
+            """Call the model with the current state."""
+            # Get system prompt from config
+            # After _merge_config, "system_prompt" should always be a key in configurable,
+            # potentially with a value of None if explicitly set.
+            system_prompt = self._base_config.system_prompt
+
+            if system_prompt is None:
+                logger.info(
+                    "system_prompt was None in the configuration. Using default prompt."
+                )
+                system_prompt = "You are a helpful AI assistant."
+
+            system = SystemMessage(content=system_prompt)
+            msg = await llm.ainvoke([system, *state.messages])
+            return {"messages": [msg]}
+
+        return call_model
 
     @property
     def compiled_graph(self) -> CompiledStateGraph:
