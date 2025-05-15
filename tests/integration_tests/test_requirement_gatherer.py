@@ -7,7 +7,7 @@ from testing import create_async_graph_caller, get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
-from requirement_gatherer.graph import RequirementsGathererGraph
+from requirement_gatherer.graph import RequirementsGraph
 
 ## Setup basic logging for the test
 logger = get_logger(__name__)
@@ -71,7 +71,9 @@ Use the reference outputs below to help you evaluate the correctness of the resp
 @pytest.mark.asyncio
 async def test_requirement_gatherer_langsmith(pytestconfig):
     """
-    Tests the requirement gatherer agent graph using langsmith.aevaluate against a LangSmith dataset.
+    Asynchronously tests the RequirementsGraph agent using LangSmith's evaluation framework.
+
+    This test verifies that the specified LangSmith dataset exists, evaluates the RequirementsGraph agent over the dataset using an LLM-based correctness evaluator, and asserts that evaluation results are produced.
     """
     client = Client()
 
@@ -93,7 +95,7 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
     memory_store = InMemoryStore()
 
     # Compile the graph - needs checkpointer for stateful execution during evaluation
-    graph = RequirementsGathererGraph(checkpointer=memory_saver, store=memory_store)
+    graph = RequirementsGraph(checkpointer=memory_saver, store=memory_store)
 
     # Define the function to be evaluated for each dataset example
     results = await client.aevaluate(

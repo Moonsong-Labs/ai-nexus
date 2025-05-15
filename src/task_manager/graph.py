@@ -1,7 +1,6 @@
 """Graphs that extract memories on a schedule."""
 
 import logging
-from dataclasses import asdict
 from datetime import datetime
 from typing import Any, Coroutine, Optional
 
@@ -17,7 +16,6 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from common.config import BaseConfiguration
 from common.graph import AgentGraph
 from task_manager import tools
 from task_manager.configuration import TASK_MANAGER_MODEL, Configuration
@@ -31,6 +29,17 @@ TASK_MANAGER_RECURSION_LIMIT = 100
 def _create_call_model(
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
 ) -> Coroutine[Any, Any, dict]:
+    """Create an asynchronous function that retrieves recent user memories, formats them into a prompt, and invokes a language model with contextual information.
+
+    The returned coroutine, when called, searches the memory store for recent relevant memories based on the user's latest messages, embeds these memories and the current timestamp into a system prompt, and calls the provided language model with this prompt and the conversation history.
+
+    Args:
+        llm_with_tools: A runnable language model instance capable of tool use.
+
+    Returns:
+        An asynchronous function that accepts the current state, configuration, and optional memory store, and returns a dictionary containing the model's response message.
+    """
+
     async def call_model(
         state: State, config: RunnableConfig, *, store: BaseStore = None
     ) -> dict:
@@ -58,14 +67,16 @@ def _create_call_model(
     {formatted}
     </memories>"""
 
-        config_with_recursion = RunnableConfig(**config)
-        config_with_recursion["recursion_limit"] = TASK_MANAGER_RECURSION_LIMIT
+        agent_config: Configuration = config["configurable"]["agent_config"]
 
         # Prepare the system prompt with user memories and current time
         # This helps the model understand the context and temporal relevance
-        sys_prompt = config["configurable"]["task_manager_system_prompt"].format(
+        sys_prompt = agent_config.task_manager_system_prompt.format(
             user_info=formatted, time=datetime.now().isoformat()
         )
+
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = TASK_MANAGER_RECURSION_LIMIT
 
         # Invoke the language model with the prepared prompt and tools
         msg = await llm_with_tools.ainvoke(
@@ -85,25 +96,29 @@ class TaskManagerGraph(AgentGraph):
     def __init__(
         self,
         *,
-        use_human_ai=False,
-        base_config: Optional[BaseConfiguration] = None,
+        agent_config: Optional[Configuration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        """Initialize TaskManagerGraph.
+        """Initialize a TaskManagerGraph for managing task workflows with optional configuration, checkpointer, and memory store.
 
         Args:
-            config: Optional Configuration instance.
-            checkpointer: Optional Checkpointer instance.
-            store: Optional BaseStore instance.
+            agent_config: Optional configuration for the task manager agent.
+            checkpointer: Optional checkpoint manager for graph state persistence.
+            store: Optional memory store for user data and memories.
         """
-        super().__init__(base_config, checkpointer, store)
-        self._name = "Task Manager"
-        self._config = Configuration(**asdict(self._base_config))
-        self._use_human_ai = use_human_ai
+        super().__init__(
+            name="Task Manager",
+            agent_config=agent_config or Configuration(),
+            checkpointer=checkpointer,
+            store=store,
+        )
 
     def create_builder(self) -> StateGraph:
-        """Create a graph builder."""
+        """Construct and returns the state graph for the task manager agent.
+
+        Initializes the language model with file management tools, creates the model and tool nodes, and defines the control flow between them in the graph.
+        """
         # Initialize the language model and the tools
         all_tools = [
             tools.read_file,
