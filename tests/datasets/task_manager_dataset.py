@@ -41,7 +41,7 @@ def create_dataset():
                     "content": "You need to provide eight specific files within the project dirctory. These are: projectRequirements.md, techContext.md, systemPatterns.md, testingContext.md, projectbrief.md, featuresContext.md, securityContext.md and progress.md"
                 }
             },
-        },        
+        },
     ]
 
     # Add examples to the dataset

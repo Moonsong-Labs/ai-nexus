@@ -13,9 +13,8 @@ from testing import get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
-# from task_manager.graph import builder as graph_builder
-from task_manager.graph import TaskManagerGraph
 from task_manager.configuration import TASK_MANAGER_MODEL
+from task_manager.graph import TaskManagerGraph
 
 # Setup basic logging for the test
 logger = get_logger(__name__)
@@ -122,9 +121,7 @@ async def test_task_manager_langsmith(pytestconfig):
     graph = TaskManagerGraph(checkpointer=MemorySaver())
 
     results = await client.aevaluate(
-        create_task_manager_graph_caller(
-            graph
-        ),
+        create_task_manager_graph_caller(graph),
         data=LANGSMITH_DATASET_NAME,  # The whole dataset is used
         evaluators=[llm_judge.create_correctness_evaluator(plaintext=True)],
         experiment_prefix="task-manager-gemini-2.5-correctness-eval-plain",
