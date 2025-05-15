@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def _create_call_model(
+    agent_config: Configuration,
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
 ) -> Coroutine[Any, Any, dict]:
     """Create an asynchronous function that queries recent user memories and invokes a language model with contextual prompts.
@@ -56,8 +57,6 @@ def _create_call_model(
 
         # Prepare the system prompt with user memories and current time
         # This helps the model understand the context and temporal relevance
-        agent_config: Configuration = config["configurable"]["agent_config"]
-
         sys_prompt = agent_config.gatherer_system_prompt.format(
             user_info=formatted, time=datetime.now().isoformat()
         )
@@ -76,7 +75,9 @@ def _create_call_model(
 
 
 def _create_gather_requirements(
-    call_model: Coroutine[Any, Any, dict], tool_node: ToolNode
+    agent_config: Configuration,
+    call_model: Coroutine[Any, Any, dict],
+    tool_node: ToolNode,
 ):
     """Create an asynchronous function to determine the next step in the requirements gathering graph.
 
@@ -125,7 +126,7 @@ class RequirementsGraph(AgentGraph):
         # Initialize the language model and the tools
         all_tools = [
             tools.create_human_feedback_tool(
-                use_human_ai=self._agent_config.use_human_ai
+                self._agent_config,
             ),
             tools.memorize,
             tools.summarize,
@@ -133,8 +134,10 @@ class RequirementsGraph(AgentGraph):
 
         llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
         tool_node = ToolNode(all_tools, name="tools")
-        call_model = _create_call_model(llm)
-        gather_requirements = _create_gather_requirements(call_model, tool_node)
+        call_model = _create_call_model(self._agent_config, llm)
+        gather_requirements = _create_gather_requirements(
+            self._agent_config, call_model, tool_node
+        )
 
         builder = StateGraph(State, config_schema=Configuration)
         builder.add_node(call_model)

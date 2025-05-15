@@ -38,13 +38,13 @@ logger = logging.getLogger(__name__)
 
 
 def _create_orchestrate(
+    agent_config: Configuration,
     llm: Runnable[LanguageModelInput, BaseMessage],
 ) -> Coroutine[Any, Any, dict]:
     async def orchestrate(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:
         """Extract the user's state from the conversation and update the memory."""
-        agent_config: Configuration = config["configurable"]["agent_config"]
         sys_prompt = agent_config.system_prompt.format(time=datetime.now().isoformat())
 
         msg = await llm.ainvoke(
@@ -57,7 +57,9 @@ def _create_orchestrate(
     return orchestrate
 
 
-def _create_delegate_to(orchestrate: Coroutine[Any, Any, dict]):
+def _create_delegate_to(
+    agent_config: Configuration, orchestrate: Coroutine[Any, Any, dict]
+):
     async def delegate_to(
         state: State, config: RunnableConfig, store: BaseStore
     ) -> Literal[
@@ -100,7 +102,9 @@ def _create_delegate_to(orchestrate: Coroutine[Any, Any, dict]):
 
 
 def _create_requirements_node(
-    requirements_graph: RequirementsGraph, recursion_limit: int = 100
+    agent_config: Configuration,
+    requirements_graph: RequirementsGraph,
+    recursion_limit: int = 100,
 ):
     """Create an asynchronous requirements node for the orchestrator graph.
 
@@ -119,7 +123,7 @@ def _create_requirements_node(
         config_with_recursion = RunnableConfig(**config)
         config_with_recursion["recursion_limit"] = recursion_limit
 
-        result = await requirements_graph.ainvoke(
+        result = await requirements_graph.compiled_graph.ainvoke(
             RequirementsState(
                 messages=[HumanMessage(content=tool_call["args"]["content"])]
             ),
@@ -208,7 +212,7 @@ class OrchestratorGraph(AgentGraph):
         llm = init_chat_model(self._agent_config.model).bind_tools(
             [tools.Delegate, tools.store_memory]
         )
-        orchestrate = _create_orchestrate(llm)
+        orchestrate = _create_orchestrate(self._agent_config, llm)
         requirements_graph = (
             stubs.RequirementsGathererStub(
                 agent_config=self._agent_config,
@@ -222,7 +226,6 @@ class OrchestratorGraph(AgentGraph):
                 store=self._store,
             )
         )
-
         github_source = maybe_mock_github()
         github_tools = get_github_tools(github_source)
         coder_graph = CoderNewPRGraph(
@@ -231,9 +234,9 @@ class OrchestratorGraph(AgentGraph):
             store=self._store,
             github_tools=github_tools,
         )
-        requirements = _create_requirements_node(requirements_graph)
-        coder = _create_coder_node(coder_graph)
-        delegate_to = _create_delegate_to(orchestrate)
+        coder = _create_coder_node(self._agent_config, coder_graph)
+        requirements = _create_requirements_node(self._agent_config, requirements_graph)
+        delegate_to = _create_delegate_to(self._agent_config, orchestrate)
 
         # Create the graph + all nodes
         builder = StateGraph(State, config_schema=Configuration)
