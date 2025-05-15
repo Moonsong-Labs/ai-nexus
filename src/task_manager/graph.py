@@ -68,7 +68,6 @@ def _create_call_model(
     {formatted}
     </memories>"""
 
-        # Prepare the system prompt with user memories and current time
         # This helps the model understand the context and temporal relevance
         sys_prompt = agent_config.task_manager_system_prompt.format(
             user_info=formatted, time=datetime.now().isoformat(), project_context=""
