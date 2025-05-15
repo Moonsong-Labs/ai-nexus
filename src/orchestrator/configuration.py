@@ -14,6 +14,7 @@ class SubAgentConfig:
     """Sub-agent configuration for orchestrator."""
 
     use_stub: bool = True
+    config: AgentConfiguration = field(default_factory=AgentConfiguration)
 
 
 @dataclass(kw_only=True)

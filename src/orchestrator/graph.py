@@ -17,6 +17,10 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+from coder.graph import CoderNewPRGraph
+from coder.state import State as CoderState
+from common.components.github_mocks import maybe_mock_github
+from common.components.github_tools import get_github_tools
 from common.graph import AgentGraph
 from orchestrator import stubs, tools
 from orchestrator.configuration import (
@@ -82,7 +86,7 @@ def _create_delegate_to(orchestrate: Coroutine[Any, Any, dict]):
                 elif tool_call["args"]["to"] == "architect":
                     return stubs.architect.__name__
                 elif tool_call["args"]["to"] == "coder":
-                    return stubs.coder.__name__
+                    return "coder"
                 elif tool_call["args"]["to"] == "tester":
                     return stubs.tester.__name__
                 elif tool_call["args"]["to"] == "reviewer":
@@ -134,6 +138,41 @@ def _create_requirements_node(
     return requirements
 
 
+def _create_coder_node(coder_new_pr_graph: CoderNewPRGraph, recursion_limit: int = 100):
+    """Create an asynchronous requirements node for the orchestrator graph.
+
+    The returned function processes a tool call from the conversation state, invokes the coder_new_pr graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
+
+    Args:
+        coder_graph: The coder_new_pr graph to invoke for coder_new_pr gathering.
+        recursion_limit: Maximum recursion depth allowed for the coder_new_pr graph (default is 100).
+
+    Returns:
+        An asynchronous function that processes the coding of new functionality and returns a dictionary with a tool message containing the changes.
+    """
+
+    async def coder(state: State, config: RunnableConfig, store: BaseStore):
+        tool_call = state.messages[-1].tool_calls[0]
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = recursion_limit
+
+        result = await coder_new_pr_graph.ainvoke(
+            CoderState(messages=[HumanMessage(content=tool_call["args"]["content"])]),
+            config_with_recursion,
+        )
+
+        return {
+            "messages": [
+                ToolMessage(
+                    content=result["summary"],
+                    tool_call_id=tool_call["id"],
+                )
+            ]
+        }
+
+    return coder
+
+
 class OrchestratorGraph(AgentGraph):
     """Orchestrator graph."""
 
@@ -183,7 +222,17 @@ class OrchestratorGraph(AgentGraph):
                 store=self._store,
             )
         )
+
+        github_source = maybe_mock_github()
+        github_tools = get_github_tools(github_source)
+        coder_graph = CoderNewPRGraph(
+            agent_config=self._agent_config.coder_agent.config,
+            checkpointer=self._checkpointer,
+            store=self._store,
+            github_tools=github_tools,
+        )
         requirements = _create_requirements_node(requirements_graph)
+        coder = _create_coder_node(coder_graph)
         delegate_to = _create_delegate_to(orchestrate)
 
         # Create the graph + all nodes
@@ -193,7 +242,7 @@ class OrchestratorGraph(AgentGraph):
         builder.add_node(orchestrate)
         builder.add_node(requirements)
         builder.add_node(stubs.architect)
-        builder.add_node(stubs.coder)
+        builder.add_node(coder)
         builder.add_node(stubs.tester)
         builder.add_node(stubs.reviewer)
         builder.add_node(stubs.memorizer)
@@ -205,7 +254,7 @@ class OrchestratorGraph(AgentGraph):
         )
         builder.add_edge(requirements.__name__, orchestrate.__name__)
         builder.add_edge(stubs.architect.__name__, orchestrate.__name__)
-        builder.add_edge(stubs.coder.__name__, orchestrate.__name__)
+        builder.add_edge(coder.__name__, orchestrate.__name__)
         builder.add_edge(stubs.tester.__name__, orchestrate.__name__)
         builder.add_edge(stubs.reviewer.__name__, orchestrate.__name__)
         builder.add_edge(stubs.memorizer.__name__, orchestrate.__name__)
