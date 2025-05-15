@@ -36,7 +36,11 @@ OUTPUT_DUMP_FILE = "dump.json"  # output file for `read` operation
 
 
 def print_messages_any(messages: list[dict]):
-    """Pretty-Print messages."""
+    """
+    Pretty-prints a list of message dictionaries with formatted output.
+    
+    Displays each message's type and content using colored formatting. If messages contain nested tool calls, formats and indents them for readability, with special handling for "Delegate" tool calls.
+    """
     next_tool_name = None
     for msg in messages:
         msg_type = msg["type"]
@@ -101,6 +105,11 @@ if __name__ == "__main__":
         )
 
         async def _exec():
+            """
+            Executes the orchestrator asynchronously, handling user input for any interrupts.
+            
+            Runs the orchestrator with an initial human message, checks for interrupts requiring user input, and resumes execution as needed until completion. Returns the final orchestrator result.
+            """
             config = RunnableConfig(
                 recursion_limit=250, configurable={"thread_id": str(uuid.uuid4())}
             )

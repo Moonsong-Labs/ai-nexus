@@ -71,7 +71,9 @@ Use the reference outputs below to help you evaluate the correctness of the resp
 @pytest.mark.asyncio
 async def test_requirement_gatherer_langsmith(pytestconfig):
     """
-    Tests the requirement gatherer agent graph using langsmith.aevaluate against a LangSmith dataset.
+    Asynchronously tests the RequirementsGraph agent using LangSmith's evaluation framework.
+    
+    This test verifies that the specified LangSmith dataset exists, evaluates the RequirementsGraph agent over the dataset using an LLM-based correctness evaluator, and asserts that evaluation results are produced.
     """
     client = Client()
 

@@ -27,6 +27,11 @@ logger = logging.getLogger(__name__)
 def _create_call_model(
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
 ) -> Coroutine[Any, Any, dict]:
+    """
+    Creates an asynchronous function that queries recent user memories and invokes a language model with contextual prompts.
+    
+    The returned coroutine retrieves the user's recent memories from the store, formats them for context, constructs a system prompt including these memories and the current timestamp, and asynchronously calls the language model with the prompt and conversation history. Returns a dictionary containing the model's response message.
+    """
     async def call_model(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:
@@ -71,6 +76,11 @@ def _create_call_model(
 def _create_gather_requirements(
     call_model: Coroutine[Any, Any, dict], tool_node: ToolNode
 ):
+    """
+    Creates an asynchronous function to determine the next step in the requirements gathering graph.
+    
+    The returned function inspects the conversation state to decide whether to route to a tool node, end the process, or continue the conversation with the model.
+    """
     async def gather_requirements(state: State, config: RunnableConfig):
         if state.messages[-1].tool_calls:
             return tool_node.name
@@ -94,12 +104,10 @@ class RequirementsGraph(AgentGraph):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        """Initialize RequirementsGathererGraph.
-
-        Args:
-            config: Optional Configuration instance.
-            checkpointer: Optional Checkpointer instance.
-            store: Optional BaseStore instance.
+        """
+        Initializes a RequirementsGraph instance with optional configuration, checkpointer, and store.
+        
+        If no configuration is provided, a default Configuration is used.
         """
         super().__init__(
             name="Requirements Gatherer",
@@ -109,7 +117,11 @@ class RequirementsGraph(AgentGraph):
         )
 
     def create_builder(self) -> StateGraph:
-        """Create a graph builder."""
+        """
+        Constructs and returns the requirements gathering agent's state graph.
+        
+        Initializes the language model and associated tools, creates the necessary graph nodes and edges, and defines the flow for gathering requirements through conversational interactions.
+        """
         # Initialize the language model and the tools
         all_tools = [
             tools.create_human_feedback_tool(

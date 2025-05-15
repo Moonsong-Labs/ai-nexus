@@ -29,6 +29,17 @@ TASK_MANAGER_RECURSION_LIMIT = 100
 def _create_call_model(
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
 ) -> Coroutine[Any, Any, dict]:
+    """
+    Creates an asynchronous function that retrieves recent user memories, formats them into a prompt, and invokes a language model with contextual information.
+    
+    The returned coroutine, when called, searches the memory store for recent relevant memories based on the user's latest messages, embeds these memories and the current timestamp into a system prompt, and calls the provided language model with this prompt and the conversation history.
+    
+    Args:
+        llm_with_tools: A runnable language model instance capable of tool use.
+    
+    Returns:
+        An asynchronous function that accepts the current state, configuration, and optional memory store, and returns a dictionary containing the model's response message.
+    """
     async def call_model(
         state: State, config: RunnableConfig, *, store: BaseStore = None
     ) -> dict:
@@ -89,12 +100,13 @@ class TaskManagerGraph(AgentGraph):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        """Initialize TaskManagerGraph.
-
+        """
+        Initializes a TaskManagerGraph for managing task workflows with optional configuration, checkpointer, and memory store.
+        
         Args:
-            config: Optional Configuration instance.
-            checkpointer: Optional Checkpointer instance.
-            store: Optional BaseStore instance.
+            agent_config: Optional configuration for the task manager agent.
+            checkpointer: Optional checkpoint manager for graph state persistence.
+            store: Optional memory store for user data and memories.
         """
         super().__init__(
             name="Task Manager",
@@ -104,7 +116,11 @@ class TaskManagerGraph(AgentGraph):
         )
 
     def create_builder(self) -> StateGraph:
-        """Create a graph builder."""
+        """
+        Constructs and returns the state graph for the task manager agent.
+        
+        Initializes the language model with file management tools, creates the model and tool nodes, and defines the control flow between them in the graph.
+        """
         # Initialize the language model and the tools
         all_tools = [
             tools.read_file,
