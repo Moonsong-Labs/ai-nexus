@@ -174,18 +174,10 @@ class OrchestratorGraph(AgentGraph):
             [tools.Delegate, tools.store_memory]
         )
         orchestrate = _create_orchestrate(self._agent_config, llm)
-        requirements_graph = (
-            stubs.RequirementsGathererStub(
-                agent_config=self._agent_config,
-                checkpointer=self._checkpointer,
-                store=self._store,
-            )
-            if self._agent_config.requirements_agent.use_stub
-            else RequirementsGraph(
-                agent_config=self._agent_config.requirements_agent.config,
-                checkpointer=self._checkpointer,
-                store=self._store,
-            )
+        requirements_graph = RequirementsGraph(
+            agent_config=self._agent_config.requirements_agent.config,
+            checkpointer=self._checkpointer,
+            store=self._store,
         )
         requirements = _create_requirements_node(self._agent_config, requirements_graph)
         delegate_to = _create_delegate_to(self._agent_config, orchestrate)
