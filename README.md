@@ -32,14 +32,14 @@ class MyCustomAgent(AgentGraph):
         agent_config.memory.use_memory = True  # Enable memory
         agent_config.memory.user_id = "user123"  # Set namespace for memories
 
-        # Alternatively you can inline the config
+        # Alternatively, you can inline the config
         agent_config = agent_config or Configuration(
             memory=MemoryConfiguration(use_memory=True, user_id = "user123"), 
             system_prompt=OTHER_SYSTEM_PROMPT,
         )
         
         super().__init__(
-            "My Custom Agent",
+            name="My Custom Agent",
             agent_config=agent_config,
             checkpointer=checkpointer,
             store=store,
