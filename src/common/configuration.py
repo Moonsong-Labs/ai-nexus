@@ -22,7 +22,11 @@ class AgentConfiguration:
 
     @property
     def langgraph_configurables(self) -> dict[str, Any]:
-        """Return langgraph configurables."""
+        """
+        Returns a dictionary of configuration fields excluding those specified in the internal exclusion list.
+        
+        The returned dictionary contains the instance's attributes except for those whose keys are present in the `_LANGGRAPH_CONFIGURABLES` list.
+        """
         return {
             k: v for k, v in self.__dict__.items() if k not in _LANGGRAPH_CONFIGURABLES
         }
