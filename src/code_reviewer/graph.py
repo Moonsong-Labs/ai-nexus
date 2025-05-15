@@ -94,6 +94,7 @@ def github_code_reviewer_config():
             "get_files_from_a_directory",
             "read_file",
             "get_pull_request",
+            "get_pull_request_diff",
             "comment_on_issue",
         ]
     )

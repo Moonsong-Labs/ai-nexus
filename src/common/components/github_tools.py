@@ -1,6 +1,7 @@
 """Tools for the code agent."""
 
 from typing import Type, Union
+import requests
 
 from langchain_community.agent_toolkits.github.toolkit import (
     BranchName,
@@ -43,19 +44,50 @@ GITHUB_TOOLS = [
     "delete_file",
     "get_pull_request",
     "list_pull_requests_files",
+    "comment_on_issue",
     # TODO: evaluate adding these tools as well
     # "overview_of_existing_files_in_main_branch",
     # "overview_of_files_in_current_working_branch",
     # "search_code",
+
     # custom tools
     "get_pull_request_head_branch",
-    "comment_on_issue",
+    "get_pull_request_diff",
 ]
 
 
+
+
+GET_PULL_REQUEST_DIFF_PROMPT = "This tool will return the diff of the code in a PR. **VERY IMPORTANT**: You must specify the PR number as an integer."
+class GetPullRequestDiff(BaseTool):
+    """Get the diff of a specific Pull Request (by PR number)."""
+
+    name: str = "get_pull_request_diff"
+    description: str = GET_PULL_REQUEST_DIFF_PROMPT
+    args_schema: Type[BaseModel] = GetPR
+    github_api_wrapper: GitHubAPIWrapper
+
+    def _run(self, pr_number: int) -> str:
+        # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
+        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
+        diff_url = pull_request.diff_url
+        response = requests.get(diff_url, headers={'Accept': 'application/vnd.github.v3.diff'})
+        response.raise_for_status()
+
+        diff_content = response.text
+        return diff_content
+
+    async def _arun(self, pr_number: int) -> str:
+        # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
+        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
+        diff_url = pull_request.diff_url
+        response = requests.get(diff_url, headers={'Accept': 'application/vnd.github.v3.diff'})
+        response.raise_for_status()
+
+        diff_content = response.text
+        return diff_content
+
 GET_PULL_REQUEST_HEAD_BRANCH_PROMPT = "This tool will fetch the head branch of a specific Pull Request (by PR number). **VERY IMPORTANT**: You must specify the PR number as an integer."
-
-
 class GetPullRequestHeadBranch(BaseTool):
     """Get the head branch of a specific Pull Request (by PR number)."""
 
@@ -83,7 +115,10 @@ def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
 
     all_github_tools = [
         make_gemini_compatible(tool) for tool in github_toolkit.get_tools()
-    ] + [GetPullRequestHeadBranch(github_api_wrapper=github_api_wrapper)]
+    ] + [
+        GetPullRequestHeadBranch(github_api_wrapper=github_api_wrapper),
+        GetPullRequestDiff(github_api_wrapper=github_api_wrapper),
+    ]
     github_tools = [tool for tool in all_github_tools if tool.name in GITHUB_TOOLS]
     assert len(github_tools) == len(GITHUB_TOOLS), "Github tool mismatch"
 
