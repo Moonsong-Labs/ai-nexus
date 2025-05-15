@@ -61,6 +61,22 @@ jobs:
         run: make deps
       - name: Run tests
         run: make test_unit
+  coder-tests:
+    name: Coder Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install dependencies
+        run: make deps
+      - name: Run tests
+        run: make test_coder
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }}
   # integration-tests:
   #   name: Integration Tests
   #   runs-on: ubuntu-latest
