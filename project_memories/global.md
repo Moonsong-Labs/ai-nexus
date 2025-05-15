@@ -65,6 +65,7 @@ This file outlines the overarching standards and technological choices for the A
     *   **Mypy:** Conducts static type checking (currently not enforced in CI/default linting pass).
     *   **codespell:** Checks for spelling mistakes.
     *   **openevals:** Used for custom evaluation logic, particularly for the Coder agent.
+    *   **CI Pipeline (`.github/workflows/checks.yml`):** Runs linting (Ruff, codespell), unit tests (`make test_unit`), and Coder integration tests (`make test_coder`). The Coder tests job requires `GOOGLE_API_KEY` as a secret.
 *   **Version Control:** Git.
 *   **LLM Models:**
     *   **`gemini-1.5-flash-latest` / `gemini-2.5-flash-preview-04-17` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (`agent_template` default updated to `gemini-2.5-flash-preview-04-17`). Orchestrator and Requirement Gatherer default to `google_genai:gemini-2.0-flash` via `BaseConfiguration`.
@@ -219,6 +220,7 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
     *   Still uses `create_async_graph_caller` and `LLMJudge` for evaluation against LangSmith datasets.
 *   **`tests/integration_tests/test_coder.py`:**
     *   Added a new test `test_coder_changes_server_port_on_existing_pr`. This test verifies that the Coder agent, using `coder_change_request_config`, correctly applies changes to the head branch of an existing pull request. It utilizes the `MockGithubApi` for setting up the test scenario.
+    *   These tests are now executed as part of the CI pipeline in a dedicated "Coder Tests" job (defined in `.github/workflows/checks.yml`), requiring the `GOOGLE_API_KEY` secret.
 *   **`tests/unit_tests/test_configuration.py`:**
     *   The previous test `test_configuration_from_none()` related to `orchestrator.configuration.Configuration` is removed as that file is deleted. A dummy test `test_foo()` might be present.
 *   **`src/orchestrator/test.py` (Local test script):**
@@ -228,7 +230,13 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`)
 
-*   (No significant changes to the overall workflow mentioned in PR, Makefile targets for specific agent tests might be affected if agent names/structures change significantly, but core `make` commands remain.)
+*   **Make:** Used as a task runner to automate common commands. New targets include:
+    *   `make test_coder`: Runs Coder integration tests (`tests/integration_tests/test_coder.py`).
+*   **CI (`.github/workflows/checks.yml`):**
+    *   The CI pipeline includes jobs for:
+        *   Linting (Ruff, codespell)
+        *   Unit tests (`make test_unit`)
+        *   Coder integration tests (`make test_coder`), which requires the `GOOGLE_API_KEY` secret.
 *   **Ruff Linting:** `pyproject.toml` updated with per-file ignores for `T201` (print statements) in `src/orchestrator/{graph,test}.py` and `src/requirement_gatherer/graph.py` and `src/requirement_gatherer/tools.py`.
 
 
@@ -243,8 +251,8 @@ ai-nexus/
 ├── .gitignore
 ├── .github/
 │   └── workflows/
-│       └── checks.yml
-├── Makefile
+│       └── checks.yml            # UPDATED: Added Coder Tests job
+├── Makefile                      # UPDATED: Added test_coder target
 ├── README.md
 ├── agent_memories/
 │   └── grumpy/
@@ -315,7 +323,7 @@ ai-nexus/
     │   └── task_manager_dataset.py
     ├── integration_tests/
     │   ├── test_architect_agent.py
-    │   ├── test_coder.py           # UPDATED: New test added for PR head branch changes
+    │   ├── test_coder.py           # UPDATED: New test added for PR head branch changes; now run in CI
     │   ├── eval_coder.py
     │   ├── test_graph.py
     │   ├── test_grumpy_agent.py
