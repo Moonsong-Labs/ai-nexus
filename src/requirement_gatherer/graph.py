@@ -1,7 +1,6 @@
 """Graphs that extract memories on a schedule."""
 
 import logging
-from dataclasses import asdict
 from datetime import datetime
 from typing import Any, Coroutine, Optional
 
@@ -17,7 +16,6 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from common.config import BaseConfiguration
 from common.graph import AgentGraph
 from requirement_gatherer import tools
 from requirement_gatherer.configuration import Configuration
@@ -29,12 +27,15 @@ logger = logging.getLogger(__name__)
 def _create_call_model(
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
 ) -> Coroutine[Any, Any, dict]:
+    """Create an asynchronous function that queries recent user memories and invokes a language model with contextual prompts.
+
+    The returned coroutine retrieves the user's recent memories from the store, formats them for context, constructs a system prompt including these memories and the current timestamp, and asynchronously calls the language model with the prompt and conversation history. Returns a dictionary containing the model's response message.
+    """
+
     async def call_model(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:
         """Extract the user's state from the conversation and update the memory."""
-        # configurable = configuration.Configuration.from_runnable_config(config)
-
         user_id = config["configurable"]["user_id"]
         # Retrieve the most recent memories for context
         memories = await store.asearch(
@@ -55,7 +56,9 @@ def _create_call_model(
 
         # Prepare the system prompt with user memories and current time
         # This helps the model understand the context and temporal relevance
-        sys_prompt = config["configurable"]["gatherer_system_prompt"].format(
+        agent_config: Configuration = config["configurable"]["agent_config"]
+
+        sys_prompt = agent_config.gatherer_system_prompt.format(
             user_info=formatted, time=datetime.now().isoformat()
         )
 
@@ -75,6 +78,11 @@ def _create_call_model(
 def _create_gather_requirements(
     call_model: Coroutine[Any, Any, dict], tool_node: ToolNode
 ):
+    """Create an asynchronous function to determine the next step in the requirements gathering graph.
+
+    The returned function inspects the conversation state to decide whether to route to a tool node, end the process, or continue the conversation with the model.
+    """
+
     async def gather_requirements(state: State, config: RunnableConfig):
         if state.messages[-1].tool_calls:
             return tool_node.name
@@ -86,41 +94,44 @@ def _create_gather_requirements(
     return gather_requirements
 
 
-class RequirementsGathererGraph(AgentGraph):
+class RequirementsGraph(AgentGraph):
     """Requirements gatherer graph."""
 
-    _config: Configuration
+    _agent_config: Configuration
 
     def __init__(
         self,
         *,
-        use_human_ai=False,
-        base_config: Optional[BaseConfiguration] = None,
+        agent_config: Optional[Configuration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        """Initialize RequirementsGathererGraph.
+        """Initialize a RequirementsGraph instance with optional configuration, checkpointer, and store.
 
-        Args:
-            config: Optional Configuration instance.
-            checkpointer: Optional Checkpointer instance.
-            store: Optional BaseStore instance.
+        If no configuration is provided, a default Configuration is used.
         """
-        super().__init__(base_config, checkpointer, store)
-        self._name = "Requirements Gatherer"
-        self._config = Configuration(**asdict(self._base_config))
-        self._use_human_ai = use_human_ai
+        super().__init__(
+            name="Requirements Gatherer",
+            agent_config=agent_config or Configuration(),
+            checkpointer=checkpointer,
+            store=store,
+        )
 
     def create_builder(self) -> StateGraph:
-        """Create a graph builder."""
+        """Construct and returns the requirements gathering agent's state graph.
+
+        Initializes the language model and associated tools, creates the necessary graph nodes and edges, and defines the flow for gathering requirements through conversational interactions.
+        """
         # Initialize the language model and the tools
         all_tools = [
-            tools.create_human_feedback_tool(use_human_ai=self._use_human_ai),
+            tools.create_human_feedback_tool(
+                use_human_ai=self._agent_config.use_human_ai
+            ),
             tools.memorize,
             tools.summarize,
         ]
 
-        llm = init_chat_model().bind_tools(all_tools)
+        llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
         tool_node = ToolNode(all_tools, name="tools")
         call_model = _create_call_model(llm)
         gather_requirements = _create_gather_requirements(call_model, tool_node)
@@ -141,6 +152,6 @@ class RequirementsGathererGraph(AgentGraph):
 
 
 # For langsmith
-graph = RequirementsGathererGraph().compiled_graph
+graph = RequirementsGraph().compiled_graph
 
-__all__ = [RequirementsGathererGraph.__name__, "graph"]
+__all__ = [RequirementsGraph.__name__, "graph"]

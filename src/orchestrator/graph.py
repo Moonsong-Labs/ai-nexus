@@ -1,7 +1,6 @@
 """Graphs that orchestrates a software project."""
 
 import logging
-from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any, Coroutine, Literal, Optional
 
@@ -18,12 +17,17 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from common.config import BaseConfiguration
 from common.graph import AgentGraph
 from orchestrator import stubs, tools
-from orchestrator.configuration import Configuration
+from orchestrator.configuration import (
+    Configuration,
+    RequirementsAgentConfig,
+)
 from orchestrator.state import State
-from requirement_gatherer.graph import RequirementsGathererGraph
+from requirement_gatherer.configuration import (
+    Configuration as RequirementsConfiguration,
+)
+from requirement_gatherer.graph import RequirementsGraph
 from requirement_gatherer.state import State as RequirementsState
 
 logger = logging.getLogger(__name__)
@@ -36,9 +40,8 @@ def _create_orchestrate(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:
         """Extract the user's state from the conversation and update the memory."""
-        sys_prompt = config["configurable"]["system_prompt"].format(
-            time=datetime.now().isoformat()
-        )
+        agent_config: Configuration = config["configurable"]["agent_config"]
+        sys_prompt = agent_config.system_prompt.format(time=datetime.now().isoformat())
 
         msg = await llm.ainvoke(
             [SystemMessage(sys_prompt), *state.messages],
@@ -93,8 +96,20 @@ def _create_delegate_to(orchestrate: Coroutine[Any, Any, dict]):
 
 
 def _create_requirements_node(
-    requirements_graph: RequirementsGathererGraph, recursion_limit: int = 100
+    requirements_graph: RequirementsGraph, recursion_limit: int = 100
 ):
+    """Create an asynchronous requirements node for the orchestrator graph.
+
+    The returned function processes a tool call from the conversation state, invokes the requirements graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
+
+    Args:
+        requirements_graph: The requirements graph to invoke for requirements gathering.
+        recursion_limit: Maximum recursion depth allowed for the requirements graph (default is 100).
+
+    Returns:
+        An asynchronous function that processes requirements extraction and returns a dictionary with a tool message containing the summary.
+    """
+
     async def requirements(state: State, config: RunnableConfig, store: BaseStore):
         tool_call = state.messages[-1].tool_calls[0]
         config_with_recursion = RunnableConfig(**config)
@@ -119,56 +134,51 @@ def _create_requirements_node(
     return requirements
 
 
-@dataclass(kw_only=True)
-class AgentConfig:
-    use_stub: bool = True
-
-
-class RequirementsAgentConfig(AgentConfig):
-    use_human_ai: bool = False
-
-
-@dataclass(kw_only=True)
-class AgentsConfig:
-    requirements: RequirementsAgentConfig = field(
-        default_factory=RequirementsAgentConfig
-    )
-    architect: AgentConfig = field(default_factory=AgentConfig)
-    coder: AgentConfig = field(default_factory=AgentConfig)
-    tester: AgentConfig = field(default_factory=AgentConfig)
-    reviewer: AgentConfig = field(default_factory=AgentConfig)
-
-
 class OrchestratorGraph(AgentGraph):
     """Orchestrator graph."""
+
+    _agent_config: Configuration
 
     def __init__(
         self,
         *,
-        agents_config: Optional[AgentsConfig] = None,
-        base_config: Optional[BaseConfiguration] = None,
+        agent_config: Optional[Configuration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        """Initialize."""
-        super().__init__(base_config, checkpointer, store)
-        self._name = "Orchestrator"
-        self._config = Configuration(**asdict(self._base_config))
-        self._agents_config = agents_config or AgentsConfig()
+        """Initialize the OrchestratorGraph with agent configuration, optional checkpointer, and store.
+
+        Args:
+            agent_config: Optional configuration for the orchestrator agent. If not provided, a default configuration is used.
+            checkpointer: Optional checkpointer for managing workflow state persistence.
+            store: Optional storage backend for conversation or workflow data.
+        """
+        super().__init__(
+            name="Orchestrator",
+            agent_config=agent_config or Configuration(),
+            checkpointer=checkpointer,
+            store=store,
+        )
 
     def create_builder(self) -> StateGraph:
-        """Create a graph builder."""
+        """Construct and returns the orchestrator state graph for project workflow management.
+
+        Initializes all nodes and edges representing the orchestrator, requirements gathering, and role-specific stubs, wiring them into a StateGraph that defines the control flow for the orchestration process.
+        """
         # Initialize the language model to be used for memory extraction
-        llm = init_chat_model().bind_tools([tools.Delegate, tools.store_memory])
+        llm = init_chat_model(self._agent_config.model).bind_tools(
+            [tools.Delegate, tools.store_memory]
+        )
         orchestrate = _create_orchestrate(llm)
         requirements_graph = (
             stubs.RequirementsGathererStub(
-                config=self._config, checkpointer=self._checkpointer, store=self._store
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
             )
-            if self._agents_config.requirements.use_stub
-            else RequirementsGathererGraph(
-                use_human_ai=self._agents_config.requirements.use_human_ai,
-                base_config=self._base_config,
+            if self._agent_config.requirements_agent.use_stub
+            else RequirementsGraph(
+                agent_config=self._agent_config.requirements_agent.config,
                 checkpointer=self._checkpointer,
                 store=self._store,
             )
@@ -204,9 +214,12 @@ class OrchestratorGraph(AgentGraph):
 
 
 # For langsmith
-_agents_config = AgentsConfig()
-_agents_config.requirements.use_stub = False
-_agents_config.requirements.use_human_ai = False
-graph = OrchestratorGraph(agents_config=_agents_config).compiled_graph
+graph = OrchestratorGraph(
+    agent_config=Configuration(
+        requirements_agent=RequirementsAgentConfig(
+            use_stub=False, config=RequirementsConfiguration(use_human_ai=False)
+        )
+    )
+).compiled_graph
 
 __all__ = ["OrchestratorGraph"]
