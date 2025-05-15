@@ -104,7 +104,7 @@ class CoderNewPRGraph(AgentGraph):
 
         Args:
             github_tools: Github toolkit to base the agent from
-            config: Optional Configuration instance.
+            base_config: Optional Configuration instance.
             checkpointer: Optional Checkpointer instance.
             store: Optional BaseStore instance.
         """
