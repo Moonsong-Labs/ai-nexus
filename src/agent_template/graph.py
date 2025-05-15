@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def _create_call_model(
+    agent_config: Configuration,
     llm: Runnable[LanguageModelInput, BaseMessage],
 ) -> Callable[..., Coroutine[Any, Any, Dict]]:
     """Create an asynchronous function that invokes a language model with a system prompt and conversation history.
@@ -43,9 +44,6 @@ def _create_call_model(
             A dictionary containing the model's response message under the 'messages' key.
         """
         # Get system prompt from config
-        # After _merge_config, "agent_config" should always be a key in configurable.
-        agent_config: Configuration = config["configurable"]["agent_config"]
-
         system_prompt = agent_config.system_prompt
         if system_prompt is None:
             logger.info(
@@ -110,7 +108,7 @@ class AgentTemplateGraph(AgentGraph):
             llm = llm.bind_tools(all_tools)
 
         # Add nodes to the graph
-        call_model = _create_call_model(llm)
+        call_model = _create_call_model(self._agent_config, llm)
 
         builder.add_node(call_model)
 

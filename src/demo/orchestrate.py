@@ -110,10 +110,17 @@ if __name__ == "__main__":
 
             Runs the orchestrator with an initial human message, checks for interrupts requiring user input, and resumes execution as needed until completion. Returns the final orchestrator result.
             """
-            config = RunnableConfig(
-                recursion_limit=250, configurable={"thread_id": str(uuid.uuid4())}
+            config = orchestrator.create_runnable_config(
+                RunnableConfig(
+                    recursion_limit=250,
+                    configurable={
+                        "thread_id": str(uuid.uuid4()),
+                        "user_id": "nish",
+                    },
+                )
             )
-            result = await orchestrator.ainvoke(
+            print(config)
+            result = await orchestrator.compiled_graph.ainvoke(
                 State(messages=HumanMessage(content="I want to build a website")),
                 config=config,
             )
