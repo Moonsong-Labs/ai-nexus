@@ -40,9 +40,8 @@ def _create_orchestrate(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:
         """Extract the user's state from the conversation and update the memory."""
-        sys_prompt = config["configurable"]["system_prompt"].format(
-            time=datetime.now().isoformat()
-        )
+        agent_config: Configuration = config["configurable"]["agent_config"]
+        sys_prompt = agent_config.system_prompt.format(time=datetime.now().isoformat())
 
         msg = await llm.ainvoke(
             [SystemMessage(sys_prompt), *state.messages],
