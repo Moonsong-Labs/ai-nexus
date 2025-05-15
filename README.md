@@ -158,7 +158,7 @@ make spell_fix
 
 ### Local Demo
 
-```python
+```sh
 uv run --env-file .env -- python ./src/demo/orchestrate.py exec ai
 ```
 
