@@ -27,35 +27,37 @@ logger = logging.getLogger(__name__)
 
 TASK_MANAGER_RECURSION_LIMIT = 100
 
-
 def _create_call_model(
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
 ) -> Coroutine[Any, Any, dict]:
     async def call_model(
-        state: State, config: RunnableConfig, *, store: BaseStore
+        state: State, config: RunnableConfig, *, store: BaseStore = None
     ) -> dict:
         """Extract the user's state from the conversation and update the memory."""
         # configurable = configuration.Configuration.from_runnable_config(config)
 
         user_id = config["configurable"]["user_id"]
         # Retrieve the most recent memories for context
-        memories = await store.asearch(
-            ("memories", user_id),
-            query=str([m.content for m in state.messages[-3:]]),
-            limit=10,
-        )
-        config_with_recursion = RunnableConfig(**config)
-        config_with_recursion["recursion_limit"] = TASK_MANAGER_RECURSION_LIMIT
-
-        # Format memories for inclusion in the prompt
-        formatted = "\n".join(
-            f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
-        )
-        if formatted:
-            formatted = f"""
+        formatted = ""
+        if store is not None:
+            memories = await store.asearch(
+                ("memories", user_id),
+                query=str([m.content for m in state.messages[-3:]]),
+                limit=10,
+            )
+            
+            # Format memories for inclusion in the prompt
+            formatted = "\n".join(
+                f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
+            )
+            if formatted:
+                formatted = f"""
     <memories>
     {formatted}
     </memories>"""
+
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = TASK_MANAGER_RECURSION_LIMIT
 
         # Prepare the system prompt with user memories and current time
         # This helps the model understand the context and temporal relevance

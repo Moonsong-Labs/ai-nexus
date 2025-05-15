@@ -23,10 +23,25 @@ def create_dataset():
             },
             "outputs": {
                 "message": {
-                    "content": "In order to create a task planning, I need to have access to prd.md, techstack.md and split_criteria.md files."
+                    "content": "I need a project name to start. Once you provide the project name, I will look for the project files in the volume directory and begin the planning process."
                 }
             },
         },
+        {
+            "inputs": {
+                "messages": [
+                    {
+                        "role": "human",
+                        "content": "What files must I provide to you?",
+                    }
+                ]
+            },
+            "outputs": {
+                "message": {
+                    "content": "You need to provide eight specific files within the project dirctory. These are: projectRequirements.md, techContext.md, systemPatterns.md, testingContext.md, projectbrief.md, featuresContext.md, securityContext.md and progress.md"
+                }
+            },
+        },        
     ]
 
     # Add examples to the dataset

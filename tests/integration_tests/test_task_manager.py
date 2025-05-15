@@ -13,7 +13,9 @@ from testing import get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
-from task_manager.graph import builder as graph_builder
+# from task_manager.graph import builder as graph_builder
+from task_manager.graph import TaskManagerGraph
+from task_manager.configuration import TASK_MANAGER_MODEL
 
 # Setup basic logging for the test
 logger = get_logger(__name__)
@@ -80,7 +82,7 @@ def create_task_manager_graph_caller(
             "configurable": {
                 "thread_id": str(uuid.uuid4()),
                 "user_id": "test_user",
-                "model": "google_genai:gemini-2.5-flash-preview-04-17",
+                "model": TASK_MANAGER_MODEL,
             }
         }
 
@@ -116,25 +118,18 @@ async def test_task_manager_langsmith(pytestconfig):
     logger.info(f"evaluating dataset: {LANGSMITH_DATASET_NAME}")
 
     # Compile the graph - needs checkpointer for stateful execution during evaluation
-    graph_compiled = graph_builder.compile(checkpointer=MemorySaver())
-
-    # Generate a unique thread_id for each evaluation run
+    # graph_compiled = graph_builder.compile(checkpointer=MemorySaver())
+    graph = TaskManagerGraph(checkpointer=MemorySaver())
 
     results = await client.aevaluate(
         create_task_manager_graph_caller(
-            graph_compiled
-        ),  # Use specialized caller for task manager
+            graph
+        ),
         data=LANGSMITH_DATASET_NAME,  # The whole dataset is used
-        # data=client.list_examples(  # Only the dev split is used
-        #     dataset_name=LANGSMITH_DATASET_NAME, splits=["dev"]
-        # ),
-        # input_mapper=lambda x: x, # Default is identity, maps dataset example to target input
-        # evaluators=[correctness_evaluator],
         evaluators=[llm_judge.create_correctness_evaluator(plaintext=True)],
         experiment_prefix="task-manager-gemini-2.5-correctness-eval-plain",
         num_repetitions=4,
         max_concurrency=4,
-        # metadata={"revision_id": "my-test-run-001"} # Optional: Add metadata
     )
 
     await print_evaluation(results, client, verbosity=Verbosity.SCORE_DETAILED)
