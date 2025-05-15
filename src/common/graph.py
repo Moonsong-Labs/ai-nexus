@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Any, Optional
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph
@@ -115,3 +115,13 @@ class AgentGraph(ABC):
                 name=self._name, checkpointer=self._checkpointer, store=self._store
             )
         return self._compiled_graph
+
+    async def ainvoke(self, state: Any, config: RunnableConfig | None = None):
+        """Asynchronously invokes the compiled agent graph with the given state and merged configuration.
+        Args:
+            state: The initial state to pass to the agent graph.
+            config: Optional runtime configuration to merge with the agent's configuration.
+        Returns:
+            The result of the agent graph execution.
+        """
+        return await self.compiled_graph.ainvoke(state, self.create_runnable_config(config))   
