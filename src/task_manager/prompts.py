@@ -1,3 +1,5 @@
+"""Task manager system prompt."""
+
 SYSTEM_PROMPT = """
 # System Prompt – Atlas (Task Manager Agent)
 

@@ -20,12 +20,13 @@ from langgraph.types import Checkpointer
 from common.config import BaseConfiguration
 from common.graph import AgentGraph
 from task_manager import tools
-from task_manager.configuration import Configuration, TASK_MANAGER_MODEL
+from task_manager.configuration import TASK_MANAGER_MODEL, Configuration
 from task_manager.state import State
 
 logger = logging.getLogger(__name__)
 
 TASK_MANAGER_RECURSION_LIMIT = 100
+
 
 def _create_call_model(
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
@@ -70,6 +71,7 @@ def _create_call_model(
         return {"messages": [msg]}
 
     return call_model
+
 
 class TaskManagerGraph(AgentGraph):
     """Task manager graph."""

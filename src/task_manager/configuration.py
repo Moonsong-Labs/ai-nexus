@@ -1,12 +1,12 @@
 """Define the configurable parameters for the agent."""
 
-
 from dataclasses import dataclass
 
 from common.config import BaseConfiguration
 from task_manager import prompts
 
 TASK_MANAGER_MODEL = "google_genai:gemini-2.5-flash-preview-04-17"
+
 
 @dataclass(kw_only=True)
 class Configuration(BaseConfiguration):
