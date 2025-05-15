@@ -5,7 +5,7 @@ from typing import Any
 
 from common.components.memory import MemoryConfiguration
 
-_LANGGRAPH_CONFIGURABLES = ["user_idmodelprovider"]
+_LANGGRAPH_CONFIGURABLES = ["user_id", "model", "provider"]
 
 
 @dataclass(kw_only=True)

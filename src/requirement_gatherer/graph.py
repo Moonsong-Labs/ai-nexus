@@ -119,7 +119,7 @@ class RequirementsGraph(AgentGraph):
             tools.summarize,
         ]
 
-        llm = init_chat_model().bind_tools(all_tools)
+        llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
         tool_node = ToolNode(all_tools, name="tools")
         call_model = _create_call_model(llm)
         gather_requirements = _create_gather_requirements(call_model, tool_node)

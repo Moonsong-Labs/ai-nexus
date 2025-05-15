@@ -146,7 +146,9 @@ class OrchestratorGraph(AgentGraph):
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
         # Initialize the language model to be used for memory extraction
-        llm = init_chat_model().bind_tools([tools.Delegate, tools.store_memory])
+        llm = init_chat_model(self._agent_config.model).bind_tools(
+            [tools.Delegate, tools.store_memory]
+        )
         orchestrate = _create_orchestrate(llm)
         requirements_graph = (
             stubs.RequirementsGathererStub(

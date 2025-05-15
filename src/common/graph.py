@@ -79,9 +79,9 @@ class AgentGraph(ABC):
             )
         return self._compiled_graph
 
-    def _merge_config(self, config: RunnableConfig) -> RunnableConfig:
+    def _merge_config(self, config: RunnableConfig | None) -> RunnableConfig:
         """Merge user provided config with the agent config and populate well-known langgraph configurables."""
-        new_config = RunnableConfig(**config)
+        new_config = RunnableConfig(**config) if config else RunnableConfig()
         new_config["configurable"] = {
             **self._agent_config.langgraph_configurables,
             **config.get("configurable", {}),

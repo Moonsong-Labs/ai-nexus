@@ -51,7 +51,7 @@ def _create_call_model(
             system_prompt = "You are a helpful AI assistant."
 
         system = SystemMessage(content=system_prompt)
-        msg = await llm.ainvoke([system, *state.messages])
+        msg = await llm.ainvoke([system, *state.messages], config)
         return {"messages": [msg]}
 
     return call_model
