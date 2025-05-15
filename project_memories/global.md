@@ -4,21 +4,21 @@
 
 **Project Name:** AI Nexus
 
-**Core Mission:** To develop a system for managing and orchestrating a team of AI agents capable of designing, developing, and maintaining technical projects. An initial focus is on an agent named "Cursor" which operates with a memory that resets between sessions, necessitating a robust external "Memory Bank" system for continuity. A specific rule (`.cursor/rules/read-project-memories.mdc`) now configures Cursor to always read all files within the `project_memories/` directory for every interaction, ensuring this core project context is consistently available to it. AI Nexus aims to be a platform for developing and managing such AI agents.
+**Core Mission:** To develop a system for managing and orchestrating a team of AI agents capable of designing, developing, and maintaining technical projects. An initial focus is on an agent named "Cursor" which operates with a memory that resets between sessions, necessitating a robust external "Memory Bank" system for continuity. A specific rule (`.cursor/rules/read-project-memories.mdc`) now configures Cursor to always read all files within the `project_memories/` directory for every interaction, ensuring this core project context is consistently available to it. AI Nexus aims to be a platform for developing and managing such AI agents. The Task Manager agent, for instance, now expects a structured set of 8 specific project documentation files (e.g., `projectRequirements.md`, `techContext.md`) to perform its planning functions.
 
 **Key Concepts:**
 1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager) working collaboratively.
 2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is now `langmem`, providing semantic search capabilities over stored memories, replacing the previous conceptual Markdown-based "Memory Bank" and direct `upsert_memory` tool usage for agents based on the template.
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
-4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`).
+4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`, or Task Manager's file system tools).
 5.  **System Prompts:** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols.
 6.  **Configuration Management:** Agents have configurable parameters, including LLM models, system prompts, and memory settings (e.g., `use_static_mem`). This is managed via:
     *   `Configuration` dataclasses from `agent_template`.
     *   A common `BaseConfiguration` in `src/common/config.py`.
-    *   Agent-specific `Configuration` dataclasses (e.g., in `src/orchestrator/configuration.py`, `src/requirement_gatherer/configuration.py`) that subclass `BaseConfiguration`.
+    *   Agent-specific `Configuration` dataclasses (e.g., in `src/orchestrator/configuration.py`, `src/requirement_gatherer/configuration.py`, `src/task_manager/configuration.py`) that subclass `BaseConfiguration`.
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
-8.  **`langmem` Integration:** Provides semantic memory capabilities (storage, search) for agents, typically managed via the `Agent` class and `SemanticMemory` component for agents following the `agent_template`. Other agents like Requirement Gatherer might implement memory tools differently.
-9.  **`AgentGraph` (NEW):** A common base class (`src/common/graph.py`) for defining agent graphs, promoting modularity. Used by Orchestrator and Requirement Gatherer. Its `__init__` method now takes `base_config: BaseConfiguration`.
+8.  **`langmem` Integration:** Provides semantic memory capabilities (storage, search) for agents, typically managed via the `Agent` class and `SemanticMemory` component for agents following the `agent_template`. Other agents like Requirement Gatherer or Task Manager might implement memory tools differently or focus on other types of state/file management.
+9.  **`AgentGraph` (NEW):** A common base class (`src/common/graph.py`) for defining agent graphs, promoting modularity. Used by Orchestrator, Requirement Gatherer, and Task Manager. Its `__init__` method now takes `base_config: BaseConfiguration`.
 
 
 ## 2. The Memory Bank System (Shift from Conceptual to `langmem`)
@@ -26,15 +26,16 @@
 The original "Memory Bank" concept described a system of structured Markdown files (`memory-bank/`) for agent knowledge persistence, particularly for the "Cursor" idea. This concept, detailed in `project_memories/global.md`, served as the initial design principle for externalized memory.
 
 **Current Implementation (`langmem` and custom tools):** The project has integrated the `langmem` library to provide a more robust and queryable semantic memory system for agents based on the `agent_template`. These agents utilize `langmem` tools for storing and retrieving memories.
-Other agents, like the Requirement Gatherer, now use custom tools (e.g., `memorize`) that might interact with the same underlying storage mechanism but are defined and invoked differently within their specific graph structure.
+Other agents, like the Requirement Gatherer, now use custom tools (e.g., `memorize`) that might interact with the same underlying storage mechanism but are defined and invoked differently within their specific graph structure. The Task Manager primarily interacts with the file system using tools like `read_file`, `create_file`, and `list_files` to manage project documentation and planning artifacts.
 
-*   **Storage:** Memories are stored in a `BaseStore` (e.g., `InMemoryStore` configured with embeddings like `GoogleGenerativeAIEmbeddings`).
+*   **Storage:** Memories are stored in a `BaseStore` (e.g., `InMemoryStore` configured with embeddings like `GoogleGenerativeAIEmbeddings`). For Task Manager, memories can also be retrieved by its `call_model` node from the `BaseStore` if available, namespaced by `("memories", user_id)`.
 *   **Namespace:** Memories are typically namespaced by `("memories", "semantic", user_id)` or `("memories", "static", user_id)`.
 *   **Tools:**
     *   `agent_template` based agents: Use `langmem`-provided tools (`manage_memory`, `search_memory`) via `SemanticMemory`. A custom `memory_dump` tool is also available.
     *   Requirement Gatherer: Uses a custom `memorize` tool (defined in `src/requirement_gatherer/tools.py`, refactored from a previous `upsert_memory` function in the same file) for storing memories.
+    *   Task Manager: Uses tools like `read_file`, `create_file`, `list_files`.
 *   **Static Memories:** The concept of static, pre-loaded knowledge persists. JSON files in `.langgraph/static_memories/` can be loaded into the `BaseStore` under a static namespace if `use_static_mem` is enabled in the agent's configuration.
-*   **Shift:** The shift moves from human-readable Markdown files as the primary memory source to a database/store queried semantically via tools. The core principle of externalized memory remains, but the implementation mechanism has evolved. The specific file structure (`projectbrief.md`, `productContext.md`, etc.) described previously is not directly implemented by the `langmem` system, although the *types* of information they represent might be stored as individual memories.
+*   **Shift:** The shift moves from human-readable Markdown files as the primary memory source to a database/store queried semantically via tools. The core principle of externalized memory remains, but the implementation mechanism has evolved. The specific file structure (`projectbrief.md`, `productContext.md`, etc.) described previously is not directly implemented by the `langmem` system, although the *types* of information they represent might be stored as individual memories. However, the Task Manager now explicitly relies on a defined set of 8 Markdown files as input.
 
 
 ## 3. Project-Level Standards & Goals (`project_memories/PRD.md`)
@@ -68,7 +69,7 @@ This file outlines the overarching standards and technological choices for the A
     *   **CI Pipeline (`.github/workflows/checks.yml`):** Runs linting (Ruff, codespell), unit tests (`make test_unit`), and Coder integration tests (`make test_coder`). The Coder tests job requires `GOOGLE_API_KEY` as a secret.
 *   **Version Control:** Git.
 *   **LLM Models:**
-    *   **`gemini-1.5-flash-latest` / `gemini-2.5-flash-preview-04-17` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (`agent_template` default updated to `gemini-2.5-flash-preview-04-17`). Orchestrator and Requirement Gatherer default to `google_genai:gemini-2.0-flash` via `BaseConfiguration`.
+    *   **`gemini-1.5-flash-latest` / `gemini-2.5-flash-preview-04-17` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (`agent_template` default updated to `gemini-2.5-flash-preview-04-17`). Orchestrator and Requirement Gatherer default to `google_genai:gemini-2.0-flash` via `BaseConfiguration`. Task Manager uses `google_genai:gemini-2.5-flash-preview-04-17`.
     *   **`gemini-1.5-pro-latest` (or similar pro variants):** Preferred for complex tasks needing reasoning.
 
 
@@ -90,7 +91,7 @@ Most agents in AI Nexus follow a common structural and operational pattern, larg
 *   **`src/common/components/memory.py` (NEW):** (As previously described, `SemanticMemory` class, static memory loading, `langmem` tool creation)
 *   **`prompts.py` (`src/agent_template/prompts.py`):** (As previously described, instruction to mention memory retrieval)
 
-**4.2. `AgentGraph` based Architecture (NEW - e.g., Orchestrator, Requirement Gatherer)**
+**4.2. `AgentGraph` based Architecture (NEW - e.g., Orchestrator, Requirement Gatherer, Task Manager)**
 
 A newer pattern utilizes a common base class for more modular graph definitions.
 
@@ -112,7 +113,7 @@ A newer pattern utilizes a common base class for more modular graph definitions.
     *   `compiled_graph`: Property to get or compile the graph.
     *   `ainvoke(state, config)`: Invokes the compiled graph, merging instance config with call-time config.
 
-Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and define their specific `Configuration` (subclassing `common.config.BaseConfiguration` in their respective new `configuration.py` files) and graph structure. Graph construction is more modular, often using factory functions to create nodes and tools.
+Agents like Orchestrator, Requirement Gatherer, and Task Manager now subclass `AgentGraph` and define their specific `Configuration` (subclassing `common.config.BaseConfiguration` in their respective new or updated `configuration.py` files) and graph structure. Graph construction is more modular, often using factory functions to create nodes and tools.
 
 
 ## 5. Specific Agent Details
@@ -208,7 +209,42 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 *   (No changes mentioned in PR - assumed same as previous state, follows `agent_template` and uses `langmem`)
 
 #### 5.8. Task Manager (`src/task_manager/`)
-*   (No changes mentioned in PR - assumed same as previous state, older agent structure)
+*   **Architecture:** Major refactor. Uses the `AgentGraph` pattern. `TaskManagerGraph` in `src/task_manager/graph.py` subclasses `common.graph.AgentGraph`.
+*   **Configuration (`src/task_manager/configuration.py` - REVISED):**
+    *   Defines its own `Configuration` dataclass, subclassing `common.config.BaseConfiguration`.
+    *   `task_manager_system_prompt: str = prompts.SYSTEM_PROMPT`.
+    *   `model: str = "google_genai:gemini-2.5-flash-preview-04-17"`.
+*   **Graph Logic (`src/task_manager/graph.py` - REVISED):**
+    *   `TaskManagerGraph` initializes with `base_config`, `checkpointer`, `store`.
+    *   `create_builder` method sets up the graph:
+        *   LLM (`google_genai:gemini-2.5-flash-preview-04-17`) is bound with tools: `read_file`, `create_file`, `list_files`.
+        *   `call_model` node created by `_create_call_model` factory:
+            *   Retrieves recent memories from the `store` (if available, namespaced by `("memories", user_id)`) for context.
+            *   Formats memories and current time into the system prompt.
+            *   Invokes the LLM with a `recursion_limit` of 100 (`TASK_MANAGER_RECURSION_LIMIT`).
+        *   `ToolNode` ("tools") executes the bound file system tools.
+    *   Graph flow: `START` -> `call_model` -> (tools_condition routes to `tools` if tool calls, else `END`) -> `tools` -> `call_model`.
+*   **State (`src/task_manager/state.py`):** (Assumed to be standard `State` with `messages`, as per `AgentGraph` pattern, but not explicitly changed in PR diff for state.py itself).
+*   **Tools (`src/task_manager/tools.py`):** Uses standard file system tools: `read_file`, `create_file`, `list_files` (likely from `langchain_community.tools` or similar, bound in graph).
+*   **Prompts (`src/task_manager/prompts.py` - REVISED):**
+    *   `SYSTEM_PROMPT` is significantly updated to define a new workflow:
+        *   **Input:** User provides a `project_name`. The agent then looks for a project directory (e.g., `src/task_manager/volume/[project_name]/`).
+        *   **Required Input Files (8):** The agent MUST find the following 8 files in the project directory:
+            1.  `projectRequirements.md`
+            2.  `techContext.md`
+            3.  `systemPatterns.md` (task splitting criteria)
+            4.  `testingContext.md`
+            5.  `projectbrief.md`
+            6.  `featuresContext.md`
+            7.  `securityContext.md`
+            8.  `progress.md`
+        *   **Workflow Stages:**
+            1.  **Project Validation and Analysis:** Check for directory and all 8 files. If missing, respond with "VALIDATION_FAILED..." and stop. Otherwise, read and analyze files.
+            2.  **Tasks Creation:** Apply task splitting guidelines (e.g., 6-14 hours per task). Create a `planning` subdirectory within the project's volume directory. Generate individual Markdown files for each task (e.g., `task-01-setup-scaffolding-dependencies.md`) in this `planning` directory. Each task file includes fields like `id`, `title`, `description`, `status` ("pending"), `dependencies`, `priority`, `details`, `testStrategy`, `subtasks`, `issueLink`, `pullRequestLink`, `skillRequirements`, `acceptanceCriteria`, `assignee` (blank), `estimatedHours`.
+            3.  **Planning Creation:** Read all generated task files. Create a `roadmap.md` file in the `planning` directory (e.g., `src/task_manager/volume/[project_name]/planning/roadmap.md`). This roadmap organizes tasks week by week, assigns tasks to team members (1 engineer by default), respects dependencies, and manages workload.
+        *   **Team Configuration:** Default 1 engineer, 40 hours/week.
+        *   **Output:** Individual task Markdown files and a `roadmap.md` file, all located in the `planning` subdirectory.
+*   **Example Input Files:** The PR adds a set of example input files for a "Simple Rust API" project under `src/task_manager/volume/api_rust/` demonstrating the 8 required file types.
 
 
 ## 6. Testing Framework (`tests/`)
@@ -221,11 +257,17 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 *   **`tests/integration_tests/test_coder.py`:**
     *   Added a new test `test_coder_changes_server_port_on_existing_pr`. This test verifies that the Coder agent, using `coder_change_request_config`, correctly applies changes to the head branch of an existing pull request. It utilizes the `MockGithubApi` for setting up the test scenario.
     *   These tests are now executed as part of the CI pipeline in a dedicated "Coder Tests" job (defined in `.github/workflows/checks.yml`), requiring the `GOOGLE_API_KEY` secret.
+*   **`tests/integration_tests/test_task_manager.py` (UPDATED):**
+    *   Updated to use the new `TaskManagerGraph`.
+    *   The `call_model` helper function is updated for the new configuration and model (`google_genai:gemini-2.5-flash-preview-04-17`).
+    *   LangSmith evaluation uses `TaskManagerGraph` instance.
 *   **`tests/unit_tests/test_configuration.py`:**
     *   The previous test `test_configuration_from_none()` related to `orchestrator.configuration.Configuration` is removed as that file is deleted. A dummy test `test_foo()` might be present.
 *   **`src/orchestrator/test.py` (Local test script):**
     *   Updated to instantiate `OrchestratorGraph` using `AgentsConfig` and `BaseConfiguration`.
     *   Demonstrates setting `agents_config.requirements.use_stub = False` and `agents_config.requirements.use_human_ai = True`.
+*   **`tests/datasets/task_manager_dataset.py` (UPDATED):**
+    *   Dataset examples updated to reflect the Task Manager's new initial interaction flow (e.g., asking for project name, listing the 8 required files if prompted).
 
 
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`)
@@ -244,15 +286,15 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and 
 
 ```
 ai-nexus/
-├── .cursor/                      # NEW: Cursor specific rules
-│   └── rules/                    # NEW
-│       └── read-project-memories.mdc # NEW: Rule to always read project_memories
+├── .cursor/
+│   └── rules/
+│       └── read-project-memories.mdc
 ├── .env.example
 ├── .gitignore
 ├── .github/
 │   └── workflows/
-│       └── checks.yml            # UPDATED: Added Coder Tests job
-├── Makefile                      # UPDATED: Added test_coder target
+│       └── checks.yml
+├── Makefile
 ├── README.md
 ├── agent_memories/
 │   └── grumpy/
@@ -260,7 +302,7 @@ ai-nexus/
 ├── project_memories/
 │   ├── PRD.md
 │   └── global.md
-├── pyproject.toml                # UPDATED: Ruff per-file ignores
+├── pyproject.toml
 ├── scripts/
 │   └── generate_project_memory.sh
 ├── src/
@@ -279,62 +321,78 @@ ai-nexus/
 │   │   └── system_prompt.md
 │   ├── coder/
 │   │   ├── __init__.py
-│   │   ├── graph.py              # UPDATED: coder_change_request_config includes new tool
+│   │   ├── graph.py
 │   │   ├── lg_server.py
 │   │   ├── mocks.py
-│   │   ├── prompts.py            # UPDATED: CHANGE_REQUEST_SYSTEM_PROMPT modified
+│   │   ├── prompts.py
 │   │   ├── state.py
 │   │   ├── tools.py
 │   │   └── README.md
 │   ├── common/
 │   │   ├── components/
-│   │   │   ├── github_mocks.py   # UPDATED: Mock API updated for new tool and PR info
-│   │   │   ├── github_tools.py   # UPDATED: Added GetPullRequestHeadBranch tool
+│   │   │   ├── github_mocks.py
+│   │   │   ├── github_tools.py
 │   │   │   └── memory.py
-│   │   ├── config.py             # REVISED: Defines BaseConfiguration
-│   │   ├── graph.py              # REVISED: AgentGraph __init__ updated
+│   │   ├── config.py
+│   │   ├── graph.py
 │   │   └── utils/
 │   ├── grumpy/
 │   ├── orchestrator/
 │   │   ├── __init__.py
-│   │   ├── configuration.py      # NEW (re-added with new structure): Specific Configuration subclassing BaseConfiguration
-│   │   ├── graph.py              # REVISED: Uses new Configuration, AgentsConfig, factory functions for nodes
+│   │   ├── configuration.py
+│   │   ├── graph.py
 │   │   ├── memory/
-│   │   │   └── team.md           # UPDATED: Delegate tool must include content
-│   │   ├── prompts.py            # UPDATED: System prompt includes {time}
-│   │   ├── state.py              # REVISED: Docstring
+│   │   │   └── team.md
+│   │   ├── prompts.py
+│   │   ├── state.py
 │   │   ├── stubs/
-│   │   │   └── __init__.py       # UPDATED: RequirementsGathererStub __init__ takes BaseConfiguration
-│   │   ├── test.py               # REVISED: Uses AgentsConfig, BaseConfiguration
-│   │   └── tools.py              # UPDATED: Delegate tool requires 'content'
+│   │   │   └── __init__.py
+│   │   ├── test.py
+│   │   └── tools.py
 │   ├── requirement_gatherer/
 │   │   ├── __init__.py
-│   │   ├── configuration.py      # NEW (re-added with new structure): Specific Configuration subclassing BaseConfiguration
-│   │   ├── graph.py              # REVISED: Uses new Configuration, factory functions for nodes, new tool usage
-│   │   ├── prompts.py            # REVISED: System prompt updated for new tools/workflow, evaluator prompt removed
-│   │   ├── state.py              # REVISED: 'veredict' removed, 'summary' added, docstring
-│   │   └── tools.py              # REVISED: Defines create_human_feedback_tool, memorize (refactored from upsert_memory), summarize
+│   │   ├── configuration.py
+│   │   ├── graph.py
+│   │   ├── prompts.py
+│   │   ├── state.py
+│   │   └── tools.py
 │   ├── task_manager/
+│   │   ├── __init__.py
+│   │   ├── configuration.py      # REVISED: Subclasses BaseConfiguration, specific model and prompt
+│   │   ├── graph.py              # REVISED: Implements TaskManagerGraph(AgentGraph), new logic
+│   │   ├── prompts.py            # REVISED: Major update to system prompt, new workflow, 8 input files, markdown outputs
+│   │   ├── state.py              # (No explicit change in PR, assumed standard)
+│   │   ├── tools.py              # (Uses file system tools bound in graph)
+│   │   └── volume/               # NEW: Directory for Task Manager project inputs
+│   │       └── api_rust/         # NEW: Example project input files
+│   │           ├── featuresContext.md      # NEW
+│   │           ├── progress.md             # NEW
+│   │           ├── projectRequirements.md  # NEW
+│   │           ├── projectbrief.md         # NEW
+│   │           ├── securityContext.md      # NEW
+│   │           ├── systemPatterns.md       # NEW
+│   │           ├── techContext.md          # NEW
+│   │           └── testingContext.md       # NEW
 │   └── tester/
 └── tests/
     ├── datasets/
     │   ├── coder_dataset.py
     │   ├── requirement_gatherer_dataset.py
-    │   └── task_manager_dataset.py
+    │   └── task_manager_dataset.py # UPDATED: Reflects new TM interaction
     ├── integration_tests/
     │   ├── test_architect_agent.py
-    │   ├── test_coder.py           # UPDATED: New test added for PR head branch changes; now run in CI
+    │   ├── test_coder.py
     │   ├── eval_coder.py
     │   ├── test_graph.py
     │   ├── test_grumpy_agent.py
-    │   ├── test_orchestrator.py    # UPDATED: Uses new OrchestratorGraph
-    │   ├── test_requirement_gatherer.py # UPDATED: Uses new RequirementsGathererGraph
-    │   ├── test_task_manager.py
+    │   ├── test_orchestrator.py
+    │   ├── test_requirement_gatherer.py
+    │   ├── test_task_manager.py    # UPDATED: Uses new TaskManagerGraph
     │   └── test_tester_agent.py
     ├── testing/
     │   ├── __init__.py
     │   ├── evaluators.py
     │   └── formatter.py
     └── unit_tests/
-        └── test_configuration.py   # REVISED: Old test removed, may contain dummy test
+        └── test_configuration.py
 ```
