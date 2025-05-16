@@ -5,6 +5,7 @@
 from typing import Any, Awaitable, Callable, Dict, Generic, List, Optional, TypeVar
 
 from langchain_core.messages import (
+    AIMessage,
     ToolMessage,
 )
 from langchain_core.runnables import RunnableConfig
@@ -144,7 +145,7 @@ class CoderNewPRStub(StubGraph[CoderState]):
     ):
         async def run(state: CoderState, config: RunnableConfig | None = None):
             return {
-                "messages": model_coder_new_pr_messages.next(),
+                "messages": [AIMessage(content=model_coder_new_pr_messages.next())],
             }
 
         super().__init__(
@@ -167,7 +168,9 @@ class CoderChangeRequestStub(StubGraph[CoderState]):
     ):
         async def run(state: CoderState, config: RunnableConfig | None = None):
             return {
-                "messages": model_coder_change_request_messages.next(),
+                "messages": [
+                    AIMessage(content=model_coder_change_request_messages.next())
+                ],
             }
 
         super().__init__(
