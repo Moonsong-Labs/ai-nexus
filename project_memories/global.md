@@ -11,7 +11,7 @@
 2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is `langmem`, providing semantic search capabilities over stored memories. `AgentGraph` can now automatically initialize and provide `SemanticMemory` and its tools to subclasses based on its configuration.
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
 4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools provided via `AgentGraph`/`SemanticMemory`, or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`).
-5.  **System Prompts:** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes (which subclass `AgentConfiguration`) and used by the agent's graph logic (e.g., in custom `call_model` implementations).
+5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes (which subclass `AgentConfiguration`). These configurations (and thus the prompts) are accessed by the agent's graph logic (e.g., in custom `call_model` implementations, which now often receive the agent's full `Configuration` object directly as a parameter).
 6.  **Configuration Management (REVISED):** Agents have configurable parameters, including LLM models, system prompts, and memory settings. This is managed via:
     *   A `MemoryConfiguration` dataclass (`common.components.memory.MemoryConfiguration`) for memory-specific settings like `use_memory`, `load_static_memories`, and `user_id`.
     *   A common `AgentConfiguration` in `src/common/configuration.py` (NEW, replaces `BaseConfiguration`), which includes a `memory: MemoryConfiguration` field. It also includes `user_id`, `model`, and `provider` for LangGraph. Agent-specific system prompts are defined in subclasses.
@@ -23,7 +23,10 @@
     *   It initializes an internal `_memory: Optional[SemanticMemory]` instance if `agent_config.memory.use_memory` is true, using `agent_config.memory` for the `SemanticMemory` configuration and the passed `name` for the `agent_name` namespace.
     *   Provides an `agent_config` property to access `self._agent_config`.
     *   Provides a `memory` property to access `self._memory`.
-    *   The base `_create_call_model` method has been removed; model calling logic (including system prompt handling) is now typically implemented within specific agent graph builders or helper functions.
+    *   The base `_create_call_model` method has been removed; model calling logic (including system prompt handling) is now typically implemented within specific agent graph builders or helper functions (these helpers now often receive the `agent_config` directly).
+    *   The `_merge_config` and `ainvoke` methods have been removed from `AgentGraph`.
+    *   A new `create_runnable_config(self, config: RunnableConfig | None = None) -> RunnableConfig` method is added. It prepares the `RunnableConfig` for graph invocation by merging the agent's `langgraph_configurables` (from `self._agent_config`) with any provided call-time configurables. It does *not* inject the full `agent_config` object into the `configurable` dictionary.
+    *   Graph invocation is now typically performed by getting the `compiled_graph` and calling its `ainvoke` method directly, e.g., `await agent_instance.compiled_graph.ainvoke(state, agent_instance.create_runnable_config(call_time_config))`.
 
 
 ## 2. The Memory Bank System (Shift from Conceptual to `langmem`)
@@ -113,7 +116,7 @@ This pattern is now embodied by `AgentTemplateGraph` which subclasses `AgentGrap
         *   Initializes an LLM.
         *   Retrieves tools from `self.memory.get_tools()` (provided by `AgentGraph` if memory is enabled) and potentially other tools.
         *   Binds tools to the LLM.
-        *   Adds a `call_model` node (using a local helper `_create_call_model` which uses the system prompt from the `agent_config`) and a `ToolNode` (if tools exist).
+        *   Adds a `call_model` node (using a local helper `_create_call_model` which now receives `self._agent_config` as an argument and uses the system prompt from it; the inner `call_model` function no longer extracts `agent_config` from the `RunnableConfig`) and a `ToolNode` (if tools exist).
         *   Sets up standard routing: `START` -> `call_model` -> (conditional) `tools` -> `call_model` or `END`.
     *   A global `graph` instance is created: `graph = AgentTemplateGraph().compiled_graph`.
 *   **`tools.py` (`src/agent_template/tools.py`):** (As previously described, `file_dump` tool; memory tools are now primarily accessed via `AgentGraph`'s `memory` component).
@@ -157,8 +160,10 @@ A common base class for modular graph definitions.
     *   `memory` (property): Returns `self._memory`.
     *   `create_builder() -> StateGraph` (abstract method): To be implemented by subclasses.
     *   `_create_call_model` base method REMOVED.
-    *   `compiled_graph`: Property to get or compile the graph.
-    *   `ainvoke(state, config)`: Invokes the compiled graph, merging instance config with call-time config using an updated `_merge_config` method.
+    *   `_merge_config` method REMOVED.
+    *   `ainvoke(state, config)`: Method REMOVED.
+    *   `create_runnable_config(self, config: RunnableConfig | None = None) -> RunnableConfig` (NEW): Method to prepare `RunnableConfig` for graph invocation. It takes an optional `RunnableConfig`, merges `self._agent_config.langgraph_configurables` into its `configurable` field, and returns the modified `RunnableConfig`. This notably does *not* inject the full `agent_config` object into the `configurable` dictionary.
+    *   `compiled_graph`: Property to get or compile the graph. Invocation is now typically done via `self.compiled_graph.ainvoke(state, self.create_runnable_config(config))`.
 
 Agents like Orchestrator, Requirement Gatherer, Coder, and `AgentTemplateGraph` subclass `AgentGraph`.
 
@@ -174,7 +179,10 @@ Agents like Orchestrator, Requirement Gatherer, Coder, and `AgentTemplateGraph` 
 *   **Graph (`src/orchestrator/graph.py` - REVISED):**
     *   `OrchestratorGraph.__init__` now takes `agent_config: Optional[orchestrator.configuration.Configuration]`.
     *   Uses `self._agent_config` for its settings and for configuring sub-agents/stubs.
+    *   Helper functions like `_create_orchestrate`, `_create_delegate_to`, `_create_requirements_node` now receive `self._agent_config` as a direct argument.
+    *   Inner functions (e.g., `orchestrate`) no longer extract `agent_config` from `RunnableConfig` but use the `agent_config` passed to their factory/creator function.
     *   `RequirementsGathererGraph` is now referred to as `RequirementsGraph`.
+    *   Invocation of sub-graphs (e.g., `requirements_graph`) now uses `compiled_graph.ainvoke` (e.g., `await requirements_graph.compiled_graph.ainvoke(...)`).
     *   `AgentsConfig` dataclass removed.
 *   **Stubs (`src/orchestrator/stubs/__init__.py` - REVISED):**
     *   `RequirementsGathererStub.__init__` now takes `agent_config`.
@@ -187,7 +195,7 @@ Agents like Orchestrator, Requirement Gatherer, Coder, and `AgentTemplateGraph` 
 *   **Architecture:** Uses the `AgentGraph` pattern. Its configuration (likely `src/coder/configuration.py`, though not explicitly detailed in PR#81 diffs) would need to subclass `common.configuration.AgentConfiguration` to be compatible with the revised `AgentGraph`.
 
 #### 5.4. Code Reviewer (`src/code_reviewer/`)
-*   (Likely follows `agent_template` pattern, so it will now use `AgentTemplateGraph` and its revised memory/config handling.)
+*   (Likely follows `agent_template` pattern, so it will now use `AgentTemplateGraph` and its revised memory/config handling, including how `agent_config` is passed to its internal `_create_call_model` helper.)
 
 #### 5.5. Tester (`src/tester/`)
 *   (No changes mentioned in PR - assumed same as previous state)
@@ -200,11 +208,14 @@ Agents like Orchestrator, Requirement Gatherer, Coder, and `AgentTemplateGraph` 
 *   **Graph (`src/requirement_gatherer/graph.py` - REVISED):**
     *   `RequirementsGraph.__init__` now takes `agent_config: Optional[requirement_gatherer.configuration.Configuration]`.
     *   Uses `self._agent_config` for its settings (e.g., `gatherer_system_prompt`, `model`).
+    *   Helper functions like `_create_call_model` and `_create_gather_requirements` now receive `self._agent_config` as a direct argument.
+    *   Inner functions (e.g., `call_model`) no longer extract `agent_config` from `RunnableConfig` but use the `agent_config` passed to their factory/creator function.
 *   **Tools (`src/requirement_gatherer/tools.py` - REVISED):**
-    *   `create_human_feedback_tool` now accesses `use_human_ai` from `agent_config` (passed via `RunnableConfig`).
+    *   `create_human_feedback_tool` now accepts the full `agent_config: requirement_gatherer.configuration.Configuration` object as an argument (instead of just `use_human_ai`).
+    *   The inner `human_feedback` tool function no longer extracts `agent_config` from `RunnableConfig` but uses the `agent_config.use_human_ai` field from the configuration object passed to `create_human_feedback_tool`.
 
 #### 5.7. Grumpy (`src/grumpy/`)
-*   (Likely follows `agent_template` pattern, so it will now use `AgentTemplateGraph` and its revised memory/config handling.)
+*   (Likely follows `agent_template` pattern, so it will now use `AgentTemplateGraph` and its revised memory/config handling, including how `agent_config` is passed to its internal `_create_call_model` helper.)
 
 #### 5.8. Task Manager (`src/task_manager/`) (REVISED)
 *   **Architecture:** Uses the `AgentGraph` pattern. `TaskManagerGraph` in `src/task_manager/graph.py` subclasses `common.graph.AgentGraph`.
@@ -213,6 +224,8 @@ Agents like Orchestrator, Requirement Gatherer, Coder, and `AgentTemplateGraph` 
 *   **Graph (`src/task_manager/graph.py` - REVISED):**
     *   `TaskManagerGraph.__init__` now takes `agent_config: Optional[task_manager.configuration.Configuration]`.
     *   Uses `self._agent_config` for its settings (e.g., `task_manager_system_prompt`, `model`).
+    *   The helper function `_create_call_model` now receives `self._agent_config` as a direct argument.
+    *   The inner `call_model` function no longer extracts `agent_config` from `RunnableConfig` but uses the `agent_config` passed to `_create_call_model`.
 
 
 ## 6. Testing Framework (`tests/`)
@@ -250,7 +263,7 @@ Agents like Orchestrator, Requirement Gatherer, Coder, and `AgentTemplateGraph` 
             config.memory.user_id = "user123"
             agent = agent_template.AgentTemplateGraph(agent_config=config)
             ```
-    *   **Local Demo (NEW):** Added section with command: `uv run --env-file .env -- python ./src/demo/orchestrate.py exec ai`.
+    *   **Local Demo (NEW & UPDATED):** Added section with command: `uv run --env-file .env -- python ./src/demo/orchestrate.py exec ai`. The `orchestrate.py` script now uses `orchestrator.create_runnable_config()` and `orchestrator.compiled_graph.ainvoke()` for execution.
 *   **`.gitignore` (UPDATED):** Added `dump.json`.
 *   (Other workflow details as previously described)
 
@@ -287,7 +300,7 @@ ai-nexus/
 │   │   ├── __init__.py           # UPDATED: Exports AgentTemplateGraph, Configuration, State
 │   │   ├── agent.py              # DELETED
 │   │   ├── configuration.py      # UPDATED: Subclasses common.configuration.AgentConfiguration
-│   │   ├── graph.py              # UPDATED: Uses AgentConfiguration, new AgentGraph init, local _create_call_model
+│   │   ├── graph.py              # UPDATED: Uses AgentConfiguration, new AgentGraph init, local _create_call_model receives agent_config
 │   │   ├── memory.py             # DELETED
 │   │   ├── prompts.py
 │   │   ├── state.py
@@ -313,15 +326,15 @@ ai-nexus/
 │   │   │   └── memory.py         # UPDATED: Defines MemoryConfiguration, SemanticMemory uses it, ConfigurationProtocol removed
 │   │   ├── config.py             # DELETED (Replaced by common/configuration.py)
 │   │   ├── configuration.py      # ADDED: Defines AgentConfiguration (base for all agent configs)
-│   │   ├── graph.py              # REVISED: AgentGraph __init__ takes name & AgentConfiguration, inits SemanticMemory, _create_call_model removed
+│   │   ├── graph.py              # REVISED: AgentGraph __init__ takes name & AgentConfiguration, inits SemanticMemory, _create_call_model, _merge_config, ainvoke removed; create_runnable_config added
 │   │   └── utils/
 │   ├── demo/                     # NEW directory
-│   │   └── orchestrate.py        # MOVED & RENAMED from src/orchestrator/test.py
+│   │   └── orchestrate.py        # MOVED & RENAMED from src/orchestrator/test.py; UPDATED to use create_runnable_config and compiled_graph.ainvoke
 │   ├── grumpy/
 │   ├── orchestrator/
 │   │   ├── __init__.py
 │   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration, new sub-agent configs
-│   │   ├── graph.py              # UPDATED: Uses new AgentConfiguration, new AgentGraph init, refers to RequirementsGraph
+│   │   ├── graph.py              # UPDATED: Uses new AgentConfiguration, new AgentGraph init, refers to RequirementsGraph; helpers receive agent_config; sub-graph invocation via compiled_graph.ainvoke
 │   │   ├── memory/
 │   │   │   └── team.md
 │   │   ├── prompts.py
@@ -332,14 +345,14 @@ ai-nexus/
 │   ├── requirement_gatherer/
 │   │   ├── __init__.py
 │   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration, adds use_human_ai
-│   │   ├── graph.py              # UPDATED: Renamed to RequirementsGraph, uses AgentConfiguration, new AgentGraph init
+│   │   ├── graph.py              # UPDATED: Renamed to RequirementsGraph, uses AgentConfiguration, new AgentGraph init; helpers receive agent_config
 │   │   ├── prompts.py
 │   │   ├── state.py
-│   │   ├── tools.py              # UPDATED: human_feedback tool uses agent_config.use_human_ai
+│   │   ├── tools.py              # UPDATED: human_feedback tool factory takes agent_config
 │   │   └── utils.py              # DELETED
 │   ├── task_manager/
 │   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration
-│   │   └── graph.py              # UPDATED: Uses AgentConfiguration, new AgentGraph init
+│   │   └── graph.py              # UPDATED: Uses AgentConfiguration, new AgentGraph init; _create_call_model helper receives agent_config
 │   └── tester/
 └── tests/
     ├── datasets/
