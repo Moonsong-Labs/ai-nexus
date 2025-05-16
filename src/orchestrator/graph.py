@@ -22,6 +22,7 @@ from orchestrator import stubs, tools
 from orchestrator.configuration import (
     Configuration,
     RequirementsAgentConfig,
+    ArchitectAgentConfig
 )
 from orchestrator.state import State
 from requirement_gatherer.configuration import (
@@ -29,6 +30,11 @@ from requirement_gatherer.configuration import (
 )
 from requirement_gatherer.graph import RequirementsGraph
 from requirement_gatherer.state import State as RequirementsState
+from architect.configuration import (
+    Configuration as ArchitectConfiguration,
+)
+from architect.state import State as ArchitectState
+from architect.graph import ArchitectGraph
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +88,7 @@ def _create_delegate_to(
                 elif tool_call["args"]["to"] == "requirements":
                     return "requirements"
                 elif tool_call["args"]["to"] == "architect":
-                    return stubs.architect.__name__
+                    return "architect"
                 elif tool_call["args"]["to"] == "coder":
                     return stubs.coder.__name__
                 elif tool_call["args"]["to"] == "tester":
@@ -95,6 +101,46 @@ def _create_delegate_to(
                     raise ValueError
 
     return delegate_to
+
+def _create_architect_node(
+    agent_config: Configuration,
+    architect_graph: ArchitectGraph,
+    recursion_limit: int = 100,
+):
+    """Create an asynchronous architect node for the orchestrator graph.
+
+    The returned function processes a tool call from the conversation state, invokes the architect graph with the tool call content as input, and returns a tool message containing the summarized architect linked to the original tool call ID.
+
+    Args:
+        architect_graph: The architect graph to invoke for architecting.
+        recursion_limit: Maximum recursion depth allowed for the requirements graph (default is 100).
+
+    Returns:
+        An asynchronous function that architects the project and returns a dictionary with a tool message containing the summary.
+    """
+
+    async def architect(state: State, config: RunnableConfig, store: BaseStore):
+        tool_call = state.messages[-1].tool_calls[0]
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = recursion_limit
+
+        result = await architect_graph.compiled_graph.ainvoke(
+            ArchitectState(
+                messages=[HumanMessage(content=tool_call["args"]["content"])]
+            ),
+            config_with_recursion,
+        )
+
+        return {
+            "messages": [
+                ToolMessage(
+                    content=result["summary"],
+                    tool_call_id=tool_call["id"],
+                )
+            ]
+        }
+
+    return architect
 
 
 def _create_requirements_node(
@@ -187,7 +233,21 @@ class OrchestratorGraph(AgentGraph):
                 store=self._store,
             )
         )
+        architect_graph = (
+            stubs.ArchitectStub(
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+            if self._agent_config.architect_agent.use_stub
+            else ArchitectGraph(
+                agent_config=self._agent_config.architect_agent.config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+        )
         requirements = _create_requirements_node(self._agent_config, requirements_graph)
+        architect = _create_architect_node(self._agent_config, architect_graph)
         delegate_to = _create_delegate_to(self._agent_config, orchestrate)
 
         # Create the graph + all nodes
@@ -196,7 +256,7 @@ class OrchestratorGraph(AgentGraph):
         # Define the flow of the memory extraction process
         builder.add_node(orchestrate)
         builder.add_node(requirements)
-        builder.add_node(stubs.architect)
+        builder.add_node(architect)
         builder.add_node(stubs.coder)
         builder.add_node(stubs.tester)
         builder.add_node(stubs.reviewer)
@@ -208,7 +268,7 @@ class OrchestratorGraph(AgentGraph):
             delegate_to,
         )
         builder.add_edge(requirements.__name__, orchestrate.__name__)
-        builder.add_edge(stubs.architect.__name__, orchestrate.__name__)
+        builder.add_edge(architect.__name__, orchestrate.__name__)
         builder.add_edge(stubs.coder.__name__, orchestrate.__name__)
         builder.add_edge(stubs.tester.__name__, orchestrate.__name__)
         builder.add_edge(stubs.reviewer.__name__, orchestrate.__name__)
@@ -222,6 +282,9 @@ graph = OrchestratorGraph(
     agent_config=Configuration(
         requirements_agent=RequirementsAgentConfig(
             use_stub=False, config=RequirementsConfiguration(use_human_ai=False)
+        ),
+        architect_agent=ArchitectAgentConfig(
+            use_stub=False, config=ArchitectConfiguration(use_human_ai=False)
         )
     )
 ).compiled_graph
