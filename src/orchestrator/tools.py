@@ -12,7 +12,8 @@ class Delegate:
 
     - If requirements, then "requirements".
     - If architecture and design, then "architect".
-    - If coding and implementation, then "coder".
+    - If coding and implementation, then "coder_new_pr".
+    - If coding and implementation, then "coder_change_request".
     - If code needs testing, then "tester".
     - If code needs review, then "reviewer".
     """
