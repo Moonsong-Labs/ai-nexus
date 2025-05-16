@@ -70,7 +70,7 @@ async def test_orchestrator(pytestconfig):
                 {
                     "function": {
                         "name": "Delegate",
-                        "arguments": '{"to": "coder"}',
+                        "arguments": '{"to": "coder_new_pr"}',
                     }
                 }
             ],
