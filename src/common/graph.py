@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Optional
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph
