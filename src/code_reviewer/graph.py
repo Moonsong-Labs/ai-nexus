@@ -95,8 +95,7 @@ def github_code_reviewer_config():
             "read_file",
             "get_pull_request",
             "get_pull_request_diff",
-            "create_pull_request_review_comment",
-            "get_pull_request_head_commit",
+            "create_pull_request_review",
         ]
     )
 

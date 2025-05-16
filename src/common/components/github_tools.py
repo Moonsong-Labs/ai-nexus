@@ -1,6 +1,6 @@
 """Tools for the code agent."""
 
-from typing import Type, Union
+from typing import List, Type, Union
 import requests
 
 from langchain_community.agent_toolkits.github.toolkit import (
@@ -27,6 +27,7 @@ from langchain_community.tools.github.prompt import (
     UPDATE_FILE_PROMPT,
 )
 from github.Commit import Commit
+from github.PullRequest import ReviewComment
 from langchain_community.utilities.github import GitHubAPIWrapper
 from langchain_core.runnables import RunnableLambda
 from langchain_core.tools import BaseTool
@@ -53,67 +54,70 @@ GITHUB_TOOLS = [
 
     # custom tools
     "get_pull_request_head_branch",
-    "get_pull_request_head_commit",
     "get_pull_request_diff",
-    "create_pull_request_review_comment",
+    "create_pull_request_review",
 ]
 
+class PRReviewComment(BaseModel):
+    """Schema for a Pull Request Review Comment."""
 
+    path: str = Field(0, description="The file path from the diff hunk this comment relates to.")
+    position: int = Field(1, description="""The position in the diff where you want to add a review comment. Note this value is not the same as the line number in the file. The position value equals the number of lines down from the first "@@" hunk header in the file you want to add a comment. The line just below the "@@" line is position 1, the next line is position 2, and so on. The position in the diff continues to increase through lines of whitespace and additional hunks until the beginning of a new file. **VERY IMPORTANT:** This MUST be an integer, not a float.""")
+    body: str = Field(2, description="Text of the review comment.")
+    line: int = Field(3, description="The line number from the diff hunk this comment relates to. **VERY IMPORTANT:** This MUST be an integer, not a float.")
+    
+    # converts to a pygithub ReviewComment object
+    def to_gh_review(self):
+        comment = ReviewComment()
+        comment["path"] = self.path
+        comment["position"] = self.position
+        comment["body"] = self.body
+        comment["line"] = self.line
+        return comment
 
-
-CREATE_PULL_REQUEST_REVIEW_COMMENT_PROMPT = """
+CREATE_PULL_REQUEST_REVIEW_PROMPT = """
 This tool is a wrapper for the GitHub API, useful when you want to leave a pull request review comment. **VERY IMPORTANT**: Your input to this tool MUST strictly follow these rules:
 
-- First you must specify the PR number. **VERY IMPORTANT**: You must specify the PR number as an integer."
-- Then you must specify the body of the review comment for the overall PR.
-- Then you must specify the commit ID for the review comment. This should be an empty string for now.
-- Then you must specify the path of the file in the diff hunk that this refers to.
-- Then you must specify the path of the line number in the diff hunk that this refers to.
+- First you must specify the PR number. **VERY IMPORTANT**: You must specify the PR number as an integer, not a float."
+- Then you must specify the body of your main comment, which is a summary of your overall feedback. It should mention anything that is very important and clearly express whether changes are requested or not.
+- Then you must specify the event for the review, which **MUST BE** one of 'REQUEST_CHANGES', 'APPROVE', or 'COMMENT'.
+- Then you must specify comments that are specific to any diff hunks. If there are none, this MUST be an empty List and CANNOT be omitted.
 """
-class CreatePRReviewComment(BaseModel):
-    """Schema for creating a Pull Request Review Comment."""
+class CreatePRReview(BaseModel):
+    """Schema for creating a Pull Request Review."""
 
     pr_number: int = Field(0, description="The PR number as an integer, e.g. `12`")
     body: str = Field(1, description="The overall feedback for the review comment.")
-    commit: str = Field(2, description="The commit ID for the review comment.")
-    path: str = Field(3, description="The file path from the diff hunk this comment relates to.")
-    line: int = Field(4, description="The line number from the diff hunk this comment relates to.")
+    event: str = Field(2, description="Must be one of 'REQUEST_CHANGES' if changes are required, 'APPROVE' if approving the PR, or 'COMMENT' otherwise.")
+    comments: List[PRReviewComment] = Field(3, description="A list of comments to include with this review.")
+
 class CreatePullRequestReviewComment(BaseTool):
     """Create a Pull Request Review Comment."""
 
-    name: str = "create_pull_request_review_comment"
-    description: str = CREATE_PULL_REQUEST_REVIEW_COMMENT_PROMPT
-    args_schema: Type[BaseModel] = CreatePRReviewComment
+    name: str = "create_pull_request_review"
+    description: str = CREATE_PULL_REQUEST_REVIEW_PROMPT
+    args_schema: Type[BaseModel] = CreatePRReview
     github_api_wrapper: GitHubAPIWrapper
 
-    """full create_review_comment function:
-        def create_review_comment(
-          self,
-          body: str,
-          commit: github.Commit.Commit,
-          path: str,
-          # line replaces deprecated position argument, so we put it between path and side
-          line: Opt[int] = NotSet,
-          side: Opt[str] = NotSet,
-          start_line: Opt[int] = NotSet,
-          start_side: Opt[str] = NotSet,
-          in_reply_to: Opt[int] = NotSet,
-          subject_type: Opt[str] = NotSet,
-          as_suggestion: bool = False,
-      ) -> PullRequestComment:
-    """
+    def _run(self, pr_number: int, body: str, event: str, comments: List[PRReviewComment]):
+        comments_mapped = list(map(lambda x: x.to_gh_review(), comments))
 
-    def _run(self, pr_number: int, body: str, commit: str, path: str, line: int):
-        commit_obj = self.github_api_wrapper.github_repo_instance.get_commit(commit)
         # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
         pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
-        pull_request.create_review_comment(body, commit_obj, path, line)
-
-    async def _arun(self, pr_number: int, body: str, commit: str, path: str, line: int):
+        commit = pull_request.head.sha
         commit_obj = self.github_api_wrapper.github_repo_instance.get_commit(commit)
+
+        pull_request.create_review(commit_obj, body, event, comments_mapped)
+
+    async def _arun(self, pr_number: int, body: str, event: str, comments: List[PRReviewComment]):
+        comments_mapped = list(map(lambda x: x.to_gh_review(), comments))
+
         # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
         pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
-        pull_request.create_review_comment(body, commit_obj, path, line)
+        commit = pull_request.head.sha
+        commit_obj = self.github_api_wrapper.github_repo_instance.get_commit(commit)
+
+        pull_request.create_review(commit_obj, body, event, comments_mapped)
 
 GET_PULL_REQUEST_DIFF_PROMPT = "This tool will return the diff of the code in a PR. **VERY IMPORTANT**: You must specify the PR number as an integer."
 class GetPullRequestDiff(BaseTool):
@@ -143,25 +147,6 @@ class GetPullRequestDiff(BaseTool):
 
         diff_content = response.text
         return diff_content
-
-# TODO: this is essentially the same as GetPullRequestHeadBranch, but returns the commit itself.
-#       the two could be combined
-GET_PULL_REQUEST_HEAD_COMMIT_PROMPT = "This tool will fetch the head commit of a specific Pull Request (by PR number). **VERY IMPORTANT**: You must specify the PR number as an integer."
-class GetPullRequestHeadCommit(BaseTool):
-    """Get the head commit of a specific Pull Request (by PR number)."""
-
-    name: str = "get_pull_request_head_commit"
-    description: str = GET_PULL_REQUEST_HEAD_COMMIT_PROMPT
-    args_schema: Type[BaseModel] = GetPR
-    github_api_wrapper: GitHubAPIWrapper
-
-    def _run(self, pr_number: int) -> str:
-        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
-        return pull_request.head.sha
-
-    async def _arun(self, pr_number: int) -> str:
-        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
-        return pull_request.head.sha
 
 GET_PULL_REQUEST_HEAD_BRANCH_PROMPT = "This tool will fetch the head branch of a specific Pull Request (by PR number). **VERY IMPORTANT**: You must specify the PR number as an integer."
 class GetPullRequestHeadBranch(BaseTool):
@@ -194,7 +179,6 @@ def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
     ] + [
         CreatePullRequestReviewComment(github_api_wrapper=github_api_wrapper),
         GetPullRequestHeadBranch(github_api_wrapper=github_api_wrapper),
-        GetPullRequestHeadCommit(github_api_wrapper=github_api_wrapper),
         GetPullRequestDiff(github_api_wrapper=github_api_wrapper),
     ]
     github_tools = [tool for tool in all_github_tools if tool.name in GITHUB_TOOLS]
