@@ -12,20 +12,17 @@ from langgraph.store.base import BaseStore
 from langgraph.types import Command, interrupt
 from termcolor import colored
 
+from requirement_gatherer.configuration import Configuration
 from requirement_gatherer.state import State
 
 
 # ruff: noqa: T201
-def create_human_feedback_tool(use_human_ai=False) -> BaseTool:
-    """Create a tool that requests feedback from a human.
+def create_human_feedback_tool(agent_config: Configuration) -> BaseTool:
+    """Create a tool that requests feedback from a human or an AI simulating a human.
 
-    Args:
-        use_llm: Whether to use an LLM to generate the question.
-
-    Returns:
-        A tool that requests feedback from a human.
+    If configured to use a human, the tool prompts the user for input and returns their response. If configured to use an AI, it generates a reply using a chat model with specific instructions for concise and consistent answers. The tool returns a Command that updates the agent's state with the received feedback.
     """
-    ai_user = init_chat_model() if use_human_ai else None
+    ai_user = init_chat_model() if agent_config.use_human_ai else None
 
     @tool("human_feedback", parse_docstring=True)
     async def human_feedback(
@@ -34,16 +31,18 @@ def create_human_feedback_tool(use_human_ai=False) -> BaseTool:
         state: Annotated[State, InjectedState],
         config: RunnableConfig,
     ) -> Command:
-        """Request feedback from a human.
+        """Request feedback on a question from either a human user or an AI simulating a human, based on agent configuration.
+
+        If configured for human input, prompts the user and captures their response. If configured for AI, generates a reply using an AI model with specific behavioral instructions and updates the agent's state with the response.
 
         Args:
-            question: The question to ask.
+            question: The question to present for feedback.
 
         Returns:
-            A Command to update the state with the human response.
+            A Command that updates the agent's state with the feedback response.
         """
         # Return prompt if human user is requested
-        if not use_human_ai:
+        if not agent_config.use_human_ai:
             content = question
             if state.messages[-1].content:
                 content = f"{question}\n\n{state.messages[-1].content}"

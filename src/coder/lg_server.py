@@ -2,7 +2,7 @@
 
 import logging
 
-from coder.graph import coder_change_request_config, coder_new_pr_config
+from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
 from common.components.github_mocks import maybe_mock_github
 from common.components.github_tools import get_github_tools
 
@@ -13,9 +13,7 @@ logger = logging.getLogger(__name__)
 github_source = maybe_mock_github()
 github_tools = get_github_tools(github_source)
 
-graph_new_pr = coder_new_pr_config().graph_builder(github_tools).compile()
-graph_change_request = (
-    coder_change_request_config().graph_builder(github_tools).compile()
-)
+graph_new_pr = CoderNewPRGraph(github_tools=github_tools).compiled_graph
+graph_change_request = CoderChangeRequestGraph(github_tools=github_tools).compiled_graph
 
 __all__ = ["graph_new_pr", "graph_change_request"]
