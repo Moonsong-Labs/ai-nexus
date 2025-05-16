@@ -128,8 +128,7 @@ class RequirementsGraph(AgentGraph):
             tools.create_human_feedback_tool(
                 self._agent_config,
             ),
-            tools.create_memorize_tool(
-                self._agent_config),
+            tools.create_memorize_tool(self._agent_config),
             tools.summarize,
         ]
 
