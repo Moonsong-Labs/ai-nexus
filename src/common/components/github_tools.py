@@ -70,7 +70,9 @@ class PRReviewComment(BaseModel):
     def to_gh_review(self):
         comment = ReviewComment()
         comment["path"] = self.path
-        comment["position"] = self.position
+        # bug fix: this fixes the eventual HTTP POST data to use "line" instead of the deprecated
+        # "position", github otherwise rejects the request. this is probably a bug in pygithub
+        comment["line"] = self.position
         comment["body"] = self.body
         comment["line"] = self.line
         return comment
