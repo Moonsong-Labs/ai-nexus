@@ -150,12 +150,12 @@ def _create_requirements_node(
 def _create_coder_new_pr_node(
     coder_new_pr_graph: CoderNewPRGraph, recursion_limit: int = 100
 ):
-    """Create an asynchronous requirements node for the orchestrator graph.
+    """Create an asynchronous coder_new_pr node for the orchestrator graph.
 
     The returned function processes a tool call from the conversation state, invokes the coder_new_pr graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
 
     Args:
-        coder_graph: The coder_new_pr graph to invoke for coder_new_pr gathering.
+        coder_new_pr_graph: The coder_new_pr graph to invoke for coder_new_pr gathering.
         recursion_limit: Maximum recursion depth allowed for the coder_new_pr graph (default is 100).
 
     Returns:
@@ -187,7 +187,7 @@ def _create_coder_new_pr_node(
 def _create_coder_change_request_node(
     coder_change_request_graph: CoderChangeRequestGraph, recursion_limit: int = 100
 ):
-    """Create an asynchronous requirements node for the orchestrator graph.
+    """Create an asynchronous coder_change_request node for the orchestrator graph.
 
     The returned function processes a tool call from the conversation state, invokes the coder_change_request graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
 
