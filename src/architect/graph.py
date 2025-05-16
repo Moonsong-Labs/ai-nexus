@@ -16,10 +16,10 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from common.graph import AgentGraph
 from architect import tools
 from architect.configuration import Configuration
 from architect.state import State
+from common.graph import AgentGraph
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,6 @@ def _create_call_model(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:
         """Extract the user's state from the conversation and update the memory."""
-
         user_id = config["configurable"]["user_id"]
         # Retrieve the most recent memories for context
         memories = await store.asearch(

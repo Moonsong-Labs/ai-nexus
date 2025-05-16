@@ -2,8 +2,8 @@
 
 from dataclasses import dataclass
 
-from common.configuration import AgentConfiguration
 from architect import prompts
+from common.configuration import AgentConfiguration
 
 
 @dataclass(kw_only=True)
