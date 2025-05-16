@@ -1,7 +1,8 @@
 """Stub implementations for the requirement gatherer component."""
 
+from typing import Any
 from common.utils.stubs import MessageWheel
-
+from langchain_core.runnables import RunnableConfig
 model_requirements_messages = MessageWheel(
     [
         """
@@ -19,3 +20,11 @@ model_requirements_messages = MessageWheel(
         """,
     ]
 )
+
+
+async def call_model_stub(state: Any, config: RunnableConfig | None = None):
+    """Async invoke."""
+    return {
+        "messages": state.messages,
+        "summary": model_requirements_messages.next(),
+    }

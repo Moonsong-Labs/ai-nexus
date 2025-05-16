@@ -39,13 +39,6 @@ def _create_call_model(
     The returned coroutine retrieves the user's recent memories from the store, formats them for context, constructs a system prompt including these memories and the current timestamp, and asynchronously calls the language model with the prompt and conversation history. Returns a dictionary containing the model's response message.
     """
 
-    async def call_model_stub(state: Any, config: RunnableConfig | None = None):
-        """Async invoke."""
-        return {
-            "messages": state.messages,
-            "summary": model_requirements_messages.next(),
-        }
-
     async def call_model(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:
