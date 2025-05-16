@@ -70,7 +70,7 @@ async def test_orchestrator(pytestconfig):
                 {
                     "function": {
                         "name": "Delegate",
-                        "arguments": '{"to": "coder"}',
+                        "arguments": '{"to": "coder_new_pr"}',
                     }
                 }
             ],
@@ -118,7 +118,7 @@ async def test_orchestrator(pytestconfig):
         {"role": "assistant", "content": "The project is done."},
     ]
 
-    graph = OrchestratorGraph()
+    graph = OrchestratorGraph().compiled_graph
     result = await graph.ainvoke(
         State(
             messages=[HumanMessage(content="I want to build a website to sell plants")]

@@ -2,19 +2,20 @@
 
 # ruff: noqa: D107 D101 D102
 
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.runnables import RunnableConfig
-from langgraph.graph import StateGraph
+from langgraph.graph import START, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from orchestrator.state import State
+from requirement_gatherer.state import State as RequirementsState
 
 
 class MessageWheel:
@@ -92,19 +93,24 @@ class RequirementsGathererStub(AgentGraph):
             store: Optional store for data management.
         """
         super().__init__(
-            "Requirements Gatherer Stub", agent_config, checkpointer, store
+            name="Requirements Gatherer Stub",
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
         )
 
     def create_builder(self) -> StateGraph:
-        """Return None to indicate that no builder is provided for this stub implementation."""
-        return None
+        async def run(state: RequirementsState, config: RunnableConfig | None = None):
+            """Async invoke."""
+            return {
+                "messages": state.messages,
+                "summary": model_requirements_messages.next(),
+            }
 
-    async def ainvoke(self, state: Any, config: RunnableConfig | None = None):
-        """Async invoke."""
-        return {
-            "messages": state.messages,
-            "summary": model_requirements_messages.next(),
-        }
+        builder = StateGraph(RequirementsState)
+        builder.add_node("run", run)
+        builder.add_edge(START, "run")
+        return builder
 
 
 def architect(state: State, config: RunnableConfig, store: BaseStore):
