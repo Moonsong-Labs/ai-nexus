@@ -185,7 +185,10 @@ Agents like Orchestrator, Requirement Gatherer, Coder, and `AgentTemplateGraph` 
     *   Invocation of sub-graphs (e.g., `requirements_graph`) now uses `compiled_graph.ainvoke` (e.g., `await requirements_graph.compiled_graph.ainvoke(...)`).
     *   `AgentsConfig` dataclass removed.
 *   **Stubs (`src/orchestrator/stubs/__init__.py` - REVISED):**
-    *   `RequirementsGathererStub.__init__` now takes `agent_config`.
+    *   `RequirementsGathererStub` (subclasses `AgentGraph`):
+        *   `__init__` now takes `agent_config` and explicitly passes `name="Requirements Gatherer Stub"` to `super().__init__`.
+        *   `create_builder()` method now returns a simple `StateGraph` (using `requirement_gatherer.state.State as RequirementsState`) with a single "run" node that provides the stubbed summary. This allows the stub to have a `compiled_graph`.
+        *   The custom `ainvoke` method has been removed (its logic is now within the graph created by `create_builder`).
 
 #### 5.2. Architect (`src/architect/`)
 *   (No changes mentioned in PR - likely still follows its previous custom structure. The `agent_template.agent.Agent` class it might have implicitly relied on for examples is now DELETED. Still uses its own `upsert_memory`.)
@@ -237,6 +240,8 @@ Agents like Orchestrator, Requirement Gatherer, Coder, and `AgentTemplateGraph` 
     *   Updated to use `AgentTemplateGraph(agent_config=config).compiled_graph` for testing the agent template's graph.
 *   **`tests/integration_tests/test_requirement_gatherer.py` (UPDATED):**
     *   Updated to use `RequirementsGraph` (renamed from `RequirementsGathererGraph`).
+*   **`tests/integration_tests/test_orchestrator.py` (UPDATED):**
+    *   Updated to use `OrchestratorGraph().compiled_graph` for testing the orchestrator's graph.
 *   **`tests/datasets/task_manager_dataset.py` (UPDATED):**
     *   Corrected a typographical error in an output message.
 *   (Other test files as previously described)
@@ -343,7 +348,7 @@ ai-nexus/
 │   │   ├── prompts.py
 │   │   ├── state.py
 │   │   ├── stubs/
-│   │   │   └── __init__.py       # UPDATED: Stub uses AgentConfiguration
+│   │   │   └── __init__.py       # UPDATED: Stub uses AgentConfiguration, RequirementsGathererStub now builds a simple graph
 │   │   └── tools.py
 │   ├── requirement_gatherer/
 │   │   ├── __init__.py
@@ -368,7 +373,7 @@ ai-nexus/
     │   ├── eval_coder.py
     │   ├── test_graph.py           # UPDATED: Uses AgentTemplateGraph(agent_config=config).compiled_graph
     │   ├── test_grumpy_agent.py
-    │   ├── test_orchestrator.py
+    │   ├── test_orchestrator.py    # UPDATED: Uses OrchestratorGraph().compiled_graph
     │   ├── test_requirement_gatherer.py # UPDATED: Uses RequirementsGraph
     │   ├── test_task_manager.py
     │   └── test_tester_agent.py
