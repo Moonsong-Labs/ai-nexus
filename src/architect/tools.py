@@ -3,21 +3,21 @@
 import uuid
 from typing import Annotated, Optional
 
+from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg
+from langchain_core.tools import InjectedToolArg, InjectedToolCallId, tool
+from langgraph.prebuilt import InjectedStore
 from langgraph.store.base import BaseStore
+from langgraph.types import Command
 
-from architect.configuration import Configuration
 
-
-async def upsert_memory(
+@tool("memorize", parse_docstring=True)
+async def memorize(
     content: str,
     context: str,
-    *,
-    memory_id: Optional[uuid.UUID] = None,
-    # Hide these arguments from the model.
+    store: Annotated[BaseStore, InjectedStore],
     config: Annotated[RunnableConfig, InjectedToolArg],
-    store: Annotated[BaseStore, InjectedToolArg],
+    memory_id: Optional[uuid.UUID] = None,
 ):
     """Upsert a memory in the database.
 
@@ -34,6 +34,8 @@ async def upsert_memory(
         The memory to overwrite.
     """
     mem_id = memory_id or uuid.uuid4()
+    from agent_template.configuration import Configuration
+
     user_id = Configuration.from_runnable_config(config).user_id
     await store.aput(
         ("memories", user_id),
@@ -41,3 +43,31 @@ async def upsert_memory(
         value={"content": content, "context": context},
     )
     return f"Stored memory {mem_id}"
+
+
+# ruff: noqa: T201
+@tool("summarize", parse_docstring=True)
+async def summarize(
+    summary: str,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+):
+    """Summarize the agent output.
+
+    Args:
+        summary: The entire summary.
+    """
+    print("=== Summary ===")
+    print(f"{summary}")
+    print("=================")
+
+    return Command(
+        update={
+            "messages": [
+                ToolMessage(
+                    content=summary,
+                    tool_call_id=tool_call_id,
+                )
+            ],
+            "summary": summary,
+        }
+    )
