@@ -31,15 +31,8 @@ class Delegate:
 
 @tool
 def store_memory(
-    origin: Literal[
-        "user",
-        "requirements",
-        "architect",
-        "coder_new_pr",
-        "coder_change_request",
-        "tester",
-        "reviewer",
-    ],
+-    return "Memorized '{content}' for '{origin}'"
++    return f"Memorized '{content}' for '{origin}'"
     content: str,
 ):
     """Use this to memorize, store or remember  instructions."""
