@@ -17,7 +17,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from common.config import BaseConfiguration
+from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from architect import tools
 from architect.configuration import Configuration
@@ -33,7 +33,6 @@ def _create_call_model(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:
         """Extract the user's state from the conversation and update the memory."""
-        # configurable = configuration.Configuration.from_runnable_config(config)
 
         user_id = config["configurable"]["user_id"]
         # Retrieve the most recent memories for context
@@ -93,7 +92,7 @@ class ArchitectGraph(AgentGraph):
         self,
         *,
         use_human_ai=False,
-        base_config: Optional[BaseConfiguration] = None,
+        base_config: Optional[AgentConfiguration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
