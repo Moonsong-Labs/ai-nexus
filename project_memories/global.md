@@ -66,6 +66,7 @@ This file outlines the overarching standards and technological choices for the A
     *   **Mypy:** Conducts static type checking (currently not enforced in CI/default linting pass).
     *   **codespell:** Checks for spelling mistakes.
     *   **openevals:** Used for custom evaluation logic, particularly for the Coder agent.
+    *   **debugpy:** (NEW) Development dependency for remote debugging support.
     *   **CI Pipeline (`.github/workflows/checks.yml`):** Runs linting (Ruff, codespell), unit tests (`make test_unit`), and Coder integration tests (`make test_coder`). The Coder tests job requires `GOOGLE_API_KEY` as a secret.
 *   **Version Control:** Git.
 *   **LLM Models:**
@@ -247,6 +248,11 @@ Agents like Orchestrator, Requirement Gatherer, and now Coder subclass `AgentGra
 
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`)
 
+*   **Development Workflow & Build:**
+    *   **Make:** Used as a task runner to automate common commands.
+        *   `make run`: (UPDATED) Now includes `--debug-port 2025` to enable remote debugging by default when running `langgraph dev`.
+    *   **gcloud:** Deployment of services.
+    *   **Remote Debugging:** (NEW) Supported via `debugpy`. A VSCode launch configuration (`.vscode/launch.json`) is provided to attach a remote debugger to the process started by `make run`.
 *   **Make:** Used as a task runner to automate common commands. New targets include:
     *   `make test_coder`: Runs Coder integration tests (`tests/integration_tests/test_coder.py`).
 *   **CI (`.github/workflows/checks.yml`):**
@@ -267,10 +273,13 @@ ai-nexus/
 │       └── read-project-memories.mdc # NEW: Rule to always read project_memories
 ├── .env.example
 ├── .gitignore
+├── .vscode/                      # NEW
+│   └── launch.json               # NEW: VSCode launch configuration for remote debugging
 ├── .github/
 │   └── workflows/
+│       └── checks.yml
+├── Makefile                      # UPDATED: 'make run' includes --debug-port
 │       └── checks.yml            # UPDATED: Added Coder Tests job
-├── Makefile                      # UPDATED: Added test_coder target
 ├── README.md
 ├── agent_memories/
 │   └── grumpy/
@@ -278,7 +287,7 @@ ai-nexus/
 ├── project_memories/
 │   ├── PRD.md
 │   └── global.md
-├── pyproject.toml                # UPDATED: Ruff per-file ignores
+├── pyproject.toml                # UPDATED: Ruff per-file ignores, debugpy dependency
 ├── scripts/
 │   └── generate_project_memory.sh
 │   └── update_project_memory_from_pr.sh  # UPDATED: LLM generation parameters
