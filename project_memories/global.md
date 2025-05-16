@@ -49,7 +49,7 @@ The original "Memory Bank" concept described a system of structured Markdown fil
 *   **Namespace:** Memories are typically namespaced by `("memories", "semantic", user_id)` or `("memories", "static", user_id)`, where `user_id` comes from `MemoryConfiguration.user_id`. The `agent_name` (from `AgentGraph._name`) is used by `SemanticMemory` internally, potentially for further namespacing or identification.
 *   **Tools:**
     *   Agents based on `AgentGraph` (like `AgentTemplateGraph`): Can get memory tools (`manage_memory`, `search_memory`) from the `AgentGraph`-managed `SemanticMemory` instance (via `self.memory.get_tools()`).
-    *   Requirement Gatherer: Uses a custom `memorize` tool.
+    *   Requirement Gatherer: Uses a custom `memorize` tool (now created by a factory function `create_memorize_tool` that receives the agent's `Configuration`, from which `user_id` is accessed for namespacing memories) and `human_feedback` tool.
 *   **Static Memories:** JSON files in `.langgraph/static_memories/` can be loaded into the `BaseStore` under a static namespace if `memory_config.load_static_memories` is enabled in the `MemoryConfiguration` used by `SemanticMemory`.
 *   **Shift:** The core principle of externalized memory remains, with `langmem` as the backend, now more seamlessly integrated via `AgentGraph` and configured through `AgentConfiguration` and `MemoryConfiguration`.
 
@@ -210,9 +210,12 @@ Agents like Orchestrator, Requirement Gatherer, Coder, and `AgentTemplateGraph` 
     *   Uses `self._agent_config` for its settings (e.g., `gatherer_system_prompt`, `model`).
     *   Helper functions like `_create_call_model` and `_create_gather_requirements` now receive `self._agent_config` as a direct argument.
     *   Inner functions (e.g., `call_model`) no longer extract `agent_config` from `RunnableConfig` but use the `agent_config` passed to their factory/creator function.
+    *   In `create_builder()`, the `memorize` tool is now instantiated via `tools.create_memorize_tool(self._agent_config)`.
 *   **Tools (`src/requirement_gatherer/tools.py` - REVISED):**
     *   `create_human_feedback_tool` now accepts the full `agent_config: requirement_gatherer.configuration.Configuration` object as an argument (instead of just `use_human_ai`).
     *   The inner `human_feedback` tool function no longer extracts `agent_config` from `RunnableConfig` but uses the `agent_config.use_human_ai` field from the configuration object passed to `create_human_feedback_tool`.
+    *   The standalone `memorize` tool function has been replaced by a factory function `create_memorize_tool(agent_config: requirement_gatherer.configuration.Configuration)`.
+    *   The inner `memorize` tool, created by this factory, now accesses `user_id` directly from the `agent_config.user_id` (provided via the factory) for namespacing memories, instead of attempting to extract configuration from `RunnableConfig`.
 
 #### 5.7. Grumpy (`src/grumpy/`)
 *   (Likely follows `agent_template` pattern, so it will now use `AgentTemplateGraph` and its revised memory/config handling, including how `agent_config` is passed to its internal `_create_call_model` helper.)
@@ -345,10 +348,10 @@ ai-nexus/
 │   ├── requirement_gatherer/
 │   │   ├── __init__.py
 │   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration, adds use_human_ai
-│   │   ├── graph.py              # UPDATED: Renamed to RequirementsGraph, uses AgentConfiguration, new AgentGraph init; helpers receive agent_config
+│   │   ├── graph.py              # UPDATED: Renamed to RequirementsGraph, uses AgentConfiguration, new AgentGraph init; helpers receive agent_config; memorize tool now created via create_memorize_tool(self._agent_config)
 │   │   ├── prompts.py
 │   │   ├── state.py
-│   │   ├── tools.py              # UPDATED: human_feedback tool factory takes agent_config
+│   │   ├── tools.py              # UPDATED: human_feedback tool factory takes agent_config; memorize tool now created by create_memorize_tool factory that takes agent_config for user_id
 │   │   └── utils.py              # DELETED
 │   ├── task_manager/
 │   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration
