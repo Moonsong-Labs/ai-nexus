@@ -1,4 +1,6 @@
 name: Update Project Memory
+concurrency:
+  group: ${{ github.workflow }}
 
 on:
   pull_request:
