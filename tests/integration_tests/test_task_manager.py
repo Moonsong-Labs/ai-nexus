@@ -15,9 +15,9 @@ from testing import get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
+from task_manager import prompts
 from task_manager.configuration import TASK_MANAGER_MODEL
 from task_manager.graph import TaskManagerGraph
-from task_manager import prompts
 
 # Setup basic logging for the test
 logger = get_logger(__name__)
@@ -148,23 +148,23 @@ async def test_task_manager_with_project_path():
     # Define test paths
     project_dir = "tests/integration_tests/inputs/api_rust"
     planning_dir = os.path.join(project_dir, "planning")
-    
+
     # Remove planning folder from previous tests execution
     if os.path.exists(planning_dir):
         shutil.rmtree(planning_dir)
-    
+
     # Initialize a task manager graph
     graph = TaskManagerGraph(checkpointer=MemorySaver())
-    
+
     # Prepare test message with project path
     messages = [
         HumanMessage(
             content="Start working with the api_rust project located at tests/integration_tests/inputs/api_rust"
         )
     ]
-    
+
     state = {"messages": messages}
-    
+
     config = {
         "configurable": {
             "thread_id": str(uuid.uuid4()),
@@ -174,19 +174,27 @@ async def test_task_manager_with_project_path():
         },
         "recursion_limit": 100,
     }
-    
+
     # Invoke the graph
     await graph.compiled_graph.ainvoke(state, config=config)
-    
+
     # Check if planning folder was created
     assert os.path.exists(planning_dir), "Planning folder was not created"
-    
+
     # Check if roadmap.md file was created
-    assert os.path.exists(os.path.join(planning_dir, "roadmap.md")), "roadmap.md was not created"
-    
+    assert os.path.exists(os.path.join(planning_dir, "roadmap.md")), (
+        "roadmap.md was not created"
+    )
+
     # Count and verify that multiple task files were created
-    task_files = [f for f in os.listdir(planning_dir) if f.startswith("task-") and f.endswith(".md")]
-    assert len(task_files) > 1, f"Expected multiple task files, but found only {len(task_files)}: {task_files}"
-    
+    task_files = [
+        f
+        for f in os.listdir(planning_dir)
+        if f.startswith("task-") and f.endswith(".md")
+    ]
+    assert len(task_files) > 1, (
+        f"Expected multiple task files, but found only {len(task_files)}: {task_files}"
+    )
+
     # Clean up after the test
     # shutil.rmtree(planning_dir)
