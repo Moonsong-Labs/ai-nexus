@@ -1,16 +1,17 @@
 """Configuration for the graph."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
-from common import config
+from common.configuration import AgentConfiguration
 from architect import prompts
 
 
 @dataclass(kw_only=True)
-class Configuration(config.BaseConfiguration):
+class Configuration(AgentConfiguration):
     """Main configuration class for the memory graph system."""
 
-    system_prompt: str = prompts.SYSTEM_PROMPT
+    architect_system_prompt: str = prompts.SYSTEM_PROMPT
+    use_human_ai: bool = False
 
 
 __all__ = ["Configuration"]

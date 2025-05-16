@@ -1,7 +1,6 @@
 """Graphs that extract memories on a schedule."""
 
 import logging
-from dataclasses import asdict
 from datetime import datetime
 from typing import Any, Coroutine, Optional
 
@@ -17,7 +16,6 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from architect import tools
 from architect.configuration import Configuration
@@ -27,8 +25,14 @@ logger = logging.getLogger(__name__)
 
 
 def _create_call_model(
+    agent_config: Configuration,
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
 ) -> Coroutine[Any, Any, dict]:
+    """Create an asynchronous function that queries recent user memories and invokes a language model with contextual prompts.
+
+    The returned coroutine retrieves the user's recent memories from the store, formats them for context, constructs a system prompt including these memories and the current timestamp, and asynchronously calls the language model with the prompt and conversation history. Returns a dictionary containing the model's response message.
+    """
+
     async def call_model(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:
@@ -54,7 +58,7 @@ def _create_call_model(
 
         # Prepare the system prompt with user memories and current time
         # This helps the model understand the context and temporal relevance
-        sys_prompt = config["configurable"]["system_prompt"].format(
+        sys_prompt = agent_config.architect_system_prompt.format(
             user_info=formatted, time=datetime.now().isoformat()
         )
 
@@ -70,8 +74,11 @@ def _create_call_model(
 
 
 def _create_call_tool(
-    call_model: Coroutine[Any, Any, dict], tool_node: ToolNode
+    agent_config: Configuration,
+    call_model: Coroutine[Any, Any, dict],
+    tool_node: ToolNode,
 ):
+    
     async def call_tool(state: State, config: RunnableConfig):
         if state.messages[-1].tool_calls:
             return tool_node.name
@@ -86,13 +93,12 @@ def _create_call_tool(
 class ArchitectGraph(AgentGraph):
     """Architect graph."""
 
-    _config: Configuration
+    _agent_config: Configuration
 
     def __init__(
         self,
         *,
-        use_human_ai=False,
-        base_config: Optional[AgentConfiguration] = None,
+        agent_config: Optional[Configuration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
@@ -103,23 +109,25 @@ class ArchitectGraph(AgentGraph):
             checkpointer: Optional Checkpointer instance.
             store: Optional BaseStore instance.
         """
-        super().__init__(base_config, checkpointer, store)
-        self._name = "Architect"
-        self._config = Configuration(**asdict(self._base_config))
-        self._use_human_ai = use_human_ai
+        super().__init__(
+            name="Architect",
+            agent_config=agent_config or Configuration(),
+            checkpointer=checkpointer,
+            store=store,
+        )
 
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
         # Initialize the language model and the tools
         all_tools = [
-            tools.memorize,
+            tools.create_memorize_tool(self._agent_config),
             tools.summarize,
         ]
 
-        llm = init_chat_model().bind_tools(all_tools)
+        llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
         tool_node = ToolNode(all_tools, name="tools")
-        call_model = _create_call_model(llm)
-        call_tool = _create_call_tool(call_model, tool_node)
+        call_model = _create_call_model(self._agent_config, llm)
+        call_tool = _create_call_tool(self._agent_config, call_model, tool_node)
 
         builder = StateGraph(State, config_schema=Configuration)
         builder.add_node(call_model)
