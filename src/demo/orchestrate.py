@@ -28,6 +28,8 @@ from orchestrator.configuration import (
 from orchestrator.configuration import (
     RequirementsAgentConfig,
     RequirementsConfiguration,
+    ArchitectAgentConfig,
+    ArchitectConfiguration
 )
 from orchestrator.graph import OrchestratorGraph
 from orchestrator.state import State
@@ -98,6 +100,10 @@ if __name__ == "__main__":
                 requirements_agent=RequirementsAgentConfig(
                     use_stub=False,
                     config=RequirementsConfiguration(use_human_ai=use_human_ai),
+                ),
+                architect_agent=ArchitectAgentConfig(
+                    use_stub=False,
+                    config=ArchitectConfiguration(use_human_ai=use_human_ai),
                 )
             ),
             checkpointer=InMemorySaver(),
