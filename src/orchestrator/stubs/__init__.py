@@ -15,6 +15,7 @@ from langgraph.types import Checkpointer
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from orchestrator.state import State
+from requirement_gatherer.stubs import model_requirements_messages
 
 
 class MessageWheel:
@@ -31,23 +32,6 @@ class MessageWheel:
         return msg
 
 
-model_requirements_messages = MessageWheel(
-    [
-        """
-        I collected all the details. Here are the requirements:    
-            User wants a clean HTML website, with clean design.
-            
-        Additionally update memory: Always ask me questions starting with "Ola!""",
-        """
-        I collected all the details. Here are the requirements:
-            User wants a clean HTML website, with clean design. It should focus on the mobile market,
-            have a light scheme, be fast, responsive and load within 0.3 seconds.
-            These are the complete requirements, nothing more is necessary.
-        
-        Additionally update memory: Always ask me questions starting with "Ola!
-        """,
-    ]
-)
 model_coder_messages = MessageWheel(
     [
         """I have finished coding.""",

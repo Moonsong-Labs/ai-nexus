@@ -1,6 +1,7 @@
 """Graphs that extract memories on a schedule."""
 
 import logging
+import os
 from datetime import datetime
 from typing import Any, Coroutine, Optional
 
@@ -20,8 +21,13 @@ from common.graph import AgentGraph
 from requirement_gatherer import tools
 from requirement_gatherer.configuration import Configuration
 from requirement_gatherer.state import State
+from requirement_gatherer.stubs import model_requirements_messages
 
 logger = logging.getLogger(__name__)
+
+_req_gatherer_stub_enabled = (
+    os.getenv("REQUIREMENT_GATHERER_USE_STUBS", "true").lower() != "false"
+)
 
 
 def _create_call_model(
@@ -71,7 +77,10 @@ def _create_call_model(
 
         return {"messages": [msg]}
 
-    return call_model
+    if _req_gatherer_stub_enabled:
+        return call_model_stub
+    else:
+        return call_model
 
 
 def _create_gather_requirements(
@@ -123,33 +132,41 @@ class RequirementsGraph(AgentGraph):
 
         Initializes the language model and associated tools, creates the necessary graph nodes and edges, and defines the flow for gathering requirements through conversational interactions.
         """
-        # Initialize the language model and the tools
-        all_tools = [
-            tools.create_human_feedback_tool(
-                self._agent_config,
-            ),
-            tools.memorize,
-            tools.summarize,
-        ]
-
-        llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
-        tool_node = ToolNode(all_tools, name="tools")
-        call_model = _create_call_model(self._agent_config, llm)
-        gather_requirements = _create_gather_requirements(
-            self._agent_config, call_model, tool_node
-        )
-
         builder = StateGraph(State, config_schema=Configuration)
-        builder.add_node(call_model)
-        builder.add_node(tool_node.name, tool_node)
 
-        builder.add_edge(START, call_model.__name__)
-        builder.add_conditional_edges(
-            call_model.__name__,
-            gather_requirements,
-            [tool_node.name, call_model.__name__, END],
-        )
-        builder.add_edge(tool_node.name, call_model.__name__)
+        if _req_gatherer_stub_enabled:
+            call_model_stub = _create_call_model(self._agent_config, None)
+            builder.add_node(call_model_stub.__name__, call_model_stub)
+            builder.add_edge(START, call_model_stub.__name__)
+            builder.add_edge(call_model_stub.__name__, END)
+
+        else:
+            # Initialize the language model and the tools for the full graph
+            all_tools = [
+                tools.create_human_feedback_tool(
+                    self._agent_config,
+                ),
+                tools.memorize,
+                tools.summarize,
+            ]
+
+            llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
+            tool_node = ToolNode(all_tools, name="tools")
+            call_model = _create_call_model(self._agent_config, llm)
+            gather_requirements = _create_gather_requirements(
+                self._agent_config, call_model, tool_node
+            )
+
+            builder.add_node(call_model.__name__, call_model)
+            builder.add_node(tool_node.name, tool_node)
+
+            builder.add_edge(START, call_model.__name__)
+            builder.add_conditional_edges(
+                call_model.__name__,
+                gather_requirements,
+                [tool_node.name, call_model.__name__, END],
+            )
+            builder.add_edge(tool_node.name, call_model.__name__)
 
         return builder
 
