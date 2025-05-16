@@ -1,110 +1,150 @@
 """Graphs that extract memories on a schedule."""
 
-import asyncio
 import logging
 from datetime import datetime
+from typing import Any, Coroutine, Optional
 
 from langchain.chat_models import init_chat_model
-from langchain_core.runnables import RunnableConfig
-from langgraph.graph import END, StateGraph
+from langchain_core.language_models import LanguageModelInput
+from langchain_core.messages import (
+    BaseMessage,
+    SystemMessage,
+)
+from langchain_core.runnables import Runnable, RunnableConfig
+from langgraph.graph import END, START, StateGraph
+from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
+from langgraph.types import Checkpointer
 
-from architect import configuration, tools, utils
+from common.graph import AgentGraph
+from architect import tools
+from architect.configuration import Configuration
 from architect.state import State
 
 logger = logging.getLogger(__name__)
 
-# Initialize the language model to be used for memory extraction
-llm = init_chat_model()
 
+def _create_call_model(
+    agent_config: Configuration,
+    llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
+) -> Coroutine[Any, Any, dict]:
+    """Create an asynchronous function that queries recent user memories and invokes a language model with contextual prompts.
 
-async def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> dict:
-    """Extract the user's state from the conversation and update the memory."""
-    configurable = configuration.Configuration.from_runnable_config(config)
+    The returned coroutine retrieves the user's recent memories from the store, formats them for context, constructs a system prompt including these memories and the current timestamp, and asynchronously calls the language model with the prompt and conversation history. Returns a dictionary containing the model's response message.
+    """
 
-    # Retrieve the most recent memories for context
-    memories = await store.asearch(
-        ("memories", configurable.user_id),
-        query=str([m.content for m in state.messages[-3:]]),
-        limit=10,
-    )
+    async def call_model(
+        state: State, config: RunnableConfig, *, store: BaseStore
+    ) -> dict:
+        """Extract the user's state from the conversation and update the memory."""
 
-    # Format memories for inclusion in the prompt
-    formatted = "\n".join(
-        f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
-    )
-    if formatted:
-        formatted = f"""
-<memories>
-{formatted}
-</memories>"""
-
-    # Prepare the system prompt with user memories and current time
-    # This helps the model understand the context and temporal relevance
-    sys = configurable.system_prompt.format(
-        user_info=formatted, time=datetime.now().isoformat()
-    )
-
-    # Invoke the language model with the prepared prompt and tools
-    # "bind_tools" gives the LLM the JSON schema for all tools in the list so it knows how
-    # to use them.
-    msg = await llm.bind_tools([tools.upsert_memory]).ainvoke(
-        [{"role": "system", "content": sys}, *state.messages],
-        {"configurable": utils.split_model_and_provider(configurable.model)},
-    )
-
-    return {"messages": [{"role": "assistant", "content": str(msg)}]}
-
-
-async def store_memory(state: State, config: RunnableConfig, *, store: BaseStore):
-    # Extract tool calls from the last message
-    tool_calls = state.messages[-1].tool_calls
-
-    # Concurrently execute all upsert_memory calls
-    saved_memories = await asyncio.gather(
-        *(
-            tools.upsert_memory(**tc["args"], config=config, store=store)
-            for tc in tool_calls
+        user_id = config["configurable"]["user_id"]
+        # Retrieve the most recent memories for context
+        memories = await store.asearch(
+            ("memories", user_id),
+            query=str([m.content for m in state.messages[-3:]]),
+            limit=10,
         )
-    )
 
-    # Format the results of memory storage operations
-    # This provides confirmation to the model that the actions it took were completed
-    results = [
-        {
-            "role": "tool",
-            "content": mem,
-            "tool_call_id": tc["id"],
-        }
-        for tc, mem in zip(tool_calls, saved_memories)
-    ]
-    return {"messages": results}
+        # Format memories for inclusion in the prompt
+        formatted = "\n".join(
+            f"[{mem.key}]: {mem.value} (similarity: {mem.score})" for mem in memories
+        )
+        if formatted:
+            formatted = f"""
+        <memories>
+        {formatted}
+        </memories>"""
 
+        # Prepare the system prompt with user memories and current time
+        # This helps the model understand the context and temporal relevance
+        sys_prompt = agent_config.architect_system_prompt.format(
+            user_info=formatted, time=datetime.now().isoformat()
+        )
 
-def route_message(state: State):
-    """Determine the next step based on the presence of tool calls."""
-    msg = state.messages[-1]
-    if msg.tool_calls:
-        # If there are tool calls, we need to store memories
-        return "store_memory"
-    # Otherwise, finish; user can send the next message
-    return END
+        # Invoke the language model with the prepared prompt and tools
+        msg = await llm_with_tools.ainvoke(
+            [SystemMessage(content=sys_prompt), *state.messages],
+            config=config,
+        )
 
+        return {"messages": [msg]}
 
-# Create the graph + all nodes
-builder = StateGraph(State, config_schema=configuration.Configuration)
-
-# Define the flow of the memory extraction process
-builder.add_node(call_model)
-builder.add_edge("__start__", "call_model")
-builder.add_node(store_memory)
-builder.add_conditional_edges("call_model", route_message, ["store_memory", END])
-# Right now, we're returning control to the user after storing a memory
-# Depending on the model, you may want to route back to the model
-# to let it first store memories, then generate a response
-builder.add_edge("store_memory", "call_model")
-graph = builder.compile()
-graph.name = "Architect"
+    return call_model
 
 
-__all__ = ["graph"]
+def _create_call_tool(
+    agent_config: Configuration,
+    call_model: Coroutine[Any, Any, dict],
+    tool_node: ToolNode,
+):
+    
+    async def call_tool(state: State, config: RunnableConfig):
+        if state.messages[-1].tool_calls:
+            return tool_node.name
+        elif state.summary:
+            return END
+        else:
+            return call_model.__name__
+
+    return call_tool
+
+
+class ArchitectGraph(AgentGraph):
+    """Architect graph."""
+
+    _agent_config: Configuration
+
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[Configuration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        """Initialize ArchitectGraph.
+
+        Args:
+            config: Optional Configuration instance.
+            checkpointer: Optional Checkpointer instance.
+            store: Optional BaseStore instance.
+        """
+        super().__init__(
+            name="Architect",
+            agent_config=agent_config or Configuration(),
+            checkpointer=checkpointer,
+            store=store,
+        )
+
+    def create_builder(self) -> StateGraph:
+        """Create a graph builder."""
+        # Initialize the language model and the tools
+        all_tools = [
+            tools.create_memorize_tool(self._agent_config),
+            tools.summarize,
+        ]
+
+        llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
+        tool_node = ToolNode(all_tools, name="tools")
+        call_model = _create_call_model(self._agent_config, llm)
+        call_tool = _create_call_tool(self._agent_config, call_model, tool_node)
+
+        builder = StateGraph(State, config_schema=Configuration)
+        builder.add_node(call_model)
+        builder.add_node(tool_node.name, tool_node)
+
+        builder.add_edge(START, call_model.__name__)
+        builder.add_conditional_edges(
+            call_model.__name__,
+            call_tool,
+            [tool_node.name, call_model.__name__, END],
+        )
+        builder.add_edge(tool_node.name, call_model.__name__)
+
+        return builder
+
+
+# For langsmith
+graph = ArchitectGraph().compiled_graph
+
+__all__ = [ArchitectGraph.__name__, "graph"]
