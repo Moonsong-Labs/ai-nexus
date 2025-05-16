@@ -40,4 +40,4 @@ class Configuration(AgentConfiguration):
     reviewer_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
 
 
-__all__ = ["Configuration", "RequirementsAgentConfig"]
+__all__ = ["Configuration", "RequirementsAgentConfig", "SubAgentConfig"]

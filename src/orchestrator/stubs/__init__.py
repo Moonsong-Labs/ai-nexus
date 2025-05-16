@@ -111,6 +111,64 @@ class RequirementsGathererStub(AgentGraph):
         }
 
 
+class CoderNewPRStub(AgentGraph):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        """Initialize the CoderNewPRStub with optional configuration, checkpointer, and store.
+
+        Args:
+            agent_config: Optional agent configuration for the stub.
+            checkpointer: Optional checkpointer for state persistence.
+            store: Optional store for data management.
+        """
+        super().__init__("Coder New PR Stub", agent_config, checkpointer, store)
+
+    def create_builder(self) -> StateGraph:
+        """Return None to indicate that no builder is provided for this stub implementation."""
+        return None
+
+    async def ainvoke(self, state: Any, config: RunnableConfig | None = None):
+        """Async invoke."""
+        return {
+            "messages": state.messages,
+            "summary": model_coder_new_pr_messages.next(),
+        }
+
+
+class CoderChangeRequestStub(AgentGraph):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        """Initialize the CoderChangeRequestStub with optional configuration, checkpointer, and store.
+
+        Args:
+            agent_config: Optional agent configuration for the stub.
+            checkpointer: Optional checkpointer for state persistence.
+            store: Optional store for data management.
+        """
+        super().__init__("Coder Change Request Stub", agent_config, checkpointer, store)
+
+    def create_builder(self) -> StateGraph:
+        """Return None to indicate that no builder is provided for this stub implementation."""
+        return None
+
+    async def ainvoke(self, state: Any, config: RunnableConfig | None = None):
+        """Async invoke."""
+        return {
+            "messages": state.messages,
+            "summary": model_coder_change_request_messages.next(),
+        }
+
+
 def architect(state: State, config: RunnableConfig, store: BaseStore):
     """Call design."""
     tool_call_id = state.messages[-1].tool_calls[0]["id"]

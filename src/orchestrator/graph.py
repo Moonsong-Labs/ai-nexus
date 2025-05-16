@@ -21,11 +21,13 @@ from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
 from coder.state import State as CoderState
 from common.components.github_mocks import maybe_mock_github
 from common.components.github_tools import get_github_tools
+from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from orchestrator import stubs, tools
 from orchestrator.configuration import (
     Configuration,
     RequirementsAgentConfig,
+    SubAgentConfig,
 )
 from orchestrator.state import State
 from requirement_gatherer.configuration import (
@@ -272,17 +274,33 @@ class OrchestratorGraph(AgentGraph):
         )
         github_source = maybe_mock_github()
         github_tools = get_github_tools(github_source)
-        coder_new_pr_graph = CoderNewPRGraph(
-            agent_config=self._agent_config.coder_new_pr_agent.config,
-            checkpointer=self._checkpointer,
-            store=self._store,
-            github_tools=github_tools,
+        coder_new_pr_graph = (
+            stubs.CoderNewPRStub(
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+            if self._agent_config.coder_new_pr_agent.use_stub
+            else CoderNewPRGraph(
+                agent_config=self._agent_config.coder_new_pr_agent.config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+                github_tools=github_tools,
+            )
         )
-        coder_change_request_graph = CoderChangeRequestGraph(
-            agent_config=self._agent_config.coder_change_request_agent.config,
-            checkpointer=self._checkpointer,
-            store=self._store,
-            github_tools=github_tools,
+        coder_change_request_graph = (
+            stubs.CoderChangeRequestStub(
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+            if self._agent_config.coder_change_request_agent.use_stub
+            else CoderChangeRequestGraph(
+                agent_config=self._agent_config.coder_change_request_agent.config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+                github_tools=github_tools,
+            )
         )
         coder_new_pr = _create_coder_new_pr_node(coder_new_pr_graph)
         coder_change_request = _create_coder_change_request_node(
@@ -325,7 +343,11 @@ graph = OrchestratorGraph(
     agent_config=Configuration(
         requirements_agent=RequirementsAgentConfig(
             use_stub=False, config=RequirementsConfiguration(use_human_ai=False)
-        )
+        ),
+        coder_new_pr_agent=SubAgentConfig(use_stub=False, config=AgentConfiguration()),
+        coder_change_request_agent=SubAgentConfig(
+            use_stub=False, config=AgentConfiguration()
+        ),
     )
 ).compiled_graph
 
