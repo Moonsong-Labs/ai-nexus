@@ -64,7 +64,7 @@ class PRReviewComment(BaseModel):
     path: str = Field(0, description="The file path from the diff hunk this comment relates to.")
     position: int = Field(1, description="""The position in the diff where you want to add a review comment. Note this value is not the same as the line number in the file. The position value equals the number of lines down from the first "@@" hunk header in the file you want to add a comment. The line just below the "@@" line is position 1, the next line is position 2, and so on. The position in the diff continues to increase through lines of whitespace and additional hunks until the beginning of a new file. **VERY IMPORTANT:** This MUST be an integer, not a float.""")
     body: str = Field(2, description="Text of the review comment.")
-    line: int = Field(3, description="The line number from the diff hunk this comment relates to. **VERY IMPORTANT:** This MUST be an integer, not a float.")
+    line: int = Field(3, description="The line number from the diff hunk this comment relates to. **VERY IMPORTANT:** This MUST be an integer, not a float. The feedback is represented BELOW this line number, not above it, so you may need to add one to the number.")
     
     # converts to a pygithub ReviewComment object
     def to_gh_review(self):
