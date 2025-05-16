@@ -31,13 +31,20 @@ class Delegate:
 
 @tool
 def store_memory(
--    return "Memorized '{content}' for '{origin}'"
-+    return f"Memorized '{content}' for '{origin}'"
     content: str,
+    origin: Literal[
+        "user",
+        "requirements",
+        "architect",
+        "coder_new_pr",
+        "coder_change_request",
+        "tester",
+        "reviewer",
+    ],
 ):
-    """Use this to memorize, store or remember  instructions."""
+    """Use this to memorize, store or remember instructions."""
     # print(f"[MEMORIZE] for {origin}: {content}")  # noqa: T201
-    return "Memorized '{content}' for '{origin}'"
+    return f"Memorized '{content}' for '{origin}'"
 
 
 @dataclass
