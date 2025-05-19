@@ -15,6 +15,9 @@ deps: sync
 run: deps
 	uv run --env-file .env -- langgraph dev --allow-blocking --debug-port 2025
 
+dry-run: deps
+	timeout 30s uv run --env-file .env.example -- langgraph dev --no-browser --no-reload
+
 # Define a variable for the test file path.
 UNIT_TEST_FILE ?= tests/unit_tests/
 INTEGRATION_TEST_FILE ?= tests/integration_tests/
