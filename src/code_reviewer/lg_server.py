@@ -1,6 +1,9 @@
 """Prepare final graphs for langgraph."""
 
-from code_reviewer.graph import github_code_reviewer_config, non_github_code_reviewer_config
+from code_reviewer.graph import (
+    github_code_reviewer_config,
+    non_github_code_reviewer_config,
+)
 from common.components.github_mocks import maybe_mock_github
 from common.components.github_tools import get_github_tools
 

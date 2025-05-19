@@ -1,8 +1,9 @@
 """Tools for the code agent."""
 
 from typing import List, Type, Union
-import requests
 
+import requests
+from github.PullRequest import ReviewComment
 from langchain_community.agent_toolkits.github.toolkit import (
     BranchName,
     CreateFile,
@@ -26,8 +27,6 @@ from langchain_community.tools.github.prompt import (
     SET_ACTIVE_BRANCH_PROMPT,
     UPDATE_FILE_PROMPT,
 )
-from github.Commit import Commit
-from github.PullRequest import ReviewComment
 from langchain_community.utilities.github import GitHubAPIWrapper
 from langchain_core.runnables import RunnableLambda
 from langchain_core.tools import BaseTool
@@ -68,6 +67,7 @@ class PRReviewComment(BaseModel):
     
     # converts to a pygithub ReviewComment object
     def to_gh_review(self):
+        """Convert self to a pygithub ReviewComment object."""
         comment = ReviewComment()
         comment["path"] = self.path
         # bug fix: this fixes the eventual HTTP POST data to use "line" instead of the deprecated
