@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import Any, Coroutine, Optional
+from typing import Optional, Awaitable, Callable
 
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import LanguageModelInput
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 def _create_call_model(
     agent_config: Configuration,
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
-) -> Coroutine[Any, Any, dict]:
+) -> Callable[[State, RunnableConfig], Awaitable[dict]]:
     """Create an asynchronous function that queries recent user memories and invokes a language model with contextual prompts.
 
     The returned coroutine retrieves the user's recent memories from the store, formats them for context, constructs a system prompt including these memories and the current timestamp, and asynchronously calls the language model with the prompt and conversation history. Returns a dictionary containing the model's response message.
@@ -37,13 +37,22 @@ def _create_call_model(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:
         """Extract the user's state from the conversation and update the memory."""
-        user_id = config["configurable"]["user_id"]
+        try:
+            user_id = config["configurable"]["user_id"]
+        except KeyError as exc:
+            raise KeyError("`user_id` not found in RunnableConfig.configurable") from exc
+        
         # Retrieve the most recent memories for context
-        memories = await store.asearch(
-            ("memories", user_id),
-            query=str([m.content for m in state.messages[-3:]]),
-            limit=10,
-        )
+        try:
+            query_content = str([m.content for m in state.messages[-3:]]) if state.messages else ""
+            memories = await store.asearch(
+                ("memories", user_id),
+                query=query_content,
+                limit=10,
+            )
+        except Exception as e:
+            logger.error(f"Failed to retrieve memories: {e}")
+            memories = []
 
         # Format memories for inclusion in the prompt
         formatted = "\n".join(

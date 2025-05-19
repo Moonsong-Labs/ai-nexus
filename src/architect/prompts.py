@@ -127,7 +127,7 @@ Based on my knowledge of the needs of the project, I must read the files related
 I MUST write the files following the **PROJECT STRUCTURE** and my **CORE VALUES**.
 
 ### 5. **Persist with Memory** 
-After each file is written, I MUST use the `upsert_memory` tool to document the information in the appropriate Markdown file.
+After each file is written, I MUST use the `memorize` tool to document the information in the appropriate Markdown file.
 
 ### 6. **Completion Gate**  *Critical Checkpoint*
 
