@@ -11,8 +11,7 @@ from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from pydantic import BaseModel, Field
 
-from code_reviewer import configuration
-from code_reviewer.prompts import SYSTEM_PROMPT
+from code_reviewer.prompts import PR_REVIEW_PROMPT, SYSTEM_PROMPT
 from code_reviewer.state import State
 
 
@@ -44,7 +43,7 @@ class DiffFeedback(BaseModel):
 logger = logging.getLogger(__name__)
 
 # Initialize the language model to be used for memory extraction
-llm = init_chat_model()
+llm = init_chat_model("google_genai:gemini-2.0-flash")
 
 
 @dataclass
@@ -82,9 +81,22 @@ class CodeReviewerInstanceConfig:
 def non_github_code_reviewer_config():
     """Instance config for code reviewer without GitHub tools."""
     return CodeReviewerInstanceConfig(
-        name="NonGithubCodeReviewer",
-        system_prompt=SYSTEM_PROMPT,
-        github_tools=[],
+        name="NonGithubCodeReviewer", system_prompt=SYSTEM_PROMPT, github_tools=[]
+    )
+
+
+def github_code_reviewer_config():
+    """Instance config for code reviewer with GitHub tools."""
+    return CodeReviewerInstanceConfig(
+        name="GithubCodeReviewer",
+        system_prompt=PR_REVIEW_PROMPT,
+        github_tools=[
+            "get_files_from_a_directory",
+            "read_file",
+            "get_pull_request",
+            "get_pull_request_diff",
+            "create_pull_request_review",
+        ],
     )
 
 
@@ -96,22 +108,15 @@ class CallModel:
     async def __call__(self, state: State) -> dict:
         system_msg = SystemMessage(content=self.system_prompt)
         messages = [system_msg] + state.messages
-        diff_feedback: DiffFeedback = (
-            await llm.bind_tools(self.github_tools)
-            .with_structured_output(DiffFeedback)
-            .ainvoke(messages)
+        messages_after_invoke = await llm.bind_tools(self.github_tools).ainvoke(
+            messages
         )
-        return {
-            "messages": [
-                {"role": "assistant", "content": diff_feedback.model_dump_json()}
-            ],
-            "diff_feedback": diff_feedback,
-        }
+        return {"messages": messages_after_invoke}
 
 
 def graph_builder(github_toolset: list[Tool], system_prompt: str) -> StateGraph:
     """Return code_reviewer graph builder."""
-    builder = StateGraph(State, config_schema=configuration.Configuration)
+    builder = StateGraph(State)
 
     tool_node = ToolNode(tools=github_toolset)
 
@@ -126,4 +131,5 @@ def graph_builder(github_toolset: list[Tool], system_prompt: str) -> StateGraph:
 
 __all__ = [
     "non_github_code_reviewer_config",
+    "github_code_reviewer_config",
 ]
