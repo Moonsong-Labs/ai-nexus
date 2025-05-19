@@ -320,7 +320,9 @@ def mock_github_tools(mock_api: MockGithubApi):
             args_schema=GetPR,
         ),
         RunnableLambda(
-            _convert_args_schema_to_string(mock_api.create_pull_request_review, CreatePRReview)
+            _convert_args_schema_to_string(
+                mock_api.create_pull_request_review, CreatePRReview
+            )
         ).as_tool(
             name="create_pull_request_review",
             description=CREATE_PULL_REQUEST_REVIEW_PROMPT,
