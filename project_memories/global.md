@@ -7,15 +7,15 @@
 **Core Mission:** To develop a system for managing and orchestrating a team of AI agents capable of designing, developing, and maintaining technical projects. An initial focus is on an agent named "Cursor" which operates with a memory that resets between sessions, necessitating a robust external "Memory Bank" system for continuity. A specific rule (`.cursor/rules/read-project-memories.mdc`) now configures Cursor to always read all files within the `project_memories/` directory for every interaction, ensuring this core project context is consistently available to it. AI Nexus aims to be a platform for developing and managing such AI agents.
 
 **Key Concepts:**
-1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager) working collaboratively.
+1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect (NEW), Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager) working collaboratively.
 2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is `langmem`, providing semantic search capabilities over stored memories. `AgentGraph` can now automatically initialize and provide `SemanticMemory` and its tools to subclasses based on its configuration. The Tester agent, for instance, now includes logic to read from a `BaseStore` for contextual memories.
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
-4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools provided via `AgentGraph`/`SemanticMemory`, or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`, or Task Manager's file system tools). The Tester agent's previous custom `upsert_memory` tool has been removed. The Code Reviewer agent can now use GitHub tools like `get_pull_request_diff` and `create_pull_request_review` to interact with pull requests.
-5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes (which subclass `AgentConfiguration` or, in the case of the Tester agent, `common.configuration.AgentConfiguration`). These configurations (and thus the prompts) are accessed by the agent's graph logic (e.g., in custom `call_model` implementations, which now often receive the agent's full `Configuration` object directly as a parameter, or access it via `RunnableConfig`). The Tester agent features enhanced prompt management with workflow stage-specific prompts and dynamic prompt formatting. The Code Reviewer agent has a specific `PR_REVIEW_PROMPT` for GitHub interactions.
+4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools provided via `AgentGraph`/`SemanticMemory`, or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`, or Task Manager's file system tools, or the Architect agent's `memorize`, `recall`, `read_file`, `create_file`, `list_files` tools). The Tester agent's previous custom `upsert_memory` tool has been removed. The Architect agent's previous custom `upsert_memory` tool has been removed. The Code Reviewer agent can now use GitHub tools like `get_pull_request_diff` and `create_pull_request_review` to interact with pull requests.
+5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes (which subclass `AgentConfiguration` or, in the case of the Tester agent, `common.configuration.AgentConfiguration`). These configurations (and thus the prompts) are accessed by the agent's graph logic (e.g., in custom `call_model` implementations, which now often receive the agent's full `Configuration` object directly as a parameter, or access it via `RunnableConfig`). The Tester agent features enhanced prompt management with workflow stage-specific prompts and dynamic prompt formatting. The Code Reviewer agent has a specific `PR_REVIEW_PROMPT` for GitHub interactions. The Architect agent has a detailed `architect_system_prompt`.
 6.  **Configuration Management (REVISED):** Agents have configurable parameters, including LLM models, system prompts, and memory settings. This is managed via:
     *   A `MemoryConfiguration` dataclass (`common.components.memory.MemoryConfiguration`) for memory-specific settings like `use_memory`, `load_static_memories`, and `user_id`.
     *   A common `AgentConfiguration` in `src/common/configuration.py` (NEW, replaces `BaseConfiguration`), which includes a `memory: MemoryConfiguration` field. It also includes `user_id`, `model`, and `provider` for LangGraph. Agent-specific system prompts are defined in subclasses.
-    *   Agent-specific `Configuration` dataclasses (e.g., in `src/orchestrator/configuration.py`, `src/requirement_gatherer/configuration.py`, `src/agent_template/configuration.py`, `src/task_manager/configuration.py`) that subclass `AgentConfiguration` and can include their own `system_prompt` or other specific settings.
+    *   Agent-specific `Configuration` dataclasses (e.g., in `src/orchestrator/configuration.py`, `src/requirement_gatherer/configuration.py`, `src/agent_template/configuration.py`, `src/task_manager/configuration.py`, `src/architect/configuration.py` (NEW)) that subclass `AgentConfiguration` and can include their own `system_prompt` (or equivalent like `architect_system_prompt`) or other specific settings.
     *   The Tester agent's configuration (`src/tester/configuration.py`) now subclasses `common.configuration.AgentConfiguration` (aligning it with other refactored agents) and defines its `system_prompt`. Model and other common settings are inherited from `AgentConfiguration`.
     *   The Code Reviewer agent's configuration is managed via a `CodeReviewerInstanceConfig` dataclass within its `graph.py` module, which holds `name`, `system_prompt`, and `github_tools`. Its previous dedicated `configuration.py` file has been removed.
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
@@ -48,12 +48,13 @@ The original "Memory Bank" concept described a system of structured Markdown fil
     *   Can automatically initialize a `SemanticMemory` instance if `agent_config.memory.use_memory` is true.
     *   The initialized `SemanticMemory` uses `self._name` (passed during `AgentGraph` instantiation) as the `agent_name` for memory namespacing, and `agent_config.memory` for its configuration (including `user_id`).
 *   **Storage:** Memories are stored in a `BaseStore` (e.g., `InMemoryStore` configured with embeddings like `GoogleGenerativeAIEmbeddings`). The Tester agent's graph logic includes reading from such a store.
-*   **Namespace:** Memories are typically namespaced by `("memories", "semantic", user_id)` or `("memories", "static", user_id)`, where `user_id` comes from `MemoryConfiguration.user_id` (or equivalent `user_id` in `RunnableConfig` for agents like Tester). The `agent_name` (from `AgentGraph._name`) is used by `SemanticMemory` internally, potentially for further namespacing or identification.
+*   **Namespace:** Memories are typically namespaced by `("memories", "semantic", user_id)` or `("memories", "static", user_id)`, where `user_id` comes from `MemoryConfiguration.user_id` (or equivalent `user_id` in `RunnableConfig` for agents like Tester or Architect). The `agent_name` (from `AgentGraph._name`) is used by `SemanticMemory` internally, potentially for further namespacing or identification.
 *   **Tools:**
     *   Agents based on `AgentGraph` (like `AgentTemplateGraph`): Can get memory tools (`manage_memory`, `search_memory`) from the `AgentGraph`-managed `SemanticMemory` instance (via `self.memory.get_tools()`).
     *   Requirement Gatherer: Uses a custom `memorize` tool (now created by a factory function `create_memorize_tool` that receives the agent's `Configuration`, from which `user_id` is accessed for namespacing memories) and `human_feedback` tool.
     *   Tester: Its custom `upsert_memory` tool has been removed. It currently reads memories directly via `BaseStore` in its `call_model` logic.
     *   Code Reviewer: Can use GitHub tools such as `get_pull_request_diff`, `create_pull_request_review`, `get_files_from_a_directory`, and `read_file`.
+    *   Architect (NEW): Uses `create_memorize_tool` and `create_recall_tool` (accessing `user_id` from its `Configuration` for namespacing) for memory operations, and file system tools (`read_file`, `create_file`, `list_files`). Its previous `upsert_memory` tool has been removed.
 *   **Static Memories:** JSON files in `.langgraph/static_memories/` can be loaded into the `BaseStore` under a static namespace if `memory_config.load_static_memories` is enabled in the `MemoryConfiguration` used by `SemanticMemory`.
 *   **Shift:** The core principle of externalized memory remains, with `langmem` as the backend, now more seamlessly integrated via `AgentGraph` and configured through `AgentConfiguration` and `MemoryConfiguration`.
 
@@ -130,7 +131,7 @@ This pattern is now embodied by `AgentTemplateGraph` which subclasses `AgentGrap
     *   `SemanticMemory` class now takes `memory_config: Optional[MemoryConfiguration]` in its constructor and uses it for initialization. The `ConfigurationProtocol` is removed.
 *   **`prompts.py` (`src/agent_template/prompts.py`):** (As previously described, instruction to mention memory retrieval).
 
-**4.2. `AgentGraph` based Architecture (REVISED - e.g., Orchestrator, Requirement Gatherer, Coder, Task Manager, AgentTemplateGraph, Tester)**
+**4.2. `AgentGraph` based Architecture (REVISED - e.g., Orchestrator, Requirement Gatherer, Coder, Task Manager, AgentTemplateGraph, Tester, Architect (NEW))**
 
 A common base class for modular graph definitions.
 
@@ -169,7 +170,7 @@ A common base class for modular graph definitions.
     *   `create_runnable_config(self, config: RunnableConfig | None = None) -> RunnableConfig` (NEW): Method to prepare `RunnableConfig` for graph invocation. It takes an optional `RunnableConfig`, merges `self._agent_config.langgraph_configurables` into its `configurable` field, and returns the modified `RunnableConfig`. This notably does *not* inject the full `agent_config` object into the `configurable` dictionary.
     *   `compiled_graph`: Property to get or compile the graph. Invocation is now typically done via `self.compiled_graph.ainvoke(state, self.create_runnable_config(config))`.
 
-Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, `AgentTemplateGraph`, and Tester subclass `AgentGraph`. The Tester agent has been updated to align its configuration and graph initialization more closely with this pattern (see 5.5).
+Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, `AgentTemplateGraph`, Tester, and Architect (NEW) subclass `AgentGraph`. The Tester agent has been updated to align its configuration and graph initialization more closely with this pattern (see 5.5).
 
 **4.3. Custom `StateGraph` Architecture (e.g., Code Reviewer - NEW)**
 
@@ -184,25 +185,61 @@ Some agents, like the Code Reviewer, may use LangGraph's `StateGraph` directly f
 *   **Architecture:** Uses the `AgentGraph` pattern. `OrchestratorGraph` in `src/orchestrator/graph.py` subclasses `common.graph.AgentGraph`.
 *   **Configuration (`src/orchestrator/configuration.py` - REVISED):**
     *   `Configuration` class subclasses `common.configuration.AgentConfiguration`.
-    *   Defines `SubAgentConfig` and `RequirementsAgentConfig` (which includes `use_stub: bool` and `config: requirement_gatherer.configuration.Configuration`).
-    *   `Configuration` now holds fields like `requirements_agent: RequirementsAgentConfig`.
+    *   Defines `SubAgentConfig`, `RequirementsAgentConfig` (which includes `use_stub: bool` and `config: requirement_gatherer.configuration.Configuration`), and `ArchitectAgentConfig` (NEW, which includes `use_stub: bool` and `config: architect.configuration.Configuration`).
+    *   `Configuration` now holds fields like `requirements_agent: RequirementsAgentConfig` and `architect_agent: ArchitectAgentConfig` (NEW).
 *   **Graph (`src/orchestrator/graph.py` - REVISED):**
     *   `OrchestratorGraph.__init__` now takes `agent_config: Optional[orchestrator.configuration.Configuration]`.
     *   Uses `self._agent_config` for its settings and for configuring sub-agents/stubs.
-    *   Helper functions like `_create_orchestrate`, `_create_delegate_to`, `_create_requirements_node` now receive `self._agent_config` as a direct argument.
+    *   Helper functions like `_create_orchestrate`, `_create_delegate_to`, `_create_requirements_node`, and `_create_architect_node` (NEW) now receive `self._agent_config` as a direct argument.
     *   Inner functions (e.g., `orchestrate`) no longer extract `agent_config` from `RunnableConfig` but use the `agent_config` passed to their factory/creator function.
     *   `RequirementsGathererGraph` is now referred to as `RequirementsGraph`.
-    *   Invocation of sub-graphs (e.g., `requirements_graph`) now uses `compiled_graph.ainvoke` (e.g., `await requirements_graph.compiled_graph.ainvoke(...)`).
+    *   Invocation of sub-graphs (e.g., `requirements_graph`, `architect_graph`) now uses `compiled_graph.ainvoke` (e.g., `await requirements_graph.compiled_graph.ainvoke(...)`).
+    *   `_create_delegate_to` now routes to `"architect"` for the Architect agent.
+    *   In `create_builder()`, an `architect_graph` (either `ArchitectStub` or `ArchitectGraph`) is instantiated and an `architect` node is added to the graph.
     *   `AgentsConfig` dataclass removed.
 *   **Stubs (`src/orchestrator/stubs/__init__.py` - REVISED):**
     *   `RequirementsGathererStub` (subclasses `AgentGraph`):
         *   `__init__` now takes `agent_config` and explicitly passes `name="Requirements Gatherer Stub"` to `super().__init__`.
         *   `create_builder()` method now returns a simple `StateGraph` (using `requirement_gatherer.state.State as RequirementsState`) with a single "run" node that provides the stubbed summary. This allows the stub to have a `compiled_graph`.
         *   The custom `ainvoke` method has been removed (its logic is now within the graph created by `create_builder`).
+    *   `ArchitectStub` (NEW, subclasses `StubGraph[ArchitectState]`): Provides stubbed responses for the Architect agent.
+    *   Old `architect` stub function removed.
 
-#### 5.2. Architect (`src/architect/`)
-*   (No changes mentioned in PR - likely still follows its previous custom structure. The `agent_template.agent.Agent` class it might have implicitly relied on for examples is now DELETED. Still uses its own `upsert_memory`.)
-*   (Other details as previously described)
+#### 5.2. Architect (`src/architect/`) (REWORKED)
+*   **Architecture:** Uses the `AgentGraph` pattern. `ArchitectGraph` in `src/architect/graph.py` subclasses `common.graph.AgentGraph`.
+*   **Configuration (`src/architect/configuration.py` - REVISED):**
+    *   `Configuration` class subclasses `common.configuration.AgentConfiguration`.
+    *   Defines `architect_system_prompt: str` (defaulting to `prompts.SYSTEM_PROMPT`).
+    *   Defines `use_human_ai: bool = False`.
+    *   Inherits `model`, `user_id`, `memory` from `AgentConfiguration`.
+    *   Previous specific `user_id`, `model`, `system_prompt` fields are removed (now inherited or replaced by `architect_system_prompt`).
+    *   The `from_runnable_config` method has been removed.
+*   **State (`src/architect/state.py`):** Defines `State` for the Architect agent's graph (used by `ArchitectGraph`).
+*   **Graph (`src/architect/graph.py` - REVISED):**
+    *   Defines `ArchitectGraph(AgentGraph)`.
+    *   `__init__` takes `agent_config: Optional[architect.configuration.Configuration]`. It calls `super().__init__(name="Architect", agent_config=agent_config or architect.configuration.Configuration(), ...)`.
+    *   `create_builder()`:
+        *   Initializes an LLM using `self._agent_config.model`.
+        *   Tools: `create_memorize_tool(self._agent_config)`, `create_recall_tool(self._agent_config)`, `read_file`, `create_file`, `list_files`.
+        *   Binds these tools to the LLM.
+        *   A helper function `_create_call_model(agent_config: Configuration, llm_with_tools)` is defined.
+            *   Its inner `call_model(state: State, config: RunnableConfig, store: BaseStore)` function:
+                *   Retrieves `user_id` from `config["configurable"]["user_id"]`.
+                *   Searches memories from `store` using this `user_id`.
+                *   Formats the `agent_config.architect_system_prompt` with `user_info` (formatted memories) and current `time`.
+                *   Invokes the `llm_with_tools` with the system prompt and current messages.
+        *   Sets up graph nodes: `call_model` (using the helper) and a `ToolNode` (named "tools").
+        *   Defines graph flow: `START` -> `call_model`. Then, based on `tools_condition` (checks for tool calls in the last message), it routes to `tools` (if tool calls exist), back to `call_model`, or to `END`.
+    *   A global `graph` instance is created for LangSmith: `graph = ArchitectGraph().compiled_graph`.
+*   **Prompts (`src/architect/prompts.py` - REVISED):**
+    *   `SYSTEM_PROMPT` (which `Configuration.architect_system_prompt` defaults to) is a new, detailed prompt. It defines the Architect's role (expert software engineer for project architecture, not coding), core values (Research Driven, Technology Selection, Task Definition, Validation and Adjustment, Transparency and Traceability, Focus and Clearness), understanding of requirements documentation structure (Mermaid diagram), project documentation structure (Mermaid diagram, core files: `projectbrief.md`, `systemPatterns.md`, `techPatterns.md`, `progress.md`; specific files: `codingContext.md`, `testingContext.md`), and a detailed workflow (1. Read Requirements Documentation, 2. Read Existing Project Documentation, 3. Read Project Files, 4. Write Documentation, 5. Persist with Memory, 6. Completion Gate, 7. Finalize). Includes `{user_info}` and `{time}` placeholders.
+*   **Tools (`src/architect/tools.py` - REVISED):**
+    *   The previous `upsert_memory` tool has been removed.
+    *   `create_memorize_tool(agent_config: Configuration)`: A factory function that creates a `memorize` tool. The inner tool uses `agent_config.user_id` for namespacing memories and `store.aput` for storage.
+    *   `create_recall_tool(agent_config: Configuration)`: A factory function that creates a `recall` tool. The inner tool uses `agent_config.user_id` for namespacing and `store.asearch` for retrieval.
+    *   `read_file(file_path: str)`: New tool to read the content of a file.
+    *   `create_file(file_path: str, content: str)`: New tool to create a file with specified content, including parent directories.
+    *   `list_files(directory_path: str = ".")`: New tool to list files and directories in a specified path, with details like size.
 
 #### 5.3. Coder (`src/coder/`)
 *   **Architecture:** Uses the `AgentGraph` pattern. Its configuration (likely `src/coder/configuration.py`, though not explicitly detailed in PR#81 diffs) would need to subclass `common.configuration.AgentConfiguration` to be compatible with the revised `AgentGraph`.
@@ -391,7 +428,7 @@ ai-nexus/
 ├── README.md                     # UPDATED: Examples for semantic memory, new config, local demo
 ├── agent_memories/
 │   └── grumpy/
-├── langgraph.json                # UPDATED: New Code Reviewer graph entry points
+├── langgraph.json                # UPDATED: New Code Reviewer graph entry points, Architect graph entry point
 ├── project_memories/
 │   ├── PRD.md
 │   └── global.md
@@ -409,9 +446,16 @@ ai-nexus/
 │   │   ├── prompts.py
 │   │   ├── state.py
 │   │   └── tools.py
-│   ├── architect/
-│   │   ├── output.py
-│   │   └── prompts/v0.1.md
+│   ├── architect/                # REWORKED
+│   │   ├── __init__.py           # (Assumed to export ArchitectGraph, Configuration, State)
+│   │   ├── configuration.py      # UPDATED: Subclasses common.configuration.AgentConfiguration, defines architect_system_prompt
+│   │   ├── graph.py              # UPDATED: Implements ArchitectGraph(AgentGraph), new tool usage, memory/prompt handling
+│   │   ├── prompts.py            # UPDATED: New detailed SYSTEM_PROMPT for Architect
+│   │   ├── prompts/
+│   │   │   ├── v0.1.md           # DELETED
+│   │   │   └── v0.md             # DELETED
+│   │   ├── state.py              # (Assumed to exist, defines State for ArchitectGraph)
+│   │   └── tools.py              # UPDATED: New memorize, recall, read_file, create_file, list_files tools; upsert_memory removed
 │   ├── code_reviewer/            # REVISED
 │   │   ├── __init__.py           # UPDATED: Exports graph_no_github_tools, graph_with_github_tools
 │   │   ├── configuration.py      # DELETED
@@ -439,18 +483,18 @@ ai-nexus/
 │   │   ├── graph.py              # REVISED: AgentGraph __init__ takes name & AgentConfiguration, inits SemanticMemory, _create_call_model, _merge_config, ainvoke removed; create_runnable_config added
 │   │   └── utils/
 │   ├── demo/                     # NEW directory
-│   │   └── orchestrate.py        # MOVED & RENAMED from src/orchestrator/test.py; UPDATED to use create_runnable_config and compiled_graph.ainvoke
+│   │   └── orchestrate.py        # MOVED & RENAMED from src/orchestrator/test.py; UPDATED to use create_runnable_config and compiled_graph.ainvoke, includes Architect agent config
 │   ├── grumpy/
 │   ├── orchestrator/
 │   │   ├── __init__.py
-│   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration, new sub-agent configs
-│   │   ├── graph.py              # UPDATED: Uses new AgentConfiguration, new AgentGraph init, refers to RequirementsGraph; helpers receive agent_config; sub-graph invocation via compiled_graph.ainvoke
+│   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration, new sub-agent configs (ArchitectAgentConfig)
+│   │   ├── graph.py              # UPDATED: Uses new AgentConfiguration, new AgentGraph init, refers to RequirementsGraph, ArchitectGraph; helpers receive agent_config; sub-graph invocation via compiled_graph.ainvoke; integrates Architect agent/stub
 │   │   ├── memory/
 │   │   │   └── team.md
 │   │   ├── prompts.py
 │   │   ├── state.py
 │   │   ├── stubs/
-│   │   │   └── __init__.py       # UPDATED: Stub uses AgentConfiguration, RequirementsGathererStub now builds a simple graph
+│   │   │   └── __init__.py       # UPDATED: Stub uses AgentConfiguration, RequirementsGathererStub now builds a simple graph, ArchitectStub added, old architect stub function removed
 │   │   └── tools.py
 │   ├── requirement_gatherer/
 │   │   ├── __init__.py
