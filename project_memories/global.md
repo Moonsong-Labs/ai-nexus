@@ -327,6 +327,7 @@ Some agents, like the Code Reviewer, may use LangGraph's `StateGraph` directly f
     *   Updated to use `AgentTemplateGraph(agent_config=config).compiled_graph` for testing the agent template's graph.
 *   **`tests/integration_tests/test_requirement_gatherer.py` (UPDATED):**
     *   Updated to use `RequirementsGraph` (renamed from `RequirementsGathererGraph`).
+    *   The graph instance for LangSmith evaluation is now obtained via `RequirementsGraph(...).compiled_graph`.
 *   **`tests/integration_tests/test_orchestrator.py` (UPDATED):**
     *   Updated to use `OrchestratorGraph().compiled_graph` for testing the orchestrator's graph.
 *   **`tests/integration_tests/test_task_manager.py` (UPDATED):**
@@ -334,9 +335,11 @@ Some agents, like the Code Reviewer, may use LangGraph's `StateGraph` directly f
     *   The `call_model` mock/helper within `test_task_manager_langsmith` now includes `task_manager_system_prompt: prompts.SYSTEM_PROMPT` in its configuration, ensuring the test uses the updated system prompt, and correctly uses `graph.compiled_graph.ainvoke` for graph invocation.
     *   Example files for testing (e.g., `api_rust` project files) are now located in `tests/integration_tests/inputs/api_rust/` (moved from `src/task_manager/volume/api_rust/`).
 *   **`tests/integration_tests/test_tester_agent.py` (UPDATED):**
-    *   Updated to use the new `TesterAgentGraph` instantiation method, e.g., `graph_compiled = TesterAgentGraph(checkpointer=MemorySaver())`.
+    *   Updated to use the new `TesterAgentGraph` instantiation method, e.g., `graph_compiled = TesterAgentGraph(checkpointer=MemorySaver()).compiled_graph` (now directly uses the compiled graph).
 *   **`tests/datasets/task_manager_dataset.py` (UPDATED):**
     *   Corrected a typographical error in an output message.
+*   **`tests/testing/__init__.py` (UPDATED):**
+    *   The `create_async_graph_caller` utility function (used for LangSmith evaluations) has been simplified. It now directly passes the `inputs` dictionary to `graph.ainvoke` as the state and expects the graph's result to be a dictionary containing a "messages" list, from which it extracts the content of the last message.
 *   (Other test files as previously described)
 
 
@@ -490,9 +493,9 @@ ai-nexus/
     │   ├── test_graph.py           # UPDATED: Uses AgentTemplateGraph(agent_config=config).compiled_graph
     │   ├── test_grumpy_agent.py
     │   ├── test_orchestrator.py    # UPDATED: Uses OrchestratorGraph().compiled_graph
-    │   ├── test_requirement_gatherer.py # UPDATED: Uses RequirementsGraph
+    │   ├── test_requirement_gatherer.py # UPDATED: Uses RequirementsGraph; graph instance for LangSmith eval now .compiled_graph
     │   ├── test_task_manager.py    # UPDATED: New test for project path, config includes task_manager_system_prompt, call_model helper uses graph.compiled_graph.ainvoke
-    │   ├── test_tester_agent.py    # UPDATED: Uses TesterAgentGraph for tests
+    │   ├── test_tester_agent.py    # UPDATED: Uses TesterAgentGraph(...).compiled_graph for tests
     │   └── inputs/                 # NEW directory
     │       └── api_rust/           # NEW directory (Contains files moved from src/task_manager/volume/api_rust)
     │           ├── featuresContext.md
@@ -504,7 +507,7 @@ ai-nexus/
     │           ├── techContext.md
     │           └── testingContext.md
     ├── testing/
-    │   ├── __init__.py
+    │   ├── __init__.py             # UPDATED: create_async_graph_caller simplified
     │   ├── evaluators.py
     │   └── formatter.py
     └── unit_tests/
