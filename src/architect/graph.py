@@ -11,8 +11,8 @@ from langchain_core.messages import (
     SystemMessage,
 )
 from langchain_core.runnables import Runnable, RunnableConfig
-from langgraph.graph import END, START, StateGraph
-from langgraph.prebuilt import ToolNode
+from langgraph.graph import START, StateGraph
+from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
@@ -72,22 +72,6 @@ def _create_call_model(
     return call_model
 
 
-def _create_call_tool(
-    agent_config: Configuration,
-    call_model: Coroutine[Any, Any, dict],
-    tool_node: ToolNode,
-):
-    async def call_tool(state: State, config: RunnableConfig):
-        if state.messages[-1].tool_calls:
-            return tool_node.name
-        elif state.summary:
-            return END
-        else:
-            return call_model.__name__
-
-    return call_tool
-
-
 class ArchitectGraph(AgentGraph):
     """Architect graph."""
 
@@ -119,24 +103,22 @@ class ArchitectGraph(AgentGraph):
         # Initialize the language model and the tools
         all_tools = [
             tools.create_memorize_tool(self._agent_config),
-            tools.summarize,
+            tools.create_recall_tool(self._agent_config),
+            tools.read_file,
+            tools.create_file,
+            tools.list_files,
         ]
 
         llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
         tool_node = ToolNode(all_tools, name="tools")
         call_model = _create_call_model(self._agent_config, llm)
-        call_tool = _create_call_tool(self._agent_config, call_model, tool_node)
 
         builder = StateGraph(State, config_schema=Configuration)
         builder.add_node(call_model)
         builder.add_node(tool_node.name, tool_node)
 
         builder.add_edge(START, call_model.__name__)
-        builder.add_conditional_edges(
-            call_model.__name__,
-            call_tool,
-            [tool_node.name, call_model.__name__, END],
-        )
+        builder.add_conditional_edges(call_model.__name__, tools_condition)
         builder.add_edge(tool_node.name, call_model.__name__)
 
         return builder
