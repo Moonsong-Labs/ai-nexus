@@ -4,7 +4,7 @@ from langsmith import Client
 from testing import create_async_graph_caller, get_logger
 from testing.evaluators import LLMJudge
 
-from deprecated_tester.graph import builder as tester_graph_builder
+from tester.graph import TesterAgentGraph
 
 # Setup basic logging for the test
 logger = get_logger(__name__)
@@ -78,7 +78,7 @@ async def test_tester_agent_langsmith(pytestconfig):
 
     logger.info(f"evaluating dataset: {LANGSMITH_DATASET_NAME}")
 
-    graph_compiled = tester_graph_builder.compile(checkpointer=MemorySaver())
+    graph_compiled = TesterAgentGraph(checkpointer=MemorySaver())
 
     results = await client.aevaluate(
         create_async_graph_caller(graph_compiled),
