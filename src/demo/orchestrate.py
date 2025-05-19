@@ -131,7 +131,7 @@ if __name__ == "__main__":
                     response = input(
                         f"\n{'-' * 50}\n{colored('requirements', 'green')}: {colored(interrupt.value['query'], 'light_grey')}\n\n{colored('Answer', 'yellow')}: "
                     )
-                    result = await orchestrator.ainvoke(
+                    result = await orchestrator.compiled_graph.ainvoke(
                         Command(resume=response), config=config
                     )
                 else:
