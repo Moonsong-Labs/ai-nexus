@@ -12,30 +12,53 @@ class Delegate:
 
     - If requirements, then "requirements".
     - If architecture and design, then "architect".
-    - If coding and implementation, then "coder".
+    - If coding and implementation, then "coder_new_pr".
+    - If coding and implementation, then "coder_change_request".
     - If code needs testing, then "tester".
     - If code needs review, then "reviewer".
     """
 
     to: Literal[
-        "orchestrator", "requirements", "architect", "coder", "tester", "reviewer"
+        "orchestrator",
+        "requirements",
+        "architect",
+        "coder_new_pr",
+        "coder_change_request",
+        "tester",
+        "reviewer",
     ]
     content: str
 
 
 @tool
 def store_memory(
-    origin: Literal["user", "requirements", "architect", "coder", "tester", "reviewer"],
     content: str,
+    origin: Literal[
+        "user",
+        "requirements",
+        "architect",
+        "coder_new_pr",
+        "coder_change_request",
+        "tester",
+        "reviewer",
+    ],
 ):
-    """Use this to memorize, store or remember  instructions."""
+    """Use this to memorize, store or remember instructions."""
     # print(f"[MEMORIZE] for {origin}: {content}")  # noqa: T201
-    return "Memorized '{content}' for '{origin}'"
+    return f"Memorized '{content}' for '{origin}'"
 
 
 @dataclass
 class Memory:
     """Tool to update memory."""
 
-    origin: Literal["user", "requirements", "architect", "coder", "tester", "reviewer"]
+    origin: Literal[
+        "user",
+        "requirements",
+        "architect",
+        "coder_new_pr",
+        "coder_change_request",
+        "tester",
+        "reviewer",
+    ]
     content: str

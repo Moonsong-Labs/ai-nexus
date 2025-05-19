@@ -13,10 +13,10 @@ from langsmith import aevaluate
 from openevals.types import EvaluatorResult
 from openevals.utils import _arun_evaluator
 
-from coder.graph import coder_new_pr_config
+from coder.graph import CoderNewPRGraph
 from coder.state import State
-from coder.tools import get_github_tools
 from common.components.github_mocks import MockGithubApi
+from common.components.github_tools import get_github_tools
 
 EVAL_PROMPT = """You are an expert code reviewer.
 Provided a starting code, user input and a set of expectations, your job is to grade the quality of a coder agent's
@@ -106,7 +106,7 @@ async def invoke_agent(inputs: CodeEvaluatorInputs) -> dict:
     mock_api.files = inputs["starting_code"]
 
     # Create and build graph
-    graph = coder_new_pr_config().graph_builder(github_tools).compile()
+    graph = CoderNewPRGraph(github_tools=github_tools).compiled_graph
 
     result = await graph.ainvoke(
         State(messages=[HumanMessage(content=inputs["user_input"])]),

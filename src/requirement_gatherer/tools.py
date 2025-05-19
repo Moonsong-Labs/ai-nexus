@@ -12,20 +12,17 @@ from langgraph.store.base import BaseStore
 from langgraph.types import Command, interrupt
 from termcolor import colored
 
+from requirement_gatherer.configuration import Configuration
 from requirement_gatherer.state import State
 
 
 # ruff: noqa: T201
-def create_human_feedback_tool(use_human_ai=False) -> BaseTool:
-    """Create a tool that requests feedback from a human.
+def create_human_feedback_tool(agent_config: Configuration) -> BaseTool:
+    """Create a tool that requests feedback from a human or an AI simulating a human.
 
-    Args:
-        use_llm: Whether to use an LLM to generate the question.
-
-    Returns:
-        A tool that requests feedback from a human.
+    If configured to use a human, the tool prompts the user for input and returns their response. If configured to use an AI, it generates a reply using a chat model with specific instructions for concise and consistent answers. The tool returns a Command that updates the agent's state with the received feedback.
     """
-    ai_user = init_chat_model() if use_human_ai else None
+    ai_user = init_chat_model() if agent_config.use_human_ai else None
 
     @tool("human_feedback", parse_docstring=True)
     async def human_feedback(
@@ -34,16 +31,18 @@ def create_human_feedback_tool(use_human_ai=False) -> BaseTool:
         state: Annotated[State, InjectedState],
         config: RunnableConfig,
     ) -> Command:
-        """Request feedback from a human.
+        """Request feedback on a question from either a human user or an AI simulating a human, based on agent configuration.
+
+        If configured for human input, prompts the user and captures their response. If configured for AI, generates a reply using an AI model with specific behavioral instructions and updates the agent's state with the response.
 
         Args:
-            question: The question to ask.
+            question: The question to present for feedback.
 
         Returns:
-            A Command to update the state with the human response.
+            A Command that updates the agent's state with the feedback response.
         """
         # Return prompt if human user is requested
-        if not use_human_ai:
+        if not agent_config.use_human_ai:
             content = question
             if state.messages[-1].content:
                 content = f"{question}\n\n{state.messages[-1].content}"
@@ -114,38 +113,41 @@ def create_human_feedback_tool(use_human_ai=False) -> BaseTool:
     return human_feedback
 
 
-@tool("memorize", parse_docstring=True)
-async def memorize(
-    content: str,
-    context: str,
-    store: Annotated[BaseStore, InjectedStore],
-    config: Annotated[RunnableConfig, InjectedToolArg],
-    memory_id: Optional[uuid.UUID] = None,
-):
-    """Upsert a memory in the database.
+def create_memorize_tool(agent_config: Configuration) -> BaseTool:
+    """Create a tool to memorize information into the database."""
 
-    If a memory conflicts with an existing one, then just UPDATE the
-    existing one by passing in memory_id - don't create two memories
-    that are the same. If the user corrects a memory, UPDATE it.
+    @tool("memorize", parse_docstring=True)
+    async def memorize(
+        content: str,
+        context: str,
+        store: Annotated[BaseStore, InjectedStore],
+        config: Annotated[RunnableConfig, InjectedToolArg],
+        memory_id: Optional[uuid.UUID] = None,
+    ):
+        """Upsert a memory in the database.
 
-    Args:
-        content: The main content of the memory. For example:
-            "User expressed interest in learning about French."
-        context: Additional context for the memory. For example:
-            "This was mentioned while discussing career options in Europe."
-        memory_id: ONLY PROVIDE IF UPDATING AN EXISTING MEMORY.
-        The memory to overwrite.
-    """
-    mem_id = memory_id or uuid.uuid4()
-    from agent_template.configuration import Configuration
+        If a memory conflicts with an existing one, then just UPDATE the
+        existing one by passing in memory_id - don't create two memories
+        that are the same. If the user corrects a memory, UPDATE it.
 
-    user_id = Configuration.from_runnable_config(config).user_id
-    await store.aput(
-        ("memories", user_id),
-        key=str(mem_id),
-        value={"content": content, "context": context},
-    )
-    return f"Stored memory {mem_id}"
+        Args:
+            content: The main content of the memory. For example:
+                "User expressed interest in learning about French."
+            context: Additional context for the memory. For example:
+                "This was mentioned while discussing career options in Europe."
+            memory_id: ONLY PROVIDE IF UPDATING AN EXISTING MEMORY.
+            The memory to overwrite.
+        """
+        mem_id = memory_id or uuid.uuid4()
+        user_id = agent_config.user_id
+        await store.aput(
+            ("memories", user_id),
+            key=str(mem_id),
+            value={"content": content, "context": context},
+        )
+        return f"Stored memory {mem_id}"
+
+    return memorize
 
 
 # ruff: noqa: T201
