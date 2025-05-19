@@ -90,7 +90,7 @@ def create_task_manager_graph_caller(
         }
 
         try:
-            result = await graph.ainvoke(state, config=config)
+            result = await graph.compiled_graph.ainvoke(state, config=config)
 
             if isinstance(result, dict) and "messages" in result and result["messages"]:
                 return result["messages"][-1].content
