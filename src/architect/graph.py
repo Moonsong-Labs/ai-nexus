@@ -87,7 +87,7 @@ class ArchitectGraph(AgentGraph):
         """Initialize ArchitectGraph.
 
         Args:
-            config: Optional Configuration instance.
+            agent_config: Optional Configuration instance.
             checkpointer: Optional Checkpointer instance.
             store: Optional BaseStore instance.
         """

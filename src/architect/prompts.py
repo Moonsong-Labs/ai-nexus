@@ -41,6 +41,7 @@ flowchart TD
 
 The project consists of core files and specific files, all in Markdown format. Files build upon each other in a clear hierarchy:
 
+```mermaid
 flowchart TD
     PB[projectbrief.md] --> SP[systemPatterns.md]
     PB --> TC[techPatterns.md]
@@ -53,6 +54,7 @@ flowchart TD
 
     CC --> P[progress.md]
     TTC --> P
+```
 
 ### Core Files (Required)
 *(Use these as a guide, not a strict sequence. Prioritize based on project type and context.)*
