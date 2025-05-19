@@ -50,21 +50,29 @@ GITHUB_TOOLS = [
     # "overview_of_existing_files_in_main_branch",
     # "overview_of_files_in_current_working_branch",
     # "search_code",
-
     # custom tools
     "get_pull_request_head_branch",
     "get_pull_request_diff",
     "create_pull_request_review",
 ]
 
+
 class PRReviewComment(BaseModel):
     """Schema for a Pull Request Review Comment."""
 
-    path: str = Field(0, description="The file path from the diff hunk this comment relates to.")
-    position: int = Field(1, description="""The position in the diff where you want to add a review comment. Note this value is not the same as the line number in the file. The position value equals the number of lines down from the first "@@" hunk header in the file you want to add a comment. The line just below the "@@" line is position 1, the next line is position 2, and so on. The position in the diff continues to increase through lines of whitespace and additional hunks until the beginning of a new file. **VERY IMPORTANT:** This MUST be an integer, not a float.""")
+    path: str = Field(
+        0, description="The file path from the diff hunk this comment relates to."
+    )
+    position: int = Field(
+        1,
+        description="""The position in the diff where you want to add a review comment. Note this value is not the same as the line number in the file. The position value equals the number of lines down from the first "@@" hunk header in the file you want to add a comment. The line just below the "@@" line is position 1, the next line is position 2, and so on. The position in the diff continues to increase through lines of whitespace and additional hunks until the beginning of a new file. **VERY IMPORTANT:** This MUST be an integer, not a float.""",
+    )
     body: str = Field(2, description="Text of the review comment.")
-    line: int = Field(3, description="The line number from the diff hunk this comment relates to. **VERY IMPORTANT:** This MUST be an integer, not a float. The feedback is represented BELOW this line number, not above it, so you may need to add one to the number.")
-    
+    line: int = Field(
+        3,
+        description="The line number from the diff hunk this comment relates to. **VERY IMPORTANT:** This MUST be an integer, not a float. The feedback is represented BELOW this line number, not above it, so you may need to add one to the number.",
+    )
+
     # converts to a pygithub ReviewComment object
     def to_gh_review(self):
         """Convert self to a pygithub ReviewComment object."""
@@ -77,6 +85,7 @@ class PRReviewComment(BaseModel):
         comment["line"] = self.line
         return comment
 
+
 CREATE_PULL_REQUEST_REVIEW_PROMPT = """
 This tool is a wrapper for the GitHub API, useful when you want to leave a pull request review comment. **VERY IMPORTANT**: Your input to this tool MUST strictly follow these rules:
 
@@ -85,13 +94,21 @@ This tool is a wrapper for the GitHub API, useful when you want to leave a pull 
 - Then you must specify the event for the review, which **MUST BE** one of 'REQUEST_CHANGES', 'APPROVE', or 'COMMENT'.
 - Then you must specify comments that are specific to any diff hunks. If there are none, this MUST be an empty List and CANNOT be omitted.
 """
+
+
 class CreatePRReview(BaseModel):
     """Schema for creating a Pull Request Review."""
 
     pr_number: int = Field(0, description="The PR number as an integer, e.g. `12`")
     body: str = Field(1, description="The overall feedback for the review comment.")
-    event: str = Field(2, description="Must be one of 'REQUEST_CHANGES' if changes are required, 'APPROVE' if approving the PR, or 'COMMENT' otherwise.")
-    comments: List[PRReviewComment] = Field(3, description="A list of comments to include with this review.")
+    event: str = Field(
+        2,
+        description="Must be one of 'REQUEST_CHANGES' if changes are required, 'APPROVE' if approving the PR, or 'COMMENT' otherwise.",
+    )
+    comments: List[PRReviewComment] = Field(
+        3, description="A list of comments to include with this review."
+    )
+
 
 class CreatePullRequestReviewComment(BaseTool):
     """Create a Pull Request Review Comment."""
@@ -101,7 +118,9 @@ class CreatePullRequestReviewComment(BaseTool):
     args_schema: Type[BaseModel] = CreatePRReview
     github_api_wrapper: GitHubAPIWrapper
 
-    def _run(self, pr_number: int, body: str, event: str, comments: List[PRReviewComment]):
+    def _run(
+        self, pr_number: int, body: str, event: str, comments: List[PRReviewComment]
+    ):
         comments_mapped = list(map(lambda x: x.to_gh_review(), comments))
 
         # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
@@ -111,7 +130,9 @@ class CreatePullRequestReviewComment(BaseTool):
 
         pull_request.create_review(commit_obj, body, event, comments_mapped)
 
-    async def _arun(self, pr_number: int, body: str, event: str, comments: List[PRReviewComment]):
+    async def _arun(
+        self, pr_number: int, body: str, event: str, comments: List[PRReviewComment]
+    ):
         comments_mapped = list(map(lambda x: x.to_gh_review(), comments))
 
         # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
@@ -120,8 +141,11 @@ class CreatePullRequestReviewComment(BaseTool):
         commit_obj = self.github_api_wrapper.github_repo_instance.get_commit(commit)
 
         pull_request.create_review(commit_obj, body, event, comments_mapped)
+
 
 GET_PULL_REQUEST_DIFF_PROMPT = "This tool will return the diff of the code in a PR. **VERY IMPORTANT**: You must specify the PR number as an integer."
+
+
 class GetPullRequestDiff(BaseTool):
     """Get the diff of a specific Pull Request (by PR number)."""
 
@@ -134,7 +158,9 @@ class GetPullRequestDiff(BaseTool):
         # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
         pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
         diff_url = pull_request.diff_url
-        response = requests.get(diff_url, headers={'Accept': 'application/vnd.github.v3.diff'})
+        response = requests.get(
+            diff_url, headers={"Accept": "application/vnd.github.v3.diff"}
+        )
         response.raise_for_status()
 
         diff_content = response.text
@@ -144,13 +170,18 @@ class GetPullRequestDiff(BaseTool):
         # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
         pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
         diff_url = pull_request.diff_url
-        response = requests.get(diff_url, headers={'Accept': 'application/vnd.github.v3.diff'})
+        response = requests.get(
+            diff_url, headers={"Accept": "application/vnd.github.v3.diff"}
+        )
         response.raise_for_status()
 
         diff_content = response.text
         return diff_content
 
+
 GET_PULL_REQUEST_HEAD_BRANCH_PROMPT = "This tool will fetch the head branch of a specific Pull Request (by PR number). **VERY IMPORTANT**: You must specify the PR number as an integer."
+
+
 class GetPullRequestHeadBranch(BaseTool):
     """Get the head branch of a specific Pull Request (by PR number)."""
 

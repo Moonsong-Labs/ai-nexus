@@ -77,13 +77,13 @@ class CodeReviewerInstanceConfig:
             )
         return filtered_tools
 
+
 def non_github_code_reviewer_config():
     """Instance config for code reviewer without GitHub tools."""
     return CodeReviewerInstanceConfig(
-        name="NonGithubCodeReviewer",
-        system_prompt=SYSTEM_PROMPT,
-        github_tools=[]
+        name="NonGithubCodeReviewer", system_prompt=SYSTEM_PROMPT, github_tools=[]
     )
+
 
 def github_code_reviewer_config():
     """Instance config for code reviewer with GitHub tools."""
@@ -96,8 +96,9 @@ def github_code_reviewer_config():
             "get_pull_request",
             "get_pull_request_diff",
             "create_pull_request_review",
-        ]
+        ],
     )
+
 
 class CallModel:
     def __init__(self, github_tools: list[Tool], system_prompt: str):
