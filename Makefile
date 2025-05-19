@@ -16,7 +16,7 @@ run: deps
 	uv run --env-file .env -- langgraph dev --allow-blocking --debug-port 2025
 
 ci-build-check: deps
-	timeout 30s uv run --env-file .env.example -- langgraph dev --no-browser --no-reload
+	@timeout 30s uv run -- langgraph dev --no-browser --no-reload; status=$$?; [ $$status -eq 0 ] || [ $$status -eq 124 ]
 
 # Define a variable for the test file path.
 UNIT_TEST_FILE ?= tests/unit_tests/
