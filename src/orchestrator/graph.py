@@ -17,16 +17,16 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
-from coder.state import State as CoderState
-from common.components.github_mocks import maybe_mock_github
-from common.components.github_tools import get_github_tools
-from common.configuration import AgentConfiguration
 from architect.configuration import (
     Configuration as ArchitectConfiguration,
 )
 from architect.graph import ArchitectGraph
 from architect.state import State as ArchitectState
+from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
+from coder.state import State as CoderState
+from common.components.github_mocks import maybe_mock_github
+from common.components.github_tools import get_github_tools
+from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from orchestrator import stubs, tools
 from orchestrator.configuration import (
@@ -34,7 +34,6 @@ from orchestrator.configuration import (
     Configuration,
     RequirementsAgentConfig,
     SubAgentConfig,
-    ArchitectAgentConfig
 )
 from orchestrator.state import State
 from requirement_gatherer.configuration import (
@@ -375,11 +374,9 @@ class OrchestratorGraph(AgentGraph):
         # Define the flow of the memory extraction process
         builder.add_node(orchestrate)
         builder.add_node(requirements)
-        builder.add_node(stubs.architect)
+        builder.add_node(architect)
         builder.add_node(coder_new_pr)
         builder.add_node(coder_change_request)
-        builder.add_node(architect)
-        builder.add_node(stubs.coder)
         builder.add_node(stubs.tester)
         builder.add_node(stubs.reviewer)
         builder.add_node(stubs.memorizer)

@@ -13,12 +13,12 @@ from langgraph.graph import START, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+from architect.state import State as ArchitectState
 from coder.state import State as CoderState
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from orchestrator.state import State
 from requirement_gatherer.state import State as RequirementsState
-from architect.state import State as ArchitectState
 
 T = TypeVar("T")
 
