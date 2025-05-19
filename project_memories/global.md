@@ -10,13 +10,14 @@
 1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager) working collaboratively.
 2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is `langmem`, providing semantic search capabilities over stored memories. `AgentGraph` can now automatically initialize and provide `SemanticMemory` and its tools to subclasses based on its configuration. The Tester agent, for instance, now includes logic to read from a `BaseStore` for contextual memories.
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
-4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools provided via `AgentGraph`/`SemanticMemory`, or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`, or Task Manager's file system tools). The Tester agent's previous custom `upsert_memory` tool has been removed.
-5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes (which subclass `AgentConfiguration` or, in the case of the Tester agent, `common.configuration.AgentConfiguration`). These configurations (and thus the prompts) are accessed by the agent's graph logic (e.g., in custom `call_model` implementations, which now often receive the agent's full `Configuration` object directly as a parameter, or access it via `RunnableConfig`). The Tester agent features enhanced prompt management with workflow stage-specific prompts and dynamic prompt formatting.
+4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools provided via `AgentGraph`/`SemanticMemory`, or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`, or Task Manager's file system tools). The Tester agent's previous custom `upsert_memory` tool has been removed. The Code Reviewer agent can now use GitHub tools like `get_pull_request_diff` and `create_pull_request_review` to interact with pull requests.
+5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes (which subclass `AgentConfiguration` or, in the case of the Tester agent, `common.configuration.AgentConfiguration`). These configurations (and thus the prompts) are accessed by the agent's graph logic (e.g., in custom `call_model` implementations, which now often receive the agent's full `Configuration` object directly as a parameter, or access it via `RunnableConfig`). The Tester agent features enhanced prompt management with workflow stage-specific prompts and dynamic prompt formatting. The Code Reviewer agent has a specific `PR_REVIEW_PROMPT` for GitHub interactions.
 6.  **Configuration Management (REVISED):** Agents have configurable parameters, including LLM models, system prompts, and memory settings. This is managed via:
     *   A `MemoryConfiguration` dataclass (`common.components.memory.MemoryConfiguration`) for memory-specific settings like `use_memory`, `load_static_memories`, and `user_id`.
     *   A common `AgentConfiguration` in `src/common/configuration.py` (NEW, replaces `BaseConfiguration`), which includes a `memory: MemoryConfiguration` field. It also includes `user_id`, `model`, and `provider` for LangGraph. Agent-specific system prompts are defined in subclasses.
     *   Agent-specific `Configuration` dataclasses (e.g., in `src/orchestrator/configuration.py`, `src/requirement_gatherer/configuration.py`, `src/agent_template/configuration.py`, `src/task_manager/configuration.py`) that subclass `AgentConfiguration` and can include their own `system_prompt` or other specific settings.
     *   The Tester agent's configuration (`src/tester/configuration.py`) now subclasses `common.configuration.AgentConfiguration` (aligning it with other refactored agents) and defines its `system_prompt`. Model and other common settings are inherited from `AgentConfiguration`.
+    *   The Code Reviewer agent's configuration is managed via a `CodeReviewerInstanceConfig` dataclass within its `graph.py` module, which holds `name`, `system_prompt`, and `github_tools`. Its previous dedicated `configuration.py` file has been removed.
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
 8.  **`langmem` Integration:** Provides semantic memory capabilities (storage, search) for agents. `SemanticMemory` (from `src/common/components/memory.py`) is configured using `MemoryConfiguration`. `AgentGraph` can instantiate `SemanticMemory` if `agent_config.memory.use_memory` is true, making memory tools available to the graph.
 9.  **`AgentGraph` (REVISED):** A common base class (`src/common/graph.py`) for defining agent graphs.
@@ -52,6 +53,7 @@ The original "Memory Bank" concept described a system of structured Markdown fil
     *   Agents based on `AgentGraph` (like `AgentTemplateGraph`): Can get memory tools (`manage_memory`, `search_memory`) from the `AgentGraph`-managed `SemanticMemory` instance (via `self.memory.get_tools()`).
     *   Requirement Gatherer: Uses a custom `memorize` tool (now created by a factory function `create_memorize_tool` that receives the agent's `Configuration`, from which `user_id` is accessed for namespacing memories) and `human_feedback` tool.
     *   Tester: Its custom `upsert_memory` tool has been removed. It currently reads memories directly via `BaseStore` in its `call_model` logic.
+    *   Code Reviewer: Can use GitHub tools such as `get_pull_request_diff`, `create_pull_request_review`, `get_files_from_a_directory`, and `read_file`.
 *   **Static Memories:** JSON files in `.langgraph/static_memories/` can be loaded into the `BaseStore` under a static namespace if `memory_config.load_static_memories` is enabled in the `MemoryConfiguration` used by `SemanticMemory`.
 *   **Shift:** The core principle of externalized memory remains, with `langmem` as the backend, now more seamlessly integrated via `AgentGraph` and configured through `AgentConfiguration` and `MemoryConfiguration`.
 
@@ -89,7 +91,7 @@ This file outlines the overarching standards and technological choices for the A
     *   **CI Pipeline (`.github/workflows/checks.yml`):** Runs linting (Ruff, codespell), unit tests (`make test_unit`), and Coder integration tests (`make test_coder`). The Coder tests job requires `GOOGLE_API_KEY` as a secret.
 *   **Version Control:** Git.
 *   **LLM Models:**
-    *   **`gemini-1.5-flash-latest` / `gemini-2.5-flash-preview-04-17` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (`agent_template` default model inherited from `AgentConfiguration` if not overridden, `AgentConfiguration` defaults to `gemini-2.0-flash`).
+    *   **`gemini-1.5-flash-latest` / `gemini-2.5-flash-preview-04-17` (or similar flash variants):** Preferred for simple tasks, quick evaluations. (`agent_template` default model inherited from `AgentConfiguration` if not overridden, `AgentConfiguration` defaults to `gemini-2.0-flash`). The Code Reviewer agent uses `gemini-2.0-flash`.
     *   **`gemini-1.5-pro-latest` (or similar pro variants):** Preferred for complex tasks needing reasoning.
 
 
@@ -97,9 +99,9 @@ This file outlines the overarching standards and technological choices for the A
 
 AI Nexus employs a few architectural patterns for its agents:
 
-**4.1. `agent_template` based Architecture (e.g., Code Reviewer, Grumpy) - REVISED**
+**4.1. `agent_template` based Architecture (e.g., Grumpy) - REVISED**
 
-This pattern is now embodied by `AgentTemplateGraph` which subclasses `AgentGraph`.
+This pattern is now embodied by `AgentTemplateGraph` which subclasses `AgentGraph`. (Code Reviewer no longer follows this pattern).
 
 *   **`configuration.py` (`src/agent_template/configuration.py` - REVISED):**
     *   `Configuration` class now subclasses `common.configuration.AgentConfiguration`.
@@ -169,6 +171,12 @@ A common base class for modular graph definitions.
 
 Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, `AgentTemplateGraph`, and Tester subclass `AgentGraph`. The Tester agent has been updated to align its configuration and graph initialization more closely with this pattern (see 5.5).
 
+**4.3. Custom `StateGraph` Architecture (e.g., Code Reviewer - NEW)**
+
+Some agents, like the Code Reviewer, may use LangGraph's `StateGraph` directly for more specialized workflows, without necessarily subclassing `AgentGraph`.
+*   Configuration is often managed via custom dataclasses (e.g., `CodeReviewerInstanceConfig` in `src/code_reviewer/graph.py`) and passed during graph construction or to specific nodes.
+*   Model invocation and tool binding are handled within the custom graph definition.
+
 
 ## 5. Specific Agent Details
 
@@ -199,8 +207,31 @@ Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, `AgentTempl
 #### 5.3. Coder (`src/coder/`)
 *   **Architecture:** Uses the `AgentGraph` pattern. Its configuration (likely `src/coder/configuration.py`, though not explicitly detailed in PR#81 diffs) would need to subclass `common.configuration.AgentConfiguration` to be compatible with the revised `AgentGraph`.
 
-#### 5.4. Code Reviewer (`src/code_reviewer/`)
-*   (Likely follows `agent_template` pattern, so it will now use `AgentTemplateGraph` and its revised memory/config handling, including how `agent_config` is passed to its internal `_create_call_model` helper.)
+#### 5.4. Code Reviewer (`src/code_reviewer/`) (REVISED)
+*   **Architecture:** Uses a custom `StateGraph` implementation (from `langgraph.graph`). It does not subclass `AgentGraph` or `AgentTemplateGraph`.
+*   **Configuration (`src/code_reviewer/configuration.py` - DELETED):** The dedicated configuration file has been removed.
+    *   Configuration parameters like system prompt and tool selection are managed by the `CodeReviewerInstanceConfig` dataclass defined in `src/code_reviewer/graph.py`.
+    *   Two configurations are provided: `non_github_code_reviewer_config()` and `github_code_reviewer_config()`.
+*   **State (`src/code_reviewer/state.py`):** Defines the `State` for the graph, including `messages` and `diff_feedback` (though `diff_feedback` is no longer directly populated by the model call in the graph).
+*   **Graph (`src/code_reviewer/graph.py` - REVISED):**
+    *   Defines `CodeReviewerInstanceConfig` dataclass to hold `name`, `system_prompt`, and `github_tools`.
+    *   The `graph_builder(github_toolset: list[Tool], system_prompt: str) -> StateGraph` function constructs the agent's graph using `StateGraph(State)`.
+    *   The `CodeReviewerModel` class handles LLM calls. Its `__call__` method now binds tools and invokes the LLM, returning the raw LLM response (including potential tool calls) in the `messages` field of the state. The structured `DiffFeedback` output from the model call itself has been removed.
+    *   The LLM is initialized with `gemini-2.0-flash`.
+*   **Server Entry Points (`src/code_reviewer/lg_server.py` - REVISED):**
+    *   Provides two compiled graph instances:
+        *   `graph_with_github_tools`: Uses `github_code_reviewer_config()` which includes GitHub interaction tools and the `PR_REVIEW_PROMPT`.
+        *   `graph_no_github_tools`: Uses `non_github_code_reviewer_config()` with a standard system prompt and no GitHub tools.
+*   **Prompts (`src/code_reviewer/prompts.py` - REVISED):**
+    *   `SYSTEM_PROMPT`: Standard system prompt.
+    *   `PR_REVIEW_PROMPT` (NEW): A specific prompt for reviewing GitHub pull requests, instructing the agent to use GitHub tools to fetch PR details, read files, analyze the diff, and provide feedback directly on the PR.
+*   **Tools (REVISED):**
+    *   When configured for GitHub interaction, it uses tools from `common.components.github_tools` such as:
+        *   `get_files_from_a_directory`
+        *   `read_file`
+        *   `get_pull_request`
+        *   `get_pull_request_diff` (NEW)
+        *   `create_pull_request_review` (NEW) - This tool allows commenting on PRs, requesting changes, or approving. It uses `PRReviewComment` and `CreatePRReview` Pydantic models for its arguments.
 
 #### 5.5. Tester (`src/tester/`) (REWORKED)
 *   **Overall:** The Tester agent has been significantly reworked to streamline its workflow, improve prompt management, and refine configuration and state.
@@ -357,7 +388,7 @@ ai-nexus/
 ├── README.md                     # UPDATED: Examples for semantic memory, new config, local demo
 ├── agent_memories/
 │   └── grumpy/
-├── langgraph.json
+├── langgraph.json                # UPDATED: New Code Reviewer graph entry points
 ├── project_memories/
 │   ├── PRD.md
 │   └── global.md
@@ -378,8 +409,14 @@ ai-nexus/
 │   ├── architect/
 │   │   ├── output.py
 │   │   └── prompts/v0.1.md
-│   ├── code_reviewer/
-│   │   └── system_prompt.md
+│   ├── code_reviewer/            # REVISED
+│   │   ├── __init__.py           # UPDATED: Exports graph_no_github_tools, graph_with_github_tools
+│   │   ├── configuration.py      # DELETED
+│   │   ├── graph.py              # UPDATED: Uses StateGraph directly, CodeReviewerInstanceConfig, CodeReviewerModel, new GitHub tool integration logic
+│   │   ├── lg_server.py          # UPDATED: Defines graph_with_github_tools and graph_no_github_tools
+│   │   ├── prompts.py            # UPDATED: Added PR_REVIEW_PROMPT
+│   │   ├── state.py
+│   │   └── system_prompt.md      # (Content likely reflected in prompts.py constants)
 │   ├── coder/
 │   │   ├── __init__.py
 │   │   ├── graph.py
@@ -391,8 +428,8 @@ ai-nexus/
 │   │   └── README.md
 │   ├── common/
 │   │   ├── components/
-│   │   │   ├── github_mocks.py
-│   │   │   ├── github_tools.py
+│   │   │   ├── github_mocks.py   # UPDATED: Added stubs for get_pull_request_diff, create_pull_request_review
+│   │   │   ├── github_tools.py   # UPDATED: Added GetPullRequestDiff, CreatePullRequestReviewComment tools, PRReviewComment, CreatePRReview schemas
 │   │   │   └── memory.py         # UPDATED: Defines MemoryConfiguration, SemanticMemory uses it, ConfigurationProtocol removed
 │   │   ├── config.py             # DELETED (Replaced by common/configuration.py) - Note: Tester agent's configuration.py refers to this path.
 │   │   ├── configuration.py      # ADDED: Defines AgentConfiguration (base for all agent configs)
