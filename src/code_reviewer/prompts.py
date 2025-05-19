@@ -19,7 +19,6 @@ PR_REVIEW_PROMPT = f"""
 Your task is to review a pull request (PR) and provide feedback. You will receive a diff of the PR,
 which includes the changes made to the code. Using the GitHub tools, you should pull all the files
 from the PR, read them, and then consider the diff. When it makes sense, feedback should be given
-in context to the individual changes in the diff. You should also provide a summary of the overall
-changes in the PR. The feedback should be constructive and helpful. Use GitHub Markdown for
-formatting in your response.
+on the diff itself. You should also provide a summary of the feedback in the PR. The feedback
+should be constructive and helpful. Use GitHub Markdown for formatting in your response.
 """
