@@ -11,12 +11,12 @@
 2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is `langmem`, providing semantic search capabilities over stored memories. `AgentGraph` can now automatically initialize and provide `SemanticMemory` and its tools to subclasses based on its configuration. The Tester agent, for instance, now includes logic to read from a `BaseStore` for contextual memories.
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
 4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools provided via `AgentGraph`/`SemanticMemory`, or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`, or Task Manager's file system tools). The Tester agent's previous custom `upsert_memory` tool has been removed.
-5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes (which subclass `AgentConfiguration` or, in the case of the Tester agent, `common.config.BaseConfiguration`). These configurations (and thus the prompts) are accessed by the agent's graph logic (e.g., in custom `call_model` implementations, which now often receive the agent's full `Configuration` object directly as a parameter, or access it via `RunnableConfig`). The Tester agent features enhanced prompt management with workflow stage-specific prompts and dynamic prompt formatting.
+5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes (which subclass `AgentConfiguration` or, in the case of the Tester agent, `common.configuration.AgentConfiguration`). These configurations (and thus the prompts) are accessed by the agent's graph logic (e.g., in custom `call_model` implementations, which now often receive the agent's full `Configuration` object directly as a parameter, or access it via `RunnableConfig`). The Tester agent features enhanced prompt management with workflow stage-specific prompts and dynamic prompt formatting.
 6.  **Configuration Management (REVISED):** Agents have configurable parameters, including LLM models, system prompts, and memory settings. This is managed via:
     *   A `MemoryConfiguration` dataclass (`common.components.memory.MemoryConfiguration`) for memory-specific settings like `use_memory`, `load_static_memories`, and `user_id`.
     *   A common `AgentConfiguration` in `src/common/configuration.py` (NEW, replaces `BaseConfiguration`), which includes a `memory: MemoryConfiguration` field. It also includes `user_id`, `model`, and `provider` for LangGraph. Agent-specific system prompts are defined in subclasses.
     *   Agent-specific `Configuration` dataclasses (e.g., in `src/orchestrator/configuration.py`, `src/requirement_gatherer/configuration.py`, `src/agent_template/configuration.py`, `src/task_manager/configuration.py`) that subclass `AgentConfiguration` and can include their own `system_prompt` or other specific settings.
-    *   The Tester agent's configuration (`src/tester/configuration.py`) currently subclasses `common.config.BaseConfiguration` (note: this differs from the `AgentConfiguration` used by other recently refactored agents) and defines its `system_prompt`.
+    *   The Tester agent's configuration (`src/tester/configuration.py`) now subclasses `common.configuration.AgentConfiguration` (aligning it with other refactored agents) and defines its `system_prompt`. Model and other common settings are inherited from `AgentConfiguration`.
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
 8.  **`langmem` Integration:** Provides semantic memory capabilities (storage, search) for agents. `SemanticMemory` (from `src/common/components/memory.py`) is configured using `MemoryConfiguration`. `AgentGraph` can instantiate `SemanticMemory` if `agent_config.memory.use_memory` is true, making memory tools available to the graph.
 9.  **`AgentGraph` (REVISED):** A common base class (`src/common/graph.py`) for defining agent graphs.
@@ -167,7 +167,7 @@ A common base class for modular graph definitions.
     *   `create_runnable_config(self, config: RunnableConfig | None = None) -> RunnableConfig` (NEW): Method to prepare `RunnableConfig` for graph invocation. It takes an optional `RunnableConfig`, merges `self._agent_config.langgraph_configurables` into its `configurable` field, and returns the modified `RunnableConfig`. This notably does *not* inject the full `agent_config` object into the `configurable` dictionary.
     *   `compiled_graph`: Property to get or compile the graph. Invocation is now typically done via `self.compiled_graph.ainvoke(state, self.create_runnable_config(config))`.
 
-Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, `AgentTemplateGraph`, and Tester subclass `AgentGraph`. (Note: The Tester agent's `super().__init__` call and configuration class (`common.config.BaseConfiguration`) show differences from this pattern, see 5.5).
+Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, `AgentTemplateGraph`, and Tester subclass `AgentGraph`. The Tester agent has been updated to align its configuration and graph initialization more closely with this pattern (see 5.5).
 
 
 ## 5. Specific Agent Details
@@ -211,20 +211,19 @@ Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, `AgentTempl
     *   Some older prompt files have been moved to `src/tester/deprecated/`.
     *   New documentation outlining the Test Agent's role, workflow, and requirements for generating tests is primarily in its system prompt.
 *   **Configuration (`src/tester/configuration.py` - REVISED):**
-    *   `Configuration` class now subclasses `common.config.BaseConfiguration`. (Note: This differs from `common.configuration.AgentConfiguration` used by other recently refactored agents. The `common.config.BaseConfiguration` class/path was previously noted as replaced).
-    *   It defines a `system_prompt` (defaulting to `prompts.SYSTEM_PROMPT`). Model and other common settings are expected to be inherited from `BaseConfiguration`.
+    *   `Configuration` class now subclasses `common.configuration.AgentConfiguration`.
+    *   It defines a `system_prompt` (defaulting to `prompts.SYSTEM_PROMPT`). Model and other common settings are inherited from `AgentConfiguration`.
     *   The `from_runnable_config` method has been removed.
 *   **State (`src/tester/state.py` - REVISED):**
     *   `WorkflowStage` enum updated to: `ANALYZE_REQUIREMENTS`, `TESTING`, `COMPLETE`.
     *   The `State` class now includes `workflow_stage: WorkflowStage`, which defaults to `WorkflowStage.TESTING`.
 *   **Graph (`src/tester/graph.py` - REVISED):**
     *   Defines `TesterAgentGraph(AgentGraph)`.
-    *   `__init__(self, *, use_human_ai=False, base_config: Optional[BaseConfiguration] = None, checkpointer: Optional[Checkpointer] = None, store: Optional[BaseStore] = None)`:
-        *   Calls `super().__init__(base_config, checkpointer, store)`. (Note: The `AgentGraph` documented in section 4.2 expects `name: str` and `agent_config: AgentConfiguration` as keyword arguments. The compatibility of this positional `super` call with that signature is unclear from this PR's diffs alone. This implies `AgentGraph` might handle this call, or `base_config` is passed as `name` and `checkpointer` as `agent_config`, which would be a type mismatch).
-        *   Sets `self._name = "Tester"` (after the super call).
-        *   Initializes `self._config = tester.configuration.Configuration(**asdict(self._base_config))`. This suggests `_base_config` is expected to be set by the `AgentGraph` superclass from the `base_config` argument passed to its `__init__`.
+    *   `__init__(self, *, agent_config: Optional[tester.configuration.Configuration] = None, checkpointer: Optional[Checkpointer] = None, store: Optional[BaseStore] = None)`:
+        *   Calls `super().__init__(name="tester", agent_config=agent_config or tester.configuration.Configuration(), checkpointer=checkpointer, store=store)`. This aligns its initialization with the `AgentGraph` base class, which sets `self._agent_config`.
+        *   It now uses `self._agent_config` (an instance of `tester.configuration.Configuration`, set by the `AgentGraph` superclass) for its settings (e.g., `self._agent_config.model`). The local `self._config` attribute and `self._use_human_ai` attribute (previously set in `__init__`) are removed.
     *   `create_builder()`:
-        *   Initializes an LLM using `self._config.model`.
+        *   Initializes an LLM using `self._agent_config.model`.
         *   Tools are currently not bound to the LLM (`all_tools = []`).
         *   Sets up graph nodes: `call_model` (for LLM interaction) and `tools` (a `ToolNode`, though no tools are currently provided).
         *   Defines graph flow: `START` -> `call_model`. Then, based on `_create_workflow`'s logic (which checks for tool calls in the last message), it routes to `tools` (if tool calls exist), back to `call_model`, or to `END`.
@@ -235,7 +234,7 @@ Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, `AgentTempl
             *   Formats the main `system_prompt` (from `config["configurable"]["system_prompt"]`) using the stage prompt, retrieved memories (`user_info`), and current `time`.
             *   Invokes the LLM.
             *   Determines the `next_stage` for the workflow (e.g., transitions to `WorkflowStage.COMPLETE` if the LLM response contains "tests are complete").
-    *   A global `graph` instance is created for LangSmith: `graph = TesterAgentGraph(base_config=BaseConfiguration()).compiled_graph`.
+    *   A global `graph` instance is created for LangSmith: `graph = TesterAgentGraph().compiled_graph` (this will instantiate `TesterAgentGraph` with a default `tester.configuration.Configuration()`).
 *   **Prompts (`src/tester/prompts.py`, `src/tester/test-agent-system-prompt.md`, `src/tester/test-agent-testing-workflow-stage.md` - REVISED/NEW):**
     *   The main system prompt (`test-agent-system-prompt.md`) has been updated to focus on requirements for generating complete, executable test files, test structure, and overall completeness.
     *   `src/tester/prompts.py`:
@@ -430,11 +429,11 @@ ai-nexus/
 │   └── tester/                   # REWORKED
 │       ├── __init__.py           # (Assumed to exist, exports TesterAgentGraph)
 │       ├── README.md             # DELETED
-│       ├── configuration.py      # UPDATED: Subclasses common.config.BaseConfiguration (differs from other agents)
+│       ├── configuration.py      # UPDATED: Subclasses common.configuration.AgentConfiguration
 │       ├── deprecated/           # NEW directory
 │       │   ├── deprecated-test-agent-system-prompt.md                # NEW
 │       │   └── test-agent-analyze-requirements-workflow-stage.md     # NEW
-│       ├── graph.py              # UPDATED: Implements TesterAgentGraph(AgentGraph), new workflow, memory reading
+│       ├── graph.py              # UPDATED: Implements TesterAgentGraph(AgentGraph), __init__ signature changed to use agent_config (tester.configuration.Configuration), calls super with name and agent_config, uses self._agent_config for settings, new workflow, memory reading
 │       ├── output.py             # DELETED
 │       ├── prompts.py            # UPDATED: Loads new prompts, get_stage_prompt function
 │       ├── state.py              # UPDATED: New WorkflowStage enum, State includes workflow_stage

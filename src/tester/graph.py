@@ -1,7 +1,6 @@
 """Test Agent Graph Implementation."""
 
 import logging
-from dataclasses import asdict
 from datetime import datetime
 from typing import Any, Coroutine, Optional
 
@@ -17,7 +16,6 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from common.config import BaseConfiguration
 from common.graph import AgentGraph
 from tester.configuration import Configuration
 from tester.prompts import get_stage_prompt
@@ -129,8 +127,7 @@ class TesterAgentGraph(AgentGraph):
     def __init__(
         self,
         *,
-        use_human_ai=False,
-        base_config: Optional[BaseConfiguration] = None,
+        agent_config: Optional[Configuration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
@@ -138,14 +135,16 @@ class TesterAgentGraph(AgentGraph):
 
         Args:
             use_human_ai: Whether to use human-AI interaction.
-            base_config: Optional BaseConfiguration instance.
+            agent_config: Optional Configuration instance.
             checkpointer: Optional Checkpointer instance.
             store: Optional BaseStore instance.
         """
-        super().__init__(base_config, checkpointer, store)
-        self._name = "Tester"
-        self._config = Configuration(**asdict(self._base_config))
-        self._use_human_ai = use_human_ai
+        super().__init__(
+            name="tester",
+            agent_config=agent_config or Configuration(),
+            checkpointer=checkpointer,
+            store=store,
+        )
 
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
@@ -156,7 +155,7 @@ class TesterAgentGraph(AgentGraph):
         call_model_name = "call_model"
         tool_node_name = "tools"
 
-        llm = init_chat_model(self._config.model).bind_tools(all_tools)
+        llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
         tool_node = ToolNode(all_tools, name=tool_node_name)
         call_model = _create_call_model(llm)
         workflow = _create_workflow(call_model_name, tool_node_name)
@@ -179,6 +178,6 @@ class TesterAgentGraph(AgentGraph):
 
 
 # For langsmith
-graph = TesterAgentGraph(base_config=BaseConfiguration()).compiled_graph
+graph = TesterAgentGraph().compiled_graph
 
 __all__ = [TesterAgentGraph.__name__, "graph"]
