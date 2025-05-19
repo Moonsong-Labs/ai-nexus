@@ -2,7 +2,6 @@ import logging
 import uuid
 from typing import Awaitable, Callable
 
-from langchain_core.messages import HumanMessage
 from langgraph.graph.state import CompiledStateGraph
 
 
@@ -26,14 +25,6 @@ def create_async_graph_caller(
     """
 
     async def call_model(inputs: dict):
-        input_message = inputs.get("message", "")
-        if isinstance(input_message, dict) and "content" in input_message:
-            input_content = input_message["content"]
-        else:
-            input_content = str(input_message)
-
-        state = {"messages": [HumanMessage(content=input_content)]}
-
         config = {
             "configurable": {
                 "thread_id": str(uuid.uuid4()),
@@ -42,13 +33,9 @@ def create_async_graph_caller(
             }
         }
 
-        result = await graph.ainvoke(state, config=config)
-
-        if isinstance(result, dict) and "messages" in result and result["messages"]:
-            return result["messages"][-1].content
-
-        return str(result)
-
+        result = await graph.ainvoke(inputs, config=config)
+        return result["messages"][-1].content
+ 
     return call_model
 
 
