@@ -46,7 +46,7 @@ def create_memorize_tool(agent_config: Configuration) -> BaseTool:
             value={"content": content, "context": context},
         )
         return f"Stored memory {mem_id}"
-    
+
     return memorize
 
 

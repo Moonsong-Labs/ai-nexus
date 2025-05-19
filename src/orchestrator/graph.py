@@ -111,6 +111,7 @@ def _create_delegate_to(
 
     return delegate_to
 
+
 def _create_architect_node(
     agent_config: Configuration,
     architect_graph: ArchitectGraph,
@@ -350,7 +351,8 @@ class OrchestratorGraph(AgentGraph):
         )
         coder_new_pr = _create_coder_new_pr_node(coder_new_pr_graph)
         coder_change_request = _create_coder_change_request_node(
-            coder_change_request_graph)
+            coder_change_request_graph
+        )
         architect_graph = (
             stubs.ArchitectStub(
                 agent_config=self._agent_config,
@@ -409,7 +411,7 @@ graph = OrchestratorGraph(
         coder_new_pr_agent=SubAgentConfig(use_stub=False, config=AgentConfiguration()),
         coder_change_request_agent=SubAgentConfig(
             use_stub=False, config=AgentConfiguration()
-        )
+        ),
     )
 ).compiled_graph
 

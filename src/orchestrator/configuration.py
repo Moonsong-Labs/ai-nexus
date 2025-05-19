@@ -27,6 +27,7 @@ class RequirementsAgentConfig(SubAgentConfig):
     use_stub: bool = True
     config: RequirementsConfiguration = field(default_factory=RequirementsConfiguration)
 
+
 @dataclass(kw_only=True)
 class ArchitectAgentConfig(SubAgentConfig):
     """Architect-agent configuration for orchestrator."""
@@ -43,9 +44,7 @@ class Configuration(AgentConfiguration):
     requirements_agent: RequirementsAgentConfig = field(
         default_factory=RequirementsAgentConfig
     )
-    architect_agent: ArchitectAgentConfig = field(
-        default_factory=ArchitectAgentConfig
-    )
+    architect_agent: ArchitectAgentConfig = field(default_factory=ArchitectAgentConfig)
     coder_new_pr_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
     coder_change_request_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
     tester_agent: SubAgentConfig = field(default_factory=SubAgentConfig)

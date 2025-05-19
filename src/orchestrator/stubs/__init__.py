@@ -188,6 +188,7 @@ class CoderChangeRequestStub(StubGraph[CoderState]):
             store=store,
         )
 
+
 class ArchitectStub(StubGraph[ArchitectState]):
     def __init__(
         self,
@@ -198,9 +199,7 @@ class ArchitectStub(StubGraph[ArchitectState]):
     ):
         async def run(state: RequirementsState, config: RunnableConfig | None = None):
             return {
-                "messages": [
-                    AIMessage(content=model_architect_messages.next())
-                ],
+                "messages": [AIMessage(content=model_architect_messages.next())],
             }
 
         super().__init__(

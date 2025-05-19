@@ -77,7 +77,6 @@ def _create_call_tool(
     call_model: Coroutine[Any, Any, dict],
     tool_node: ToolNode,
 ):
-    
     async def call_tool(state: State, config: RunnableConfig):
         if state.messages[-1].tool_calls:
             return tool_node.name
