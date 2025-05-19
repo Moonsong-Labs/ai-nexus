@@ -258,7 +258,7 @@ Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, and `AgentT
     *   Updated to use `OrchestratorGraph().compiled_graph` for testing the orchestrator's graph.
 *   **`tests/integration_tests/test_task_manager.py` (UPDATED):**
     *   A new test `test_task_manager_with_project_path` is added to verify the agent's ability to work with user-specified project paths, checking for the creation of a `planning` folder and `roadmap.md` within that path, and the generation of multiple task files.
-    *   The `call_model` mock/helper within `test_task_manager_langsmith` now includes `task_manager_system_prompt: prompts.SYSTEM_PROMPT` in its configuration, ensuring the test uses the updated system prompt.
+    *   The `call_model` mock/helper within `test_task_manager_langsmith` now includes `task_manager_system_prompt: prompts.SYSTEM_PROMPT` in its configuration, ensuring the test uses the updated system prompt, and correctly uses `graph.compiled_graph.ainvoke` for graph invocation.
     *   Example files for testing (e.g., `api_rust` project files) are now located in `tests/integration_tests/inputs/api_rust/` (moved from `src/task_manager/volume/api_rust/`).
 *   **`tests/datasets/task_manager_dataset.py` (UPDATED):**
     *   Corrected a typographical error in an output message.
@@ -396,7 +396,7 @@ ai-nexus/
     │   ├── test_grumpy_agent.py
     │   ├── test_orchestrator.py    # UPDATED: Uses OrchestratorGraph().compiled_graph
     │   ├── test_requirement_gatherer.py # UPDATED: Uses RequirementsGraph
-    │   ├── test_task_manager.py    # UPDATED: New test for project path, config includes task_manager_system_prompt
+    │   ├── test_task_manager.py    # UPDATED: New test for project path, config includes task_manager_system_prompt, call_model helper uses graph.compiled_graph.ainvoke
     │   ├── test_tester_agent.py
     │   └── inputs/                 # NEW directory
     │       └── api_rust/           # NEW directory (Contains files moved from src/task_manager/volume/api_rust)
