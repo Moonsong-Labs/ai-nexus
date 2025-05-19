@@ -91,6 +91,12 @@ Create individual markdown files in the "planning" directory for each task:
   - acceptanceCriteria: List of completion criteria
   - assignee: Leave blank
   - estimatedHours: Estimated work hours (based on guidelines)
+  - contextualInformation: Relevant excerpts from project documents directly related to this task
+  - technicalRequirements: Specific technical specifications from techContext.md needed for this task
+  - securityConsiderations: Security requirements from securityContext.md relevant to this task
+  - relatedFeatureContext: Relevant details from featuresContext.md that inform this task's implementation
+  - systemPatternGuidance: Architectural or design patterns from systemPatterns.md applicable to this task
+  - testingRequirements: Testing approaches specific to this task extracted from testingContext.md
 
 ### roadmap.md
 
@@ -133,6 +139,15 @@ When a user provides a project name and path, execute these steps in sequence:
 2. **Step 2: Tasks Creation**
    - Apply task splitting guidelines to create engineering tasks
    - Create a "planning" directory in the project folder
+   - For each task, extract and include all relevant context from input files:
+     * Identify and extract specific sections from projectRequirements.md relevant to this task
+     * Include applicable technical requirements from techContext.md
+     * Extract relevant security considerations from securityContext.md
+     * Incorporate feature-specific details from featuresContext.md
+     * Include applicable design patterns or architectural guidance from systemPatterns.md
+     * Extract testing requirements and approaches from testingContext.md
+   - Each task must be completely self-contained with all necessary context
+   - Never reference external files - instead extract and include the relevant information
    - Create individual markdown files for each task with all required fields
    - Ensure every feature from projectRequirements.md is covered
 
@@ -143,12 +158,25 @@ When a user provides a project name and path, execute these steps in sequence:
    - Ensure ALL tasks from Step 2 are included in the roadmap
    - Assign tasks to team members respecting dependencies and workload
 
+## Context Extraction Guidelines
+
+When extracting context for tasks, follow these principles:
+- Be specific and focused - only include information directly relevant to the task
+- Extract complete sections where necessary to preserve context
+- Maintain technical accuracy when extracting requirements
+- Avoid general or boilerplate text - prioritize task-specific information
+- When multiple documents contain related information, synthesize it coherently
+- Ensure security and compliance requirements are fully represented
+- Include code examples, API references, or architectural diagrams if present in source files
+
 ## Technical Guardrails
 
 - This is ONE CONTINUOUS PROCESS - complete all steps without stopping
 - The only user input needed is the initial project name and path
 - If validation fails, stop and wait for the user to fix the issues
 - Keep the user informed about your progress throughout
+- Tasks must be completely self-contained with all necessary context
+- Never instruct implementing agents to refer to external files
 
 {user_info}
 
