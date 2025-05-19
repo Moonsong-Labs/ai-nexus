@@ -17,11 +17,17 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
+from coder.state import State as CoderState
+from common.components.github_mocks import maybe_mock_github
+from common.components.github_tools import get_github_tools
+from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from orchestrator import stubs, tools
 from orchestrator.configuration import (
     Configuration,
     RequirementsAgentConfig,
+    SubAgentConfig,
 )
 from orchestrator.state import State
 from requirement_gatherer.configuration import (
@@ -63,7 +69,8 @@ def _create_delegate_to(
         "orchestrate",
         "requirements",
         "architect",
-        "coder",
+        "coder_new_pr",
+        "coder_change_request",
         "tester",
         "reviewer",
         "memorizer",
@@ -83,8 +90,10 @@ def _create_delegate_to(
                     return "requirements"
                 elif tool_call["args"]["to"] == "architect":
                     return stubs.architect.__name__
-                elif tool_call["args"]["to"] == "coder":
-                    return stubs.coder.__name__
+                elif tool_call["args"]["to"] == "coder_new_pr":
+                    return "coder_new_pr"
+                elif tool_call["args"]["to"] == "coder_change_request":
+                    return "coder_change_request"
                 elif tool_call["args"]["to"] == "tester":
                     return stubs.tester.__name__
                 elif tool_call["args"]["to"] == "reviewer":
@@ -138,6 +147,82 @@ def _create_requirements_node(
     return requirements
 
 
+def _create_coder_new_pr_node(
+    coder_new_pr_graph: CoderNewPRGraph, recursion_limit: int = 100
+):
+    """Create an asynchronous coder_new_pr node for the orchestrator graph.
+
+    The returned function processes a tool call from the conversation state, invokes the coder_new_pr graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
+
+    Args:
+        coder_new_pr_graph: The coder_new_pr graph to invoke for coder_new_pr gathering.
+        recursion_limit: Maximum recursion depth allowed for the coder_new_pr graph (default is 100).
+
+    Returns:
+        An asynchronous function that processes the coding of new functionality and returns a dictionary with a tool message containing the changes.
+    """
+
+    async def coder_new_pr(state: State, config: RunnableConfig, store: BaseStore):
+        tool_call = state.messages[-1].tool_calls[0]
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = recursion_limit
+
+        result = await coder_new_pr_graph.compiled_graph.ainvoke(
+            CoderState(messages=[HumanMessage(content=tool_call["args"]["content"])]),
+            config_with_recursion,
+        )
+
+        return {
+            "messages": [
+                ToolMessage(
+                    content=result["messages"][-1].content,
+                    tool_call_id=tool_call["id"],
+                )
+            ]
+        }
+
+    return coder_new_pr
+
+
+def _create_coder_change_request_node(
+    coder_change_request_graph: CoderChangeRequestGraph, recursion_limit: int = 100
+):
+    """Create an asynchronous coder_change_request node for the orchestrator graph.
+
+    The returned function processes a tool call from the conversation state, invokes the coder_change_request graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
+
+    Args:
+        coder_change_request_graph: The coder_change_request graph to invoke for coder_change_request gathering.
+        recursion_limit: Maximum recursion depth allowed for the coder_change_request graph (default is 100).
+
+    Returns:
+        An asynchronous function that processes the coding of changes and returns a dictionary with a tool message containing the changes.
+    """
+
+    async def coder_change_request(
+        state: State, config: RunnableConfig, store: BaseStore
+    ):
+        tool_call = state.messages[-1].tool_calls[0]
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = recursion_limit
+
+        result = await coder_change_request_graph.compiled_graph.ainvoke(
+            CoderState(messages=[HumanMessage(content=tool_call["args"]["content"])]),
+            config_with_recursion,
+        )
+
+        return {
+            "messages": [
+                ToolMessage(
+                    content=result["messages"][-1].content,
+                    tool_call_id=tool_call["id"],
+                )
+            ]
+        }
+
+    return coder_change_request
+
+
 class OrchestratorGraph(AgentGraph):
     """Orchestrator graph."""
 
@@ -187,6 +272,40 @@ class OrchestratorGraph(AgentGraph):
                 store=self._store,
             )
         )
+        github_source = maybe_mock_github()
+        github_tools = get_github_tools(github_source)
+        coder_new_pr_graph = (
+            stubs.CoderNewPRStub(
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+            if self._agent_config.coder_new_pr_agent.use_stub
+            else CoderNewPRGraph(
+                agent_config=self._agent_config.coder_new_pr_agent.config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+                github_tools=github_tools,
+            )
+        )
+        coder_change_request_graph = (
+            stubs.CoderChangeRequestStub(
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+            if self._agent_config.coder_change_request_agent.use_stub
+            else CoderChangeRequestGraph(
+                agent_config=self._agent_config.coder_change_request_agent.config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+                github_tools=github_tools,
+            )
+        )
+        coder_new_pr = _create_coder_new_pr_node(coder_new_pr_graph)
+        coder_change_request = _create_coder_change_request_node(
+            coder_change_request_graph
+        )
         requirements = _create_requirements_node(self._agent_config, requirements_graph)
         delegate_to = _create_delegate_to(self._agent_config, orchestrate)
 
@@ -197,7 +316,8 @@ class OrchestratorGraph(AgentGraph):
         builder.add_node(orchestrate)
         builder.add_node(requirements)
         builder.add_node(stubs.architect)
-        builder.add_node(stubs.coder)
+        builder.add_node(coder_new_pr)
+        builder.add_node(coder_change_request)
         builder.add_node(stubs.tester)
         builder.add_node(stubs.reviewer)
         builder.add_node(stubs.memorizer)
@@ -209,7 +329,8 @@ class OrchestratorGraph(AgentGraph):
         )
         builder.add_edge(requirements.__name__, orchestrate.__name__)
         builder.add_edge(stubs.architect.__name__, orchestrate.__name__)
-        builder.add_edge(stubs.coder.__name__, orchestrate.__name__)
+        builder.add_edge(coder_new_pr.__name__, orchestrate.__name__)
+        builder.add_edge(coder_change_request.__name__, orchestrate.__name__)
         builder.add_edge(stubs.tester.__name__, orchestrate.__name__)
         builder.add_edge(stubs.reviewer.__name__, orchestrate.__name__)
         builder.add_edge(stubs.memorizer.__name__, orchestrate.__name__)
@@ -222,7 +343,11 @@ graph = OrchestratorGraph(
     agent_config=Configuration(
         requirements_agent=RequirementsAgentConfig(
             use_stub=False, config=RequirementsConfiguration(use_human_ai=False)
-        )
+        ),
+        coder_new_pr_agent=SubAgentConfig(use_stub=False, config=AgentConfiguration()),
+        coder_change_request_agent=SubAgentConfig(
+            use_stub=False, config=AgentConfiguration()
+        ),
     )
 ).compiled_graph
 

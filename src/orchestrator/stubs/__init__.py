@@ -2,9 +2,10 @@
 
 # ruff: noqa: D107 D101 D102
 
-from typing import List, Optional
+from typing import Any, Awaitable, Callable, Dict, Generic, List, Optional, TypeVar
 
 from langchain_core.messages import (
+    AIMessage,
     ToolMessage,
 )
 from langchain_core.runnables import RunnableConfig
@@ -12,10 +13,39 @@ from langgraph.graph import START, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+from coder.state import State as CoderState
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from orchestrator.state import State
 from requirement_gatherer.state import State as RequirementsState
+
+T = TypeVar("T")
+
+
+class StubGraph(AgentGraph, Generic[T]):
+    """Base class for stub graphs that follow a simple run pattern."""
+
+    def __init__(
+        self,
+        *,
+        name: str,
+        state_type: type[T],
+        run_fn: Callable[[T, Optional[RunnableConfig]], Awaitable[Dict[str, Any]]],
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__(
+            name=name, agent_config=agent_config, checkpointer=checkpointer, store=store
+        )
+        self._state_type = state_type
+        self._run_fn = run_fn
+
+    def create_builder(self) -> StateGraph:
+        builder = StateGraph(self._state_type)
+        builder.add_node("run", self._run_fn)
+        builder.add_edge(START, "run")
+        return builder
 
 
 class MessageWheel:
@@ -49,9 +79,13 @@ model_requirements_messages = MessageWheel(
         """,
     ]
 )
-model_coder_messages = MessageWheel(
+model_coder_new_pr_messages = MessageWheel(
     [
-        """I have finished coding.""",
+        """I have finished coding the new PR is #69 and the branch is code-agent-new-pr.""",
+    ]
+)
+model_coder_change_request_messages = MessageWheel(
+    [
         """I fixed the required issue.""",
     ]
 )
@@ -77,7 +111,7 @@ model_reviewer_messages = MessageWheel(
 )
 
 
-class RequirementsGathererStub(AgentGraph):
+class RequirementsGathererStub(StubGraph[RequirementsState]):
     def __init__(
         self,
         *,
@@ -85,32 +119,68 @@ class RequirementsGathererStub(AgentGraph):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        """Initialize the RequirementsGathererStub with optional configuration, checkpointer, and store.
-
-        Args:
-            agent_config: Optional agent configuration for the stub.
-            checkpointer: Optional checkpointer for state persistence.
-            store: Optional store for data management.
-        """
-        super().__init__(
-            name="Requirements Gatherer Stub",
-            agent_config=agent_config,
-            checkpointer=checkpointer,
-            store=store,
-        )
-
-    def create_builder(self) -> StateGraph:
         async def run(state: RequirementsState, config: RunnableConfig | None = None):
-            """Async invoke."""
             return {
                 "messages": state.messages,
                 "summary": model_requirements_messages.next(),
             }
 
-        builder = StateGraph(RequirementsState)
-        builder.add_node("run", run)
-        builder.add_edge(START, "run")
-        return builder
+        super().__init__(
+            name="Requirements Gatherer Stub",
+            state_type=RequirementsState,
+            run_fn=run,
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
+
+
+class CoderNewPRStub(StubGraph[CoderState]):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        async def run(state: CoderState, config: RunnableConfig | None = None):
+            return {
+                "messages": [AIMessage(content=model_coder_new_pr_messages.next())],
+            }
+
+        super().__init__(
+            name="Coder New PR Stub",
+            state_type=CoderState,
+            run_fn=run,
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
+
+
+class CoderChangeRequestStub(StubGraph[CoderState]):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        async def run(state: CoderState, config: RunnableConfig | None = None):
+            return {
+                "messages": [
+                    AIMessage(content=model_coder_change_request_messages.next())
+                ],
+            }
+
+        super().__init__(
+            name="Coder Change Request Stub",
+            state_type=CoderState,
+            run_fn=run,
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
 
 
 def architect(state: State, config: RunnableConfig, store: BaseStore):
@@ -128,13 +198,26 @@ def architect(state: State, config: RunnableConfig, store: BaseStore):
     }
 
 
-def coder(state: State, config: RunnableConfig, store: BaseStore):
+def coder_new_pr(state: State, config: RunnableConfig, store: BaseStore):
     """Call code."""
     tool_call_id = state.messages[-1].tool_calls[0]["id"]
     return {
         "messages": [
             ToolMessage(
-                content=model_coder_messages.next(),
+                content=model_coder_new_pr_messages.next(),
+                tool_call_id=tool_call_id,
+            )
+        ]
+    }
+
+
+def coder_change_request(state: State, config: RunnableConfig, store: BaseStore):
+    """Call code."""
+    tool_call_id = state.messages[-1].tool_calls[0]["id"]
+    return {
+        "messages": [
+            ToolMessage(
+                content=model_coder_change_request_messages.next(),
                 tool_call_id=tool_call_id,
             )
         ]
