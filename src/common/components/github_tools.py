@@ -45,7 +45,6 @@ GITHUB_TOOLS = [
     "delete_file",
     "get_pull_request",
     "list_pull_requests_files",
-    "comment_on_issue",
     # TODO: evaluate adding these tools as well
     # "overview_of_existing_files_in_main_branch",
     # "overview_of_files_in_current_working_branch",
@@ -312,6 +311,20 @@ def mock_github_tools(mock_api: MockGithubApi):
             name="get_pull_request_head_branch",
             description=GET_PULL_REQUEST_HEAD_BRANCH_PROMPT,
             args_schema=GetPR,
+        ),
+        RunnableLambda(
+            _convert_args_schema_to_string(mock_api.get_pull_request_diff, GetPR)
+        ).as_tool(
+            name="get_pull_request_diff",
+            description=GET_PULL_REQUEST_DIFF_PROMPT,
+            args_schema=GetPR,
+        ),
+        RunnableLambda(
+            _convert_args_schema_to_string(mock_api.create_pull_request_review, CreatePRReview)
+        ).as_tool(
+            name="create_pull_request_review",
+            description=CREATE_PULL_REQUEST_REVIEW_PROMPT,
+            args_schema=CreatePRReview,
         ),
     ]
 
