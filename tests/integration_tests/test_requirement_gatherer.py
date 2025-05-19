@@ -92,7 +92,9 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
     memory_store = InMemoryStore()
 
     # Compile the graph - needs checkpointer for stateful execution during evaluation
-    graph = RequirementsGraph(checkpointer=memory_saver, store=memory_store).compiled_graph
+    graph = RequirementsGraph(
+        checkpointer=memory_saver, store=memory_store
+    ).compiled_graph
 
     # Define the function to be evaluated for each dataset example
     results = await client.aevaluate(

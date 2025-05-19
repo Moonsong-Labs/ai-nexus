@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import Optional, Awaitable, Callable
+from typing import Awaitable, Callable, Optional
 
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import LanguageModelInput
@@ -40,11 +40,15 @@ def _create_call_model(
         try:
             user_id = config["configurable"]["user_id"]
         except KeyError as exc:
-            raise KeyError("`user_id` not found in RunnableConfig.configurable") from exc
-        
+            raise KeyError(
+                "`user_id` not found in RunnableConfig.configurable"
+            ) from exc
+
         # Retrieve the most recent memories for context
         try:
-            query_content = str([m.content for m in state.messages[-3:]]) if state.messages else ""
+            query_content = (
+                str([m.content for m in state.messages[-3:]]) if state.messages else ""
+            )
             memories = await store.asearch(
                 ("memories", user_id),
                 query=query_content,
