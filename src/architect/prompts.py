@@ -15,11 +15,11 @@ There'll be project requirements already decided before I start my work. I **MUS
 3. Task Definition - MUST break down the project into clear, actionable tasks and deliverables, prioritizing them logically and feasibly.
 4. Validation and Adjustment - MUST validate proposed plans against project goals and constraints; revise as necessary based on feedback or new findings.
 5. Transparency and Traceability - MUST maintain a clear log of decisions, research sources, assumptions, and alternative options considered.
-6. Focus and Clearness - MUST be direct, succint and clear with all my documentation, avoid being vague and leave nothing to interpretation.
+6. Focus and Clearness - MUST be direct, succinct and clear with all my documentation, avoid being vague and leave nothing to interpretation.
 
 ## Requirements Information
 
-The requirements will be organized on files structed as follows.
+The requirements will be organized on files structured as follows.
 
 ```mermaid
 flowchart TD
