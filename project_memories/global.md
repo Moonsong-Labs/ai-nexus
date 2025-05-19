@@ -10,12 +10,12 @@
 1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager) working collaboratively.
 2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is `langmem`, providing semantic search capabilities over stored memories. `AgentGraph` can now automatically initialize and provide `SemanticMemory` and its tools to subclasses based on its configuration.
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
-4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools provided via `AgentGraph`/`SemanticMemory`, or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`).
+4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools provided via `AgentGraph`/`SemanticMemory`, or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`, or Task Manager's file system tools).
 5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes (which subclass `AgentConfiguration`). These configurations (and thus the prompts) are accessed by the agent's graph logic (e.g., in custom `call_model` implementations, which now often receive the agent's full `Configuration` object directly as a parameter).
 6.  **Configuration Management (REVISED):** Agents have configurable parameters, including LLM models, system prompts, and memory settings. This is managed via:
     *   A `MemoryConfiguration` dataclass (`common.components.memory.MemoryConfiguration`) for memory-specific settings like `use_memory`, `load_static_memories`, and `user_id`.
     *   A common `AgentConfiguration` in `src/common/configuration.py` (NEW, replaces `BaseConfiguration`), which includes a `memory: MemoryConfiguration` field. It also includes `user_id`, `model`, and `provider` for LangGraph. Agent-specific system prompts are defined in subclasses.
-    *   Agent-specific `Configuration` dataclasses (e.g., in `src/orchestrator/configuration.py`, `src/requirement_gatherer/configuration.py`, `src/agent_template/configuration.py`) that subclass `AgentConfiguration` and can include their own `system_prompt` or other specific settings.
+    *   Agent-specific `Configuration` dataclasses (e.g., in `src/orchestrator/configuration.py`, `src/requirement_gatherer/configuration.py`, `src/agent_template/configuration.py`, `src/task_manager/configuration.py`) that subclass `AgentConfiguration` and can include their own `system_prompt` or other specific settings.
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
 8.  **`langmem` Integration:** Provides semantic memory capabilities (storage, search) for agents. `SemanticMemory` (from `src/common/components/memory.py`) is configured using `MemoryConfiguration`. `AgentGraph` can instantiate `SemanticMemory` if `agent_config.memory.use_memory` is true, making memory tools available to the graph.
 9.  **`AgentGraph` (REVISED):** A common base class (`src/common/graph.py`) for defining agent graphs.
@@ -126,7 +126,7 @@ This pattern is now embodied by `AgentTemplateGraph` which subclasses `AgentGrap
     *   `SemanticMemory` class now takes `memory_config: Optional[MemoryConfiguration]` in its constructor and uses it for initialization. The `ConfigurationProtocol` is removed.
 *   **`prompts.py` (`src/agent_template/prompts.py`):** (As previously described, instruction to mention memory retrieval).
 
-**4.2. `AgentGraph` based Architecture (REVISED - e.g., Orchestrator, Requirement Gatherer, Coder, AgentTemplateGraph)**
+**4.2. `AgentGraph` based Architecture (REVISED - e.g., Orchestrator, Requirement Gatherer, Coder, Task Manager, AgentTemplateGraph)**
 
 A common base class for modular graph definitions.
 
@@ -165,7 +165,7 @@ A common base class for modular graph definitions.
     *   `create_runnable_config(self, config: RunnableConfig | None = None) -> RunnableConfig` (NEW): Method to prepare `RunnableConfig` for graph invocation. It takes an optional `RunnableConfig`, merges `self._agent_config.langgraph_configurables` into its `configurable` field, and returns the modified `RunnableConfig`. This notably does *not* inject the full `agent_config` object into the `configurable` dictionary.
     *   `compiled_graph`: Property to get or compile the graph. Invocation is now typically done via `self.compiled_graph.ainvoke(state, self.create_runnable_config(config))`.
 
-Agents like Orchestrator, Requirement Gatherer, Coder, and `AgentTemplateGraph` subclass `AgentGraph`.
+Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, and `AgentTemplateGraph` subclass `AgentGraph`.
 
 
 ## 5. Specific Agent Details
@@ -227,11 +227,25 @@ Agents like Orchestrator, Requirement Gatherer, Coder, and `AgentTemplateGraph` 
 *   **Architecture:** Uses the `AgentGraph` pattern. `TaskManagerGraph` in `src/task_manager/graph.py` subclasses `common.graph.AgentGraph`.
 *   **Configuration (`src/task_manager/configuration.py` - REVISED):**
     *   `Configuration` class subclasses `common.configuration.AgentConfiguration`.
+    *   Its `task_manager_system_prompt` (defined in `prompts.py`) is used by the agent.
 *   **Graph (`src/task_manager/graph.py` - REVISED):**
     *   `TaskManagerGraph.__init__` now takes `agent_config: Optional[task_manager.configuration.Configuration]`.
     *   Uses `self._agent_config` for its settings (e.g., `task_manager_system_prompt`, `model`).
     *   The helper function `_create_call_model` now receives `self._agent_config` as a direct argument.
-    *   The inner `call_model` function no longer extracts `agent_config` from `RunnableConfig` but uses the `agent_config` passed to `_create_call_model`.
+    *   The inner `call_model` function no longer extracts `agent_config` from `RunnableConfig` but uses the `agent_config` passed to `_create_call_model`. The system prompt it formats now includes a `project_context` placeholder (e.g., `agent_config.task_manager_system_prompt.format(..., project_context="")`).
+*   **Prompts (`src/task_manager/prompts.py` - REVISED):**
+    *   The `SYSTEM_PROMPT` now includes a `{project_context}` placeholder.
+    *   User input is now expected to be a `project_name` and the complete `path to the project`.
+    *   Project directory validation and file operations (e.g., checking for required files, creating task files, creating `roadmap.md`) are performed relative to the user-provided project path, not a fixed "volume" or "planning" directory.
+    *   Task files are to be created in `[provided_project_path]/planning/task-##-short-title.md`.
+    *   `roadmap.md` is to be created in `[provided_project_path]/planning/roadmap.md`.
+    *   Validation error messages now include the specific path if a directory is not found.
+*   **Tools (`src/task_manager/tools.py` - REVISED):**
+    *   The `get_volume_path` helper function has been removed.
+    *   `read_file(file_path: str)`: Reads a file from the given `file_path`. No longer restricted to a "volume" directory.
+    *   `create_file(file_path: str, content: str)`: Creates a file at the specified `file_path` with the given `content`. Parent directories are created if they don't exist. No longer uses `subfolder` or restricted to a "volume" directory.
+    *   `list_files(directory_path: str = ".")`: Lists files in the given `directory_path`. No longer restricted to a "volume" directory.
+*   **File System Interaction (REVISED):** The agent now operates on file paths provided by the user, allowing it to work in any user-specified directory. It no longer uses a hardcoded `src/task_manager/volume/` directory for its operations or example data.
 
 
 ## 6. Testing Framework (`tests/`)
@@ -242,6 +256,10 @@ Agents like Orchestrator, Requirement Gatherer, Coder, and `AgentTemplateGraph` 
     *   Updated to use `RequirementsGraph` (renamed from `RequirementsGathererGraph`).
 *   **`tests/integration_tests/test_orchestrator.py` (UPDATED):**
     *   Updated to use `OrchestratorGraph().compiled_graph` for testing the orchestrator's graph.
+*   **`tests/integration_tests/test_task_manager.py` (UPDATED):**
+    *   A new test `test_task_manager_with_project_path` is added to verify the agent's ability to work with user-specified project paths, checking for the creation of a `planning` folder and `roadmap.md` within that path, and the generation of multiple task files.
+    *   The `call_model` mock/helper within `test_task_manager_langsmith` now includes `task_manager_system_prompt: prompts.SYSTEM_PROMPT` in its configuration, ensuring the test uses the updated system prompt.
+    *   Example files for testing (e.g., `api_rust` project files) are now located in `tests/integration_tests/inputs/api_rust/` (moved from `src/task_manager/volume/api_rust/`).
 *   **`tests/datasets/task_manager_dataset.py` (UPDATED):**
     *   Corrected a typographical error in an output message.
 *   (Other test files as previously described)
@@ -360,7 +378,10 @@ ai-nexus/
 │   │   └── utils.py              # DELETED
 │   ├── task_manager/
 │   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration
-│   │   └── graph.py              # UPDATED: Uses AgentConfiguration, new AgentGraph init; _create_call_model helper receives agent_config
+│   │   ├── graph.py              # UPDATED: Uses AgentConfiguration, new AgentGraph init; _create_call_model helper receives agent_config; system prompt formatting includes project_context
+│   │   ├── prompts.py            # UPDATED: System prompt expects project_name and path, includes {project_context} placeholder, file operations relative to provided path
+│   │   ├── tools.py              # UPDATED: File tools (read_file, create_file, list_files) operate on direct paths, get_volume_path removed
+│   │   └── volume/               # DELETED (Contents moved to tests/integration_tests/inputs/)
 │   └── tester/
 └── tests/
     ├── datasets/
@@ -375,8 +396,18 @@ ai-nexus/
     │   ├── test_grumpy_agent.py
     │   ├── test_orchestrator.py    # UPDATED: Uses OrchestratorGraph().compiled_graph
     │   ├── test_requirement_gatherer.py # UPDATED: Uses RequirementsGraph
-    │   ├── test_task_manager.py
-    │   └── test_tester_agent.py
+    │   ├── test_task_manager.py    # UPDATED: New test for project path, config includes task_manager_system_prompt
+    │   ├── test_tester_agent.py
+    │   └── inputs/                 # NEW directory
+    │       └── api_rust/           # NEW directory (Contains files moved from src/task_manager/volume/api_rust)
+    │           ├── featuresContext.md
+    │           ├── progress.md
+    │           ├── projectRequirements.md
+    │           ├── projectbrief.md
+    │           ├── securityContext.md
+    │           ├── systemPatterns.md
+    │           ├── techContext.md
+    │           └── testingContext.md
     ├── testing/
     │   ├── __init__.py
     │   ├── evaluators.py
