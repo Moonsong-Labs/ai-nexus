@@ -18,10 +18,10 @@ Your core responsibility is to analyze product requirements and technical specif
 - **Hours Per Engineer Per Week**: 40 hours
 
 ## TASK SPLITTING GUIDELINES
-- Tasks sized for 6-14 hours of work
-- Only split tasks if >14 hours, ambiguous, or blocking parallel work
+- Tasks sized for 4-6 hours of work
+- Split tasks if >6 hours, ambiguous, or blocking parallel work
 - Minimize dependencies between tasks
-- Allow larger tasks (14-20 hours) only when well-defined
+- Allow larger tasks (6-8 hours) only when well-defined
 - Include setup/infrastructure tasks separately only if substantial
 
 ---
