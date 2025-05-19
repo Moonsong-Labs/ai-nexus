@@ -144,7 +144,7 @@ def _create_architect_node(
         return {
             "messages": [
                 ToolMessage(
-                    content=result["summary"],
+                    content=result["messages"][-1].content,
                     tool_call_id=tool_call["id"],
                 )
             ]
@@ -349,10 +349,6 @@ class OrchestratorGraph(AgentGraph):
                 github_tools=github_tools,
             )
         )
-        coder_new_pr = _create_coder_new_pr_node(coder_new_pr_graph)
-        coder_change_request = _create_coder_change_request_node(
-            coder_change_request_graph
-        )
         architect_graph = (
             stubs.ArchitectStub(
                 agent_config=self._agent_config,
@@ -368,6 +364,10 @@ class OrchestratorGraph(AgentGraph):
         )
         requirements = _create_requirements_node(self._agent_config, requirements_graph)
         architect = _create_architect_node(self._agent_config, architect_graph)
+        coder_new_pr = _create_coder_new_pr_node(coder_new_pr_graph)
+        coder_change_request = _create_coder_change_request_node(
+            coder_change_request_graph
+        )
         delegate_to = _create_delegate_to(self._agent_config, orchestrate)
 
         # Create the graph + all nodes
