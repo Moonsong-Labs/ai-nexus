@@ -8,14 +8,15 @@
 
 **Key Concepts:**
 1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager) working collaboratively.
-2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is `langmem`, providing semantic search capabilities over stored memories. `AgentGraph` can now automatically initialize and provide `SemanticMemory` and its tools to subclasses based on its configuration.
+2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is `langmem`, providing semantic search capabilities over stored memories. `AgentGraph` can now automatically initialize and provide `SemanticMemory` and its tools to subclasses based on its configuration. The Tester agent, for instance, now includes logic to read from a `BaseStore` for contextual memories.
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
-4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools provided via `AgentGraph`/`SemanticMemory`, or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`, or Task Manager's file system tools).
-5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes (which subclass `AgentConfiguration`). These configurations (and thus the prompts) are accessed by the agent's graph logic (e.g., in custom `call_model` implementations, which now often receive the agent's full `Configuration` object directly as a parameter).
+4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory (using `langmem` tools provided via `AgentGraph`/`SemanticMemory`, or custom tools like `file_dump`, or agent-specific tools like the Requirement Gatherer's `memorize` and `human_feedback`, or Task Manager's file system tools). The Tester agent's previous custom `upsert_memory` tool has been removed.
+5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes (which subclass `AgentConfiguration` or, in the case of the Tester agent, `common.config.BaseConfiguration`). These configurations (and thus the prompts) are accessed by the agent's graph logic (e.g., in custom `call_model` implementations, which now often receive the agent's full `Configuration` object directly as a parameter, or access it via `RunnableConfig`). The Tester agent features enhanced prompt management with workflow stage-specific prompts and dynamic prompt formatting.
 6.  **Configuration Management (REVISED):** Agents have configurable parameters, including LLM models, system prompts, and memory settings. This is managed via:
     *   A `MemoryConfiguration` dataclass (`common.components.memory.MemoryConfiguration`) for memory-specific settings like `use_memory`, `load_static_memories`, and `user_id`.
     *   A common `AgentConfiguration` in `src/common/configuration.py` (NEW, replaces `BaseConfiguration`), which includes a `memory: MemoryConfiguration` field. It also includes `user_id`, `model`, and `provider` for LangGraph. Agent-specific system prompts are defined in subclasses.
     *   Agent-specific `Configuration` dataclasses (e.g., in `src/orchestrator/configuration.py`, `src/requirement_gatherer/configuration.py`, `src/agent_template/configuration.py`, `src/task_manager/configuration.py`) that subclass `AgentConfiguration` and can include their own `system_prompt` or other specific settings.
+    *   The Tester agent's configuration (`src/tester/configuration.py`) currently subclasses `common.config.BaseConfiguration` (note: this differs from the `AgentConfiguration` used by other recently refactored agents) and defines its `system_prompt`.
 7.  **Asynchronous Operations:** The system heavily utilizes `async` and `await` for non-blocking operations within the agent graphs.
 8.  **`langmem` Integration:** Provides semantic memory capabilities (storage, search) for agents. `SemanticMemory` (from `src/common/components/memory.py`) is configured using `MemoryConfiguration`. `AgentGraph` can instantiate `SemanticMemory` if `agent_config.memory.use_memory` is true, making memory tools available to the graph.
 9.  **`AgentGraph` (REVISED):** A common base class (`src/common/graph.py`) for defining agent graphs.
@@ -45,11 +46,12 @@ The original "Memory Bank" concept described a system of structured Markdown fil
 *   **`AgentGraph` (`common.graph.AgentGraph` - REVISED):**
     *   Can automatically initialize a `SemanticMemory` instance if `agent_config.memory.use_memory` is true.
     *   The initialized `SemanticMemory` uses `self._name` (passed during `AgentGraph` instantiation) as the `agent_name` for memory namespacing, and `agent_config.memory` for its configuration (including `user_id`).
-*   **Storage:** Memories are stored in a `BaseStore` (e.g., `InMemoryStore` configured with embeddings like `GoogleGenerativeAIEmbeddings`).
-*   **Namespace:** Memories are typically namespaced by `("memories", "semantic", user_id)` or `("memories", "static", user_id)`, where `user_id` comes from `MemoryConfiguration.user_id`. The `agent_name` (from `AgentGraph._name`) is used by `SemanticMemory` internally, potentially for further namespacing or identification.
+*   **Storage:** Memories are stored in a `BaseStore` (e.g., `InMemoryStore` configured with embeddings like `GoogleGenerativeAIEmbeddings`). The Tester agent's graph logic includes reading from such a store.
+*   **Namespace:** Memories are typically namespaced by `("memories", "semantic", user_id)` or `("memories", "static", user_id)`, where `user_id` comes from `MemoryConfiguration.user_id` (or equivalent `user_id` in `RunnableConfig` for agents like Tester). The `agent_name` (from `AgentGraph._name`) is used by `SemanticMemory` internally, potentially for further namespacing or identification.
 *   **Tools:**
     *   Agents based on `AgentGraph` (like `AgentTemplateGraph`): Can get memory tools (`manage_memory`, `search_memory`) from the `AgentGraph`-managed `SemanticMemory` instance (via `self.memory.get_tools()`).
     *   Requirement Gatherer: Uses a custom `memorize` tool (now created by a factory function `create_memorize_tool` that receives the agent's `Configuration`, from which `user_id` is accessed for namespacing memories) and `human_feedback` tool.
+    *   Tester: Its custom `upsert_memory` tool has been removed. It currently reads memories directly via `BaseStore` in its `call_model` logic.
 *   **Static Memories:** JSON files in `.langgraph/static_memories/` can be loaded into the `BaseStore` under a static namespace if `memory_config.load_static_memories` is enabled in the `MemoryConfiguration` used by `SemanticMemory`.
 *   **Shift:** The core principle of externalized memory remains, with `langmem` as the backend, now more seamlessly integrated via `AgentGraph` and configured through `AgentConfiguration` and `MemoryConfiguration`.
 
@@ -126,7 +128,7 @@ This pattern is now embodied by `AgentTemplateGraph` which subclasses `AgentGrap
     *   `SemanticMemory` class now takes `memory_config: Optional[MemoryConfiguration]` in its constructor and uses it for initialization. The `ConfigurationProtocol` is removed.
 *   **`prompts.py` (`src/agent_template/prompts.py`):** (As previously described, instruction to mention memory retrieval).
 
-**4.2. `AgentGraph` based Architecture (REVISED - e.g., Orchestrator, Requirement Gatherer, Coder, Task Manager, AgentTemplateGraph)**
+**4.2. `AgentGraph` based Architecture (REVISED - e.g., Orchestrator, Requirement Gatherer, Coder, Task Manager, AgentTemplateGraph, Tester)**
 
 A common base class for modular graph definitions.
 
@@ -165,7 +167,7 @@ A common base class for modular graph definitions.
     *   `create_runnable_config(self, config: RunnableConfig | None = None) -> RunnableConfig` (NEW): Method to prepare `RunnableConfig` for graph invocation. It takes an optional `RunnableConfig`, merges `self._agent_config.langgraph_configurables` into its `configurable` field, and returns the modified `RunnableConfig`. This notably does *not* inject the full `agent_config` object into the `configurable` dictionary.
     *   `compiled_graph`: Property to get or compile the graph. Invocation is now typically done via `self.compiled_graph.ainvoke(state, self.create_runnable_config(config))`.
 
-Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, and `AgentTemplateGraph` subclass `AgentGraph`.
+Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, `AgentTemplateGraph`, and Tester subclass `AgentGraph`. (Note: The Tester agent's `super().__init__` call and configuration class (`common.config.BaseConfiguration`) show differences from this pattern, see 5.5).
 
 
 ## 5. Specific Agent Details
@@ -200,8 +202,49 @@ Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, and `AgentT
 #### 5.4. Code Reviewer (`src/code_reviewer/`)
 *   (Likely follows `agent_template` pattern, so it will now use `AgentTemplateGraph` and its revised memory/config handling, including how `agent_config` is passed to its internal `_create_call_model` helper.)
 
-#### 5.5. Tester (`src/tester/`)
-*   (No changes mentioned in PR - assumed same as previous state)
+#### 5.5. Tester (`src/tester/`) (REWORKED)
+*   **Overall:** The Tester agent has been significantly reworked to streamline its workflow, improve prompt management, and refine configuration and state.
+*   **Architecture:** Uses the `AgentGraph` pattern. `TesterAgentGraph` in `src/tester/graph.py` subclasses `common.graph.AgentGraph`.
+*   **Documentation:**
+    *   `src/tester/README.md` has been deleted.
+    *   Old prompt examples (`src/tester/test-prompts/`) have been deleted.
+    *   Some older prompt files have been moved to `src/tester/deprecated/`.
+    *   New documentation outlining the Test Agent's role, workflow, and requirements for generating tests is primarily in its system prompt.
+*   **Configuration (`src/tester/configuration.py` - REVISED):**
+    *   `Configuration` class now subclasses `common.config.BaseConfiguration`. (Note: This differs from `common.configuration.AgentConfiguration` used by other recently refactored agents. The `common.config.BaseConfiguration` class/path was previously noted as replaced).
+    *   It defines a `system_prompt` (defaulting to `prompts.SYSTEM_PROMPT`). Model and other common settings are expected to be inherited from `BaseConfiguration`.
+    *   The `from_runnable_config` method has been removed.
+*   **State (`src/tester/state.py` - REVISED):**
+    *   `WorkflowStage` enum updated to: `ANALYZE_REQUIREMENTS`, `TESTING`, `COMPLETE`.
+    *   The `State` class now includes `workflow_stage: WorkflowStage`, which defaults to `WorkflowStage.TESTING`.
+*   **Graph (`src/tester/graph.py` - REVISED):**
+    *   Defines `TesterAgentGraph(AgentGraph)`.
+    *   `__init__(self, *, use_human_ai=False, base_config: Optional[BaseConfiguration] = None, checkpointer: Optional[Checkpointer] = None, store: Optional[BaseStore] = None)`:
+        *   Calls `super().__init__(base_config, checkpointer, store)`. (Note: The `AgentGraph` documented in section 4.2 expects `name: str` and `agent_config: AgentConfiguration` as keyword arguments. The compatibility of this positional `super` call with that signature is unclear from this PR's diffs alone. This implies `AgentGraph` might handle this call, or `base_config` is passed as `name` and `checkpointer` as `agent_config`, which would be a type mismatch).
+        *   Sets `self._name = "Tester"` (after the super call).
+        *   Initializes `self._config = tester.configuration.Configuration(**asdict(self._base_config))`. This suggests `_base_config` is expected to be set by the `AgentGraph` superclass from the `base_config` argument passed to its `__init__`.
+    *   `create_builder()`:
+        *   Initializes an LLM using `self._config.model`.
+        *   Tools are currently not bound to the LLM (`all_tools = []`).
+        *   Sets up graph nodes: `call_model` (for LLM interaction) and `tools` (a `ToolNode`, though no tools are currently provided).
+        *   Defines graph flow: `START` -> `call_model`. Then, based on `_create_workflow`'s logic (which checks for tool calls in the last message), it routes to `tools` (if tool calls exist), back to `call_model`, or to `END`.
+    *   `_create_call_model(llm_with_tools)` helper function:
+        *   Its inner `call_model(state: State, config: RunnableConfig, store: Optional[BaseStore])` function:
+            *   If `store` is provided, attempts to retrieve memories using `store.asearch` with `user_id` from `config["configurable"]["user_id"]`.
+            *   Retrieves a stage-specific prompt using `prompts.get_stage_prompt(state.workflow_stage.value)`.
+            *   Formats the main `system_prompt` (from `config["configurable"]["system_prompt"]`) using the stage prompt, retrieved memories (`user_info`), and current `time`.
+            *   Invokes the LLM.
+            *   Determines the `next_stage` for the workflow (e.g., transitions to `WorkflowStage.COMPLETE` if the LLM response contains "tests are complete").
+    *   A global `graph` instance is created for LangSmith: `graph = TesterAgentGraph(base_config=BaseConfiguration()).compiled_graph`.
+*   **Prompts (`src/tester/prompts.py`, `src/tester/test-agent-system-prompt.md`, `src/tester/test-agent-testing-workflow-stage.md` - REVISED/NEW):**
+    *   The main system prompt (`test-agent-system-prompt.md`) has been updated to focus on requirements for generating complete, executable test files, test structure, and overall completeness.
+    *   `src/tester/prompts.py`:
+        *   Loads the main system prompt and workflow stage-specific prompts (e.g., `test-agent-testing-workflow-stage.md` for the "testing" stage).
+        *   The `SYSTEM_PROMPT` string template is formatted with placeholders: `{workflow_stage}`, `{user_info}` (for memories), and `{time}`.
+        *   A `get_stage_prompt(stage_name)` function is introduced to provide specific instructions for the current workflow stage.
+        *   Error handling for missing or empty prompt files has been improved.
+*   **Tools (`src/tester/tools.py`):** DELETED. The previous `upsert_memory` tool has been removed. The agent currently does not have any custom tools bound in its graph.
+*   **Output (`src/tester/output.py`):** DELETED. The agent's output is now directly the LLM messages within the `State`.
 
 #### 5.6. Requirement Gatherer (`src/requirement_gatherer/`) (REVISED)
 *   **Architecture:** Uses the `AgentGraph` pattern. `RequirementsGraph` (renamed from `RequirementsGathererGraph`) in `src/requirement_gatherer/graph.py` subclasses `common.graph.AgentGraph`.
@@ -260,6 +303,8 @@ Agents like Orchestrator, Requirement Gatherer, Coder, Task Manager, and `AgentT
     *   A new test `test_task_manager_with_project_path` is added to verify the agent's ability to work with user-specified project paths, checking for the creation of a `planning` folder and `roadmap.md` within that path, and the generation of multiple task files.
     *   The `call_model` mock/helper within `test_task_manager_langsmith` now includes `task_manager_system_prompt: prompts.SYSTEM_PROMPT` in its configuration, ensuring the test uses the updated system prompt, and correctly uses `graph.compiled_graph.ainvoke` for graph invocation.
     *   Example files for testing (e.g., `api_rust` project files) are now located in `tests/integration_tests/inputs/api_rust/` (moved from `src/task_manager/volume/api_rust/`).
+*   **`tests/integration_tests/test_tester_agent.py` (UPDATED):**
+    *   Updated to use the new `TesterAgentGraph` instantiation method, e.g., `graph_compiled = TesterAgentGraph(checkpointer=MemorySaver())`.
 *   **`tests/datasets/task_manager_dataset.py` (UPDATED):**
     *   Corrected a typographical error in an output message.
 *   (Other test files as previously described)
@@ -350,7 +395,7 @@ ai-nexus/
 │   │   │   ├── github_mocks.py
 │   │   │   ├── github_tools.py
 │   │   │   └── memory.py         # UPDATED: Defines MemoryConfiguration, SemanticMemory uses it, ConfigurationProtocol removed
-│   │   ├── config.py             # DELETED (Replaced by common/configuration.py)
+│   │   ├── config.py             # DELETED (Replaced by common/configuration.py) - Note: Tester agent's configuration.py refers to this path.
 │   │   ├── configuration.py      # ADDED: Defines AgentConfiguration (base for all agent configs)
 │   │   ├── graph.py              # REVISED: AgentGraph __init__ takes name & AgentConfiguration, inits SemanticMemory, _create_call_model, _merge_config, ainvoke removed; create_runnable_config added
 │   │   └── utils/
@@ -382,7 +427,21 @@ ai-nexus/
 │   │   ├── prompts.py            # UPDATED: System prompt expects project_name and path, includes {project_context} placeholder, file operations relative to provided path
 │   │   ├── tools.py              # UPDATED: File tools (read_file, create_file, list_files) operate on direct paths, get_volume_path removed
 │   │   └── volume/               # DELETED (Contents moved to tests/integration_tests/inputs/)
-│   └── tester/
+│   └── tester/                   # REWORKED
+│       ├── __init__.py           # (Assumed to exist, exports TesterAgentGraph)
+│       ├── README.md             # DELETED
+│       ├── configuration.py      # UPDATED: Subclasses common.config.BaseConfiguration (differs from other agents)
+│       ├── deprecated/           # NEW directory
+│       │   ├── deprecated-test-agent-system-prompt.md                # NEW
+│       │   └── test-agent-analyze-requirements-workflow-stage.md     # NEW
+│       ├── graph.py              # UPDATED: Implements TesterAgentGraph(AgentGraph), new workflow, memory reading
+│       ├── output.py             # DELETED
+│       ├── prompts.py            # UPDATED: Loads new prompts, get_stage_prompt function
+│       ├── state.py              # UPDATED: New WorkflowStage enum, State includes workflow_stage
+│       ├── test-agent-system-prompt.md           # UPDATED content
+│       ├── test-agent-testing-workflow-stage.md  # NEW file
+│       ├── test-prompts/         # DELETED directory
+│       └── tools.py              # DELETED
 └── tests/
     ├── datasets/
     │   ├── coder_dataset.py
@@ -397,7 +456,7 @@ ai-nexus/
     │   ├── test_orchestrator.py    # UPDATED: Uses OrchestratorGraph().compiled_graph
     │   ├── test_requirement_gatherer.py # UPDATED: Uses RequirementsGraph
     │   ├── test_task_manager.py    # UPDATED: New test for project path, config includes task_manager_system_prompt, call_model helper uses graph.compiled_graph.ainvoke
-    │   ├── test_tester_agent.py
+    │   ├── test_tester_agent.py    # UPDATED: Uses TesterAgentGraph for tests
     │   └── inputs/                 # NEW directory
     │       └── api_rust/           # NEW directory (Contains files moved from src/task_manager/volume/api_rust)
     │           ├── featuresContext.md
