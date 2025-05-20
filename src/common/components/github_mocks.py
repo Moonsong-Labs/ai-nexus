@@ -229,6 +229,17 @@ class MockGithubApi:
             return "No pull request found"
         return self.pull_request["head"]
 
+    def get_pull_request_diff(self, pr_number: str) -> str:
+        """Get the diff of a pull request."""
+        # TODO: how to mock this...?
+        raise NotImplementedError("get_pull_request_diff is not implemented")
+
+    def create_pull_request_review(self, pr_number: str, review: str) -> str:
+        """Comment on an issue."""
+        # TODO: store list of reviews?
+        # TODO: fn signature
+        raise NotImplementedError("comment_on_issue is not implemented")
+
 
 def maybe_mock_github() -> Union[GitHubAPIWrapper, MockGithubApi]:
     """Get either a real GitHub API wrapper or a mock based on environment variables.

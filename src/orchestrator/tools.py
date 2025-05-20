@@ -22,13 +22,20 @@ class Delegate:
 
     - If requirements, then "requirements".
     - If architecture and design, then "architect".
-    - If coding and implementation, then "coder".
+    - If coding and implementation, then "coder_new_pr".
+    - If coding and implementation, then "coder_change_request".
     - If code needs testing, then "tester".
     - If code needs review, then "reviewer".
     """
 
     to: Literal[
-        "orchestrator", "requirements", "architect", "coder", "tester", "reviewer"
+        "orchestrator",
+        "requirements",
+        "architect",
+        "coder_new_pr",
+        "coder_change_request",
+        "tester",
+        "reviewer",
     ]
     content: str
 
@@ -148,7 +155,7 @@ def _create_architect_tool(
         config_with_recursion = RunnableConfig(**config)
         config_with_recursion["recursion_limit"] = recursion_limit
 
-        result = await requirements_graph.compiled_graph.ainvoke(
+        result = await architect_graph.compiled_graph.ainvoke(
             RequirementsState(messages=[HumanMessage(content=content)]),
             config_with_recursion,
         )
@@ -167,33 +174,33 @@ def _create_architect_tool(
 
 @tool("store_memory", parse_docstring=True)
 def store_memory(
-    origin: Literal["user", "requirements", "architect", "coder", "tester", "reviewer"],
     content: str,
+    origin: Literal[
+        "user",
+        "requirements",
+        "architect",
+        "coder_new_pr",
+        "coder_change_request",
+        "tester",
+        "reviewer",
+    ],
 ):
-    """Store information in the agent's memory for future reference.
-
-    This tool allows the orchestrator to memorize important information, instructions,
-    or context from various sources within the AI Nexus system. The stored memories
-    can be retrieved later to maintain context across interactions.
-
-    Args:
-        origin: The source of the memory. Must be one of: "user", "requirements",
-               "architect", "coder", "tester", or "reviewer". This identifies which
-               component or agent provided the information.
-        content: The actual information to be stored in memory. This should be a
-                string containing the knowledge, instruction, or context to remember.
-
-    Returns:
-        str: A confirmation message indicating that the content has been memorized
-             for the specified origin.
-    """
+    """Use this to memorize, store or remember instructions."""
     # print(f"[MEMORIZE] for {origin}: {content}")  # noqa: T201
-    return "Memorized '{content}' for '{origin}'"
+    return f"Memorized '{content}' for '{origin}'"
 
 
 @dataclass
 class Memory:
     """Tool to update memory."""
 
-    origin: Literal["user", "requirements", "architect", "coder", "tester", "reviewer"]
+    origin: Literal[
+        "user",
+        "requirements",
+        "architect",
+        "coder_new_pr",
+        "coder_change_request",
+        "tester",
+        "reviewer",
+    ]
     content: str

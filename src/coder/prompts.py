@@ -8,6 +8,7 @@ that instruction you will need to sync with the latest changes in the main branc
 and then submit a pull request that satisfies the request.
 You should NEVER submit changes on `main` you cannot ever write to it. Instead the work should be
 done on a branch called `code-agent-*`, where * is a single word describing the change
+When you are done, reply with the PR number and the branch name.
 """
 
 # Prompt for addressing changes on an existing PR
