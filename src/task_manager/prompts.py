@@ -225,6 +225,60 @@ When extracting context for tasks, follow these principles:
 - Ensure security and compliance requirements are fully represented
 - Include code examples, API references, or architectural diagrams if present in source files
 
+## Task-Specific Document Extraction Guidelines
+
+### TestingContext.md Extraction
+When extracting information from testingContext.md, you MUST:
+1. Identify the specific testing framework/approach mentioned in the document
+2. Extract ALL testing patterns (e.g., Arrange-Act-Assert, table-driven tests) specified in the document
+3. Include any test organization preferences (e.g., tests alongside code, separate test directory)
+4. Extract specific test coverage goals (e.g., percentages, critical paths)
+5. Identify required test types (unit, integration, performance, etc.)
+6. Extract any test data management approaches (fixed test data, generated test data)
+7. Include error testing requirements and approaches
+8. Note any specific testing challenges or considerations mentioned
+9. Capture any specific tools or libraries mentioned for testing
+10. For EACH TASK that implements functionality, create SPECIFIC test requirements based on this information
+
+### TechContext.md Extraction
+When extracting information from techContext.md, you MUST:
+1. Identify ALL specific technologies, frameworks, and libraries mentioned
+2. Extract version requirements for dependencies
+3. Include performance targets and constraints that apply to the task
+4. Capture compatibility requirements relevant to the task
+5. Extract project structure information to ensure tasks align with it
+6. Include relevant code examples or patterns provided
+7. Identify build and run commands that apply to the task
+8. Extract configuration management details (environment variables, settings)
+9. Include tool usage patterns that relate to the task
+10. For EACH TASK, specify the EXACT technologies and versions to be used
+
+### SecurityContext.md Extraction
+When extracting information from securityContext.md, you MUST:
+1. Identify ALL security requirements that apply to the task
+2. Extract security headers that need to be implemented
+3. Include input validation requirements
+4. Capture rate limiting or access control requirements
+5. Extract logging and monitoring security considerations
+6. Identify dependency management security practices
+7. Include any security-first development principles mentioned
+8. Extract secure configuration practices
+9. Capture security-conscious error handling approaches
+10. For EACH TASK, include SPECIFIC security requirements and practices
+
+### FeatureContext.md Extraction
+When extracting information from featuresContext.md, you MUST:
+1. Identify ALL features and their detailed specifications
+2. Extract the current work focus and recent changes
+3. Include planned next steps that relate to the task
+4. Capture active decisions and considerations
+5. Extract important patterns and preferences for implementation
+6. Include any learnings or project insights mentioned
+7. Identify endpoint paths, response formats, or other API design details
+8. Extract error handling strategies mentioned
+9. Include code organization and pattern preferences
+10. For EACH TASK, specify the EXACT feature requirements and preferences
+
 ## Test Creation Guidelines
 
 When specifying tests for each task:
