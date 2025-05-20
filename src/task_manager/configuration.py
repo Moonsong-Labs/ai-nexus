@@ -13,6 +13,7 @@ class Configuration(AgentConfiguration):
     """Main configuration class for the memory graph system."""
 
     use_stub: bool = True
+    use_human_ai: bool = False
     task_manager_system_prompt: str = prompts.SYSTEM_PROMPT
     model: str = TASK_MANAGER_MODEL
 

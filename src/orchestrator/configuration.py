@@ -11,7 +11,7 @@ from requirement_gatherer.configuration import (
     Configuration as RequirementsConfiguration,
 )
 from task_manager.configuration import (
-    Configuration as TaskManagerAgentConfig,
+    Configuration as TaskManagerConfiguration,
 )
 
 
@@ -40,6 +40,14 @@ class ArchitectAgentConfig(SubAgentConfig):
 
 
 @dataclass(kw_only=True)
+class TaskManagerAgentConfig(SubAgentConfig):
+    """Task-manager-agent configuration for orchestrator."""
+
+    use_stub: bool = True
+    config: TaskManagerConfiguration = field(default_factory=TaskManagerConfiguration)
+
+
+@dataclass(kw_only=True)
 class Configuration(AgentConfiguration):
     """Main configuration class for the memory graph system."""
 
@@ -49,7 +57,7 @@ class Configuration(AgentConfiguration):
     )
     architect_agent: ArchitectAgentConfig = field(default_factory=ArchitectAgentConfig)
     task_manager_agent: TaskManagerAgentConfig = field(
-        default_factory=TaskManagerAgentConfig
+        default_factory=TaskManagerConfiguration
     )
     coder_new_pr_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
     coder_change_request_agent: SubAgentConfig = field(default_factory=SubAgentConfig)

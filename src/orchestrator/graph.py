@@ -34,6 +34,7 @@ from orchestrator.configuration import (
     Configuration,
     RequirementsAgentConfig,
     SubAgentConfig,
+    TaskManagerAgentConfig,
 )
 from orchestrator.state import State
 from requirement_gatherer.configuration import (
@@ -43,6 +44,9 @@ from requirement_gatherer.graph import RequirementsGraph
 from requirement_gatherer.state import State as RequirementsState
 from task_manager.graph import TaskManagerGraph
 from task_manager.state import State as TaskManagerState
+from task_manager.configuration import (
+    Configuration as TaskManagerConfiguration,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -467,6 +471,9 @@ graph = OrchestratorGraph(
         ),
         architect_agent=ArchitectAgentConfig(
             use_stub=False, config=ArchitectConfiguration(use_human_ai=False)
+        ),
+        task_manager_agent=TaskManagerAgentConfig(
+            use_stub=False, config=TaskManagerConfiguration(use_human_ai=False)
         ),
         coder_new_pr_agent=SubAgentConfig(use_stub=False, config=AgentConfiguration()),
         coder_change_request_agent=SubAgentConfig(

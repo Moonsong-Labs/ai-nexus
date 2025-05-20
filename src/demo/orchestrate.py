@@ -27,6 +27,8 @@ from orchestrator.configuration import (
     ArchitectConfiguration,
     RequirementsAgentConfig,
     RequirementsConfiguration,
+    TaskManagerAgentConfig,
+    TaskManagerConfiguration,
 )
 from orchestrator.configuration import (
     Configuration as OrchestratorConfiguration,
@@ -104,6 +106,10 @@ if __name__ == "__main__":
                 architect_agent=ArchitectAgentConfig(
                     use_stub=False,
                     config=ArchitectConfiguration(use_human_ai=use_human_ai),
+                ),
+                task_manager_agent=TaskManagerAgentConfig(
+                    use_stub=False,
+                    config=TaskManagerConfiguration(),
                 ),
             ),
             checkpointer=InMemorySaver(),
