@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build output
+dist/
+
+# Test output
+langgraph-test-result.png
+
+# Environment variables
+.env
+.env.local
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+
+# Logs
+*.log
+npm-debug.log*
