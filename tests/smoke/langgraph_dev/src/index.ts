@@ -1,6 +1,8 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
 import puppeteer from "puppeteer";
 
+const SCREENSHOT_FILE = "langgraph-test-result.png";
+
 /**
  * Simple smoke test for langgraph CLI
  * This script:
@@ -79,9 +81,7 @@ async function runTest(): Promise<void> {
         timeout: 30000,
       }
     );
-
-    // Take a screenshot for verification
-    console.log("Screenshot saved to langgraph-test-result.png");
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     // Verify the page loaded successfully
     const pageTitle = await page.title();
@@ -89,23 +89,23 @@ async function runTest(): Promise<void> {
 
     let testPassed = false;
 
-    await page.screenshot({ path: "langgraph-test-result.png" });
+    await page.screenshot({ path: SCREENSHOT_FILE });
     await page.click("text=agent_template");
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    await page.screenshot({ path: "langgraph-test-result.png" });
+    await page.screenshot({ path: SCREENSHOT_FILE });
     await page.click("text=orchestrator");
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    await page.screenshot({ path: "langgraph-test-result.png" });
+    await page.screenshot({ path: SCREENSHOT_FILE });
     await page.click("text=Message");
     await page.type("div[contenteditable=true]", "I want to build a website");
 
-    await page.screenshot({ path: "langgraph-test-result.png" });
+    await page.screenshot({ path: SCREENSHOT_FILE });
     await page.click("text=Submit");
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
-    await page.screenshot({ path: "langgraph-test-result.png" });
+    await page.screenshot({ path: SCREENSHOT_FILE });
     try {
       const elementHumanInterrupt = await page.waitForSelector(
         "span ::-p-text('Interrupt')"
