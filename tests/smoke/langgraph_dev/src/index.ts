@@ -89,16 +89,23 @@ async function runTest(): Promise<void> {
 
     let testPassed = false;
 
+    await page.screenshot({ path: "langgraph-test-result.png" });
     await page.click("text=agent_template");
     await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    await page.screenshot({ path: "langgraph-test-result.png" });
     await page.click("text=orchestrator");
     await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    await page.screenshot({ path: "langgraph-test-result.png" });
     await page.click("text=Message");
     await page.type("div[contenteditable=true]", "I want to build a website");
+
+    await page.screenshot({ path: "langgraph-test-result.png" });
     await page.click("text=Submit");
     await new Promise((resolve) => setTimeout(resolve, 5000));
-    await page.screenshot({ path: "langgraph-test-result.png" });
 
+    await page.screenshot({ path: "langgraph-test-result.png" });
     try {
       const elementHumanInterrupt = await page.waitForSelector(
         "span ::-p-text('Interrupt')"
