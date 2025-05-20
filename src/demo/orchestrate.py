@@ -169,7 +169,7 @@ if __name__ == "__main__":
         project_id = "a6835858-9241-4360-9c88-44d5fe9ca98e"  # ai-nexus
         trace_url = f"https://smith.langchain.com/o/{organization_id}/projects/p/{project_id}/r/{run_id}?traceId={run_id}&mode=graph"
         print(
-            f"{"-" *  120}\nTrace: {colored(trace_url, "magenta", attrs=["bold"])}\n{"-" *  120}"
+            f"{'-' * 120}\nTrace: {colored(trace_url, 'magenta', attrs=['bold'])}\n{'-' * 120}"
         )
 
         result = asyncio.run(_exec(langsmith_extra={"run_id": run_id}))
