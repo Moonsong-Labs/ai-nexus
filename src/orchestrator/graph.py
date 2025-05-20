@@ -41,6 +41,8 @@ from requirement_gatherer.configuration import (
 )
 from requirement_gatherer.graph import RequirementsGraph
 from requirement_gatherer.state import State as RequirementsState
+from task_manager.graph import TaskManagerGraph
+from task_manager.state import State as TaskManagerState
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +77,7 @@ def _create_delegate_to(
         "orchestrate",
         "requirements",
         "architect",
+        "task_manager",
         "coder_new_pr",
         "coder_change_request",
         "tester",
@@ -96,6 +99,8 @@ def _create_delegate_to(
                     return "requirements"
                 elif tool_call["args"]["to"] == "architect":
                     return "architect"
+                elif tool_call["args"]["to"] == "task_manager":
+                    return "task_manager"
                 elif tool_call["args"]["to"] == "coder_new_pr":
                     return "coder_new_pr"
                 elif tool_call["args"]["to"] == "coder_change_request":
@@ -269,6 +274,44 @@ def _create_coder_change_request_node(
 
     return coder_change_request
 
+def _create_task_manager_node(
+    task_manager_graph: TaskManagerGraph, recursion_limit: int = 100
+):
+    """Create an asynchronous task_manager node for the orchestrator graph.
+
+    The returned function processes a tool call from the conversation state, invokes the task_manager graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
+
+    Args:
+        task_manager_graph: The task_manager graph to invoke for task_manager gathering.
+        recursion_limit: Maximum recursion depth allowed for the task_manager graph (default is 100).
+
+    Returns:
+        An asynchronous function that processes the task_manager and returns a dictionary with a tool message containing the changes.
+    """
+
+    async def task_manager(
+        state: State, config: RunnableConfig, store: BaseStore
+    ):
+        tool_call = state.messages[-1].tool_calls[0]
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = recursion_limit
+
+        result = await task_manager_graph.compiled_graph.ainvoke(
+            TaskManagerState(messages=[HumanMessage(content=tool_call["args"]["content"])]),
+            config_with_recursion,
+        )
+
+        return {
+            "messages": [
+                ToolMessage(
+                    content=result["messages"][-1].content,
+                    tool_call_id=tool_call["id"],
+                )
+            ]
+        }
+
+    return task_manager
+
 
 class OrchestratorGraph(AgentGraph):
     """Orchestrator graph."""
@@ -362,8 +405,22 @@ class OrchestratorGraph(AgentGraph):
                 store=self._store,
             )
         )
+        task_manager_graph = (
+            stubs.TaskManagerStub(
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+            if self._agent_config.task_manager_agent.use_stub
+            else TaskManagerGraph(
+                agent_config=self._agent_config.task_manager_agent.config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+        )
         requirements = _create_requirements_node(self._agent_config, requirements_graph)
         architect = _create_architect_node(self._agent_config, architect_graph)
+        task_manager = _create_task_manager_node(task_manager_graph)
         coder_new_pr = _create_coder_new_pr_node(coder_new_pr_graph)
         coder_change_request = _create_coder_change_request_node(
             coder_change_request_graph
@@ -377,6 +434,7 @@ class OrchestratorGraph(AgentGraph):
         builder.add_node(orchestrate)
         builder.add_node(requirements)
         builder.add_node(architect)
+        builder.add_node(task_manager)
         builder.add_node(coder_new_pr)
         builder.add_node(coder_change_request)
         builder.add_node(stubs.tester)
@@ -390,6 +448,7 @@ class OrchestratorGraph(AgentGraph):
         )
         builder.add_edge(requirements.__name__, orchestrate.__name__)
         builder.add_edge(architect.__name__, orchestrate.__name__)
+        builder.add_edge(task_manager.__name__, orchestrate.__name__)
         builder.add_edge(coder_new_pr.__name__, orchestrate.__name__)
         builder.add_edge(coder_change_request.__name__, orchestrate.__name__)
         builder.add_edge(stubs.tester.__name__, orchestrate.__name__)
