@@ -96,7 +96,7 @@ async function runTest(): Promise<void> {
     await page.click("text=Message");
     await page.type("div[contenteditable=true]", "I want to build a website");
     await page.click("text=Submit");
-
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     await page.screenshot({ path: "langgraph-test-result.png" });
 
     try {
