@@ -95,70 +95,116 @@ class RequirementsGathererStub(AgentGraph):
             "Requirements Gatherer Stub", agent_config, checkpointer, store
         )
 
+        # stub the compiled_graph
+        def runnable(state: State, config: RunnableConfig, store: BaseStore):
+            return {
+                "messages": state.messages,
+                "summary": model_requirements_messages.next(),
+            }
+
+        self._compiled_graph = runnable
+
     def create_builder(self) -> StateGraph:
         """Return None to indicate that no builder is provided for this stub implementation."""
         return None
 
-    async def ainvoke(self, state: Any, config: RunnableConfig | None = None):
-        """Async invoke."""
-        return {
-            "messages": state.messages,
-            "summary": model_requirements_messages.next(),
-        }
+
+class ArchitectStub(AgentGraph):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__("Architect Stub", agent_config, checkpointer, store)
+
+        # stub the compiled_graph
+        def runnable(state: State, config: RunnableConfig, store: BaseStore):
+            return {
+                "messages": state.messages,
+                "summary": """I am finished with the design. Here are the details:
+                    The design should be simple HTML file with CSS styling.
+                    """,
+            }
+
+        self._compiled_graph = runnable
+
+    def create_builder(self) -> StateGraph:
+        """Return None to indicate that no builder is provided for this stub implementation."""
+        return None
 
 
-def architect(state: State, config: RunnableConfig, store: BaseStore):
-    """Call design."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content="""I am finished with the design. Here are the details:
-                The design should be simple HTML file with CSS styling.
-                """,
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
+class CoderStub(AgentGraph):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__("Coder Stub", agent_config, checkpointer, store)
+
+        # stub the compiled_graph
+        def runnable(state: State, config: RunnableConfig, store: BaseStore):
+            return {
+                "messages": state.messages,
+                "summary": model_coder_messages.next(),
+            }
+
+        self._compiled_graph = runnable
+
+    def create_builder(self) -> StateGraph:
+        """Return None to indicate that no builder is provided for this stub implementation."""
+        return None
 
 
-def coder(state: State, config: RunnableConfig, store: BaseStore):
-    """Call code."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content=model_coder_messages.next(),
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
+class TesterStub(AgentGraph):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__("Tester Stub", agent_config, checkpointer, store)
+
+        # stub the compiled_graph
+        def runnable(state: State, config: RunnableConfig, store: BaseStore):
+            return {
+                "messages": state.messages,
+                "summary": model_tester_messages.next(),
+            }
+
+        self._compiled_graph = runnable
+
+    def create_builder(self) -> StateGraph:
+        """Return None to indicate that no builder is provided for this stub implementation."""
+        return None
 
 
-def tester(state: State, config: RunnableConfig, store: BaseStore):
-    """Call test."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content=model_tester_messages.next(),
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
+class ReviewerStub(AgentGraph):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__("Reviewer Stub", agent_config, checkpointer, store)
 
+        # stub the compiled_graph
+        def runnable(state: State, config: RunnableConfig, store: BaseStore):
+            return {
+                "messages": state.messages,
+                "summary": model_reviewer_messages.next(),
+            }
 
-def reviewer(state: State, config: RunnableConfig, store: BaseStore):
-    """Call review."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content=model_reviewer_messages.next(),
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
+        self._compiled_graph = runnable
+
+    def create_builder(self) -> StateGraph:
+        """Return None to indicate that no builder is provided for this stub implementation."""
+        return None
 
 
 def memorizer(state: State, config: RunnableConfig, store: BaseStore):

@@ -1,9 +1,19 @@
 """Define he agent's tools."""
 
+from collections.abc import Coroutine
 from dataclasses import dataclass
-from typing import Literal
+from typing import Annotated, Any, Literal
 
-from langchain_core.tools import tool
+from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import InjectedToolCallId, tool
+from langgraph.prebuilt import InjectedState
+from langgraph.types import Command
+
+from orchestrator.configuration import Configuration
+from orchestrator.state import State
+from requirement_gatherer.graph import RequirementsGraph
+from requirement_gatherer.state import State as RequirementsState
 
 
 @dataclass
@@ -23,12 +33,160 @@ class Delegate:
     content: str
 
 
-@tool
+# def _create_delegate_to(
+#     agent_config: Configuration, orchestrate: Coroutine[Any, Any, dict]
+# ):
+#     @tool("delegate_to", parse_docstring=True)
+#     async def delegate_to(
+#         delegate: Delegate,
+#         tool_call_id: Annotated[str, InjectedToolCallId],
+#         state: Annotated[State, InjectedState],
+#         config: RunnableConfig,
+#     ) -> Literal[
+#         "__end__",
+#         "orchestrate",
+#         "requirements",
+#         "architect",
+#         "coder",
+#         "tester",
+#         "reviewer",
+#         "memorizer",
+#     ]:
+#         """Determine the next step based on the presence of tool calls."""
+#         if delegate.to == "orchestrator":
+#             return orchestrate.__name__
+#         elif delegate.to == "requirements":
+#             return "requirements"
+#         elif delegate.to == "architect":
+#             return stubs.architect.__name__
+#         elif delegate.to == "coder":
+#             return stubs.coder.__name__
+#         elif delegate.to == "tester":
+#             return stubs.tester.__name__
+#         elif delegate.to == "reviewer":
+#             return stubs.reviewer.__name__
+#         # elif tool_call["args"]["to"] == "memorizer":
+#         #     return stubs.memorizer.__name__
+#         else:
+#             raise ValueError
+
+#     return delegate_to
+
+
+def create_requirements_tool(
+    agent_config: Configuration,
+    requirements_graph: RequirementsGraph,
+    recursion_limit: int = 100,
+):
+    """Create an asynchronous requirements gatherer tool for the orchestrator graph.
+
+    The returned function processes a tool call from the conversation state, invokes the requirements graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
+
+    Args:
+        requirements_graph: The requirements graph to invoke for requirements gathering.
+        recursion_limit: Maximum recursion depth allowed for the requirements graph (default is 100).
+
+    Returns:
+        An asynchronous function that processes requirements extraction and returns a dictionary with a tool message containing the summary.
+    """
+
+    @tool("requirements", parse_docstring=True)
+    async def requirements(
+        content: str,
+        tool_call_id: Annotated[str, InjectedToolCallId],
+        state: Annotated[State, InjectedState],
+        config: RunnableConfig,
+    ) -> Command:
+        """If requirements need to be gathered or a project defined in the earliest stage.
+
+        Args:
+            content: The input to the requirements gatherer agent.
+
+        Returns:
+            A Command that updates the agent's state with requirements gatherer's response.
+        """
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = recursion_limit
+
+        result = await requirements_graph.compiled_graph.ainvoke(
+            RequirementsState(messages=[HumanMessage(content=content)]),
+            config_with_recursion,
+        )
+
+        return {
+            "messages": [
+                ToolMessage(
+                    content=result["summary"],
+                    tool_call_id=tool_call_id,
+                )
+            ]
+        }
+
+    return requirements
+
+
+def _create_architect_tool(
+    agent_config: Configuration,
+    architect_graph: RequirementsGraph,
+    recursion_limit: int = 100,
+):
+    @tool("architect", parse_docstring=True)
+    async def architect(
+        content: str,
+        tool_call_id: Annotated[str, InjectedToolCallId],
+        state: Annotated[State, InjectedState],
+        config: RunnableConfig,
+    ) -> Command:
+        """Given the requirements if a project architectrure or design needs to be created.
+
+        Args:
+            content: The input to the architect agent.
+
+        Returns:
+            A Command that updates the agent's state with requirements gatherer's response.
+        """
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = recursion_limit
+
+        result = await requirements_graph.compiled_graph.ainvoke(
+            RequirementsState(messages=[HumanMessage(content=content)]),
+            config_with_recursion,
+        )
+
+        return {
+            "messages": [
+                ToolMessage(
+                    content=result["summary"],
+                    tool_call_id=tool_call_id,
+                )
+            ]
+        }
+
+    return architect
+
+
+@tool("store_memory", parse_docstring=True)
 def store_memory(
     origin: Literal["user", "requirements", "architect", "coder", "tester", "reviewer"],
     content: str,
 ):
-    """Use this to memorize, store or remember  instructions."""
+    """Store information in the agent's memory for future reference.
+
+    This tool allows the orchestrator to memorize important information, instructions,
+    or context from various sources within the AI Nexus system. The stored memories
+    can be retrieved later to maintain context across interactions.
+
+    Args:
+        origin: The source of the memory. Must be one of: "user", "requirements",
+               "architect", "coder", "tester", or "reviewer". This identifies which
+               component or agent provided the information.
+        content: The actual information to be stored in memory. This should be a
+                string containing the knowledge, instruction, or context to remember.
+
+    Returns:
+        str: A confirmation message indicating that the content has been memorized
+             for the specified origin.
+    """
     # print(f"[MEMORIZE] for {origin}: {content}")  # noqa: T201
     return "Memorized '{content}' for '{origin}'"
 
