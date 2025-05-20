@@ -28,6 +28,7 @@ from orchestrator.configuration import (
     RequirementsConfiguration,
     TaskManagerAgentConfig,
     TaskManagerConfiguration,
+    SubAgentConfig,
 )
 from orchestrator.configuration import (
     Configuration as OrchestratorConfiguration,
@@ -113,6 +114,12 @@ if __name__ == "__main__":
                 task_manager_agent=TaskManagerAgentConfig(
                     use_stub=False,
                     config=TaskManagerConfiguration(),
+                ),    
+                coder_new_pr_agent=SubAgentConfig(
+                    use_stub=True,
+                ),
+                coder_change_request_agent=SubAgentConfig(
+                    use_stub=True,
                 ),
             ),
             checkpointer=InMemorySaver(),
