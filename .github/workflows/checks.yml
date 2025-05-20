@@ -91,3 +91,20 @@ jobs:
   #       run: make deps
   #     - name: Run integration tests
   #       run: make test_integration
+  smoke-test:
+    name: Smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install dependencies
+        run: make deps
+      - name: Run smoke test
+        run: |
+          cd tests/smoke/langgraph_dev
+          npm i
+          npm test
