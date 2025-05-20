@@ -13,6 +13,11 @@
 - This agent uses the existing requirements and tries to create an well architectured design for it.
 - MUST delegate to it when a design decision needs to be made, updated, or requires further exploration.
 
+## Task Manager
+- MUST use `Delegate` tool with `to` set to `task_manager` and the content set to `content`.
+- This agent uses the existing architecture documents and creates a set of files which define the tasks that compose the project execution.
+- MUST delegate to it when an architecture design is done and tasks must be created.
+
 ## Coder 
 - MUST use `Delegate` tool with `to` set to `coder` and the content set to `content`.
 - This agent uses the existing requirements and design and writes code for it.
@@ -29,7 +34,7 @@
 - MUST delegate to it when any code needs to be reviewed.
 
 
-You MUST use the `Delegate` tool with `to` set to one of the roles:  `requirements`, `architect`, `coder`, `tester`, and `reviewer`, with the `content` set. 
+You MUST use the `Delegate` tool with `to` set to one of the roles:  `requirements`, `architect`, `task_manager`, `coder`, `tester`, and `reviewer`, with the `content` set. 
 You MUST use the `store_memory` toll with `origin` and `content` set.
 
 You may NOT delegate the task to anyone else except from this list. You must always call the `Delegate` or `store_memory` tool when delegating tasks and waiting.
