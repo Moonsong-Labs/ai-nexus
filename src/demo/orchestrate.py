@@ -28,6 +28,8 @@ from orchestrator.configuration import (
     RequirementsAgentConfig,
     RequirementsConfiguration,
     SubAgentConfig,
+    TaskManagerAgentConfig,
+    TaskManagerConfiguration,
 )
 from orchestrator.configuration import (
     Configuration as OrchestratorConfiguration,
@@ -110,6 +112,10 @@ if __name__ == "__main__":
                 ),
                 architect_agent=ArchitectAgentConfig(
                     use_stub=False,
+                ),
+                task_manager_agent=TaskManagerAgentConfig(
+                    use_stub=True,
+                    config=TaskManagerConfiguration(),
                 ),
                 coder_new_pr_agent=SubAgentConfig(
                     use_stub=False,

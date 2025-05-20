@@ -31,12 +31,17 @@ from orchestrator.configuration import (
     Configuration,
     RequirementsAgentConfig,
     SubAgentConfig,
+    TaskManagerAgentConfig,
 )
 from orchestrator.state import State
 from requirement_gatherer.configuration import (
     Configuration as RequirementsConfiguration,
 )
 from requirement_gatherer.graph import RequirementsGraph
+from task_manager.configuration import (
+    Configuration as TaskManagerConfiguration,
+)
+from task_manager.graph import TaskManagerGraph
 from tester.graph import TesterAgentGraph
 
 logger = logging.getLogger(__name__)
@@ -140,6 +145,19 @@ class OrchestratorGraph(AgentGraph):
                 store=self._store,
             )
         )
+        task_manager_graph = (
+            stubs.TaskManagerStub(
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+            if self._agent_config.task_manager_agent.use_stub
+            else TaskManagerGraph(
+                agent_config=self._agent_config.task_manager_agent.config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+        )
         github_tools = get_github_tools(maybe_mock_github())
         coder_new_pr_graph = (
             stubs.CoderNewPRStub(
@@ -191,6 +209,7 @@ class OrchestratorGraph(AgentGraph):
         all_tools = [
             tools.create_requirements_tool(self._agent_config, requirements_graph),
             tools.create_architect_tool(self._agent_config, architect_graph),
+            tools.create_task_manager_tool(self._agent_config, task_manager_graph),
             tools.create_coder_new_pr_tool(self._agent_config, coder_new_pr_graph),
             tools.create_coder_change_request_tool(
                 self._agent_config, coder_change_request_graph
@@ -230,6 +249,9 @@ graph = OrchestratorGraph(
         ),
         architect_agent=ArchitectAgentConfig(
             use_stub=False, config=ArchitectConfiguration()
+        ),
+        task_manager_agent=TaskManagerAgentConfig(
+            use_stub=False, config=TaskManagerConfiguration(use_human_ai=False)
         ),
         coder_new_pr_agent=SubAgentConfig(use_stub=False, config=AgentConfiguration()),
         coder_change_request_agent=SubAgentConfig(
