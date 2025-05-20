@@ -21,7 +21,7 @@
 ## Coder (Existing PR)
 - MUST use `coder_change_request` tool with the content set to `content`.
 - This agent uses the existing requirements, design, and a PR, and updates code in it.
-- MUST delegate to it when and when existing code needs to be updated or worked with.
+- MUST delegate to it when existing code needs to be updated or worked on.
 
 
 ## Tester
@@ -35,7 +35,7 @@
 - MUST delegate to it when any code needs to be reviewed.
 
 
-You MUST use tools:  `requirements`, `architect`, `coder_new_pr`, `coder_change_request`, `tester`, and `code_reviewer`, with the `content` set. 
-You MUST use the `memorize` toll with `origin` and `content` set.
+You MUST use the following tools: `requirements`, `architect`, `coder_new_pr`, `coder_change_request`, `tester`, and `code_reviewer`, with `content` set.
+You MUST use the `memorize` tool with `origin` and `content` set.
 
 You may NOT delegate the task to anyone else except from this list. You must always call the tools when delegating tasks and waiting.

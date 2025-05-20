@@ -85,7 +85,7 @@ def _create_gather_requirements(
     """
 
     async def gather_requirements(state: State, config: RunnableConfig):
-        if state.messages[-1].tool_calls:
+        if state.messages and state.messages[-1].tool_calls:
             return tool_node.name
         elif state.summary:
             return END

@@ -1,8 +1,6 @@
 """Define he agent's tools."""
 
-from collections.abc import Coroutine
-from dataclasses import dataclass
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 
 from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
@@ -43,7 +41,7 @@ def create_requirements_tool(
         tool_call_id: Annotated[str, InjectedToolCallId],
         state: Annotated[State, InjectedState],
         config: RunnableConfig,
-    ) -> Command:
+    ) -> str:
         """If requirements need to be gathered or a project defined in the earliest stage.
 
         Args:
@@ -77,7 +75,7 @@ def create_architect_tool(
         tool_call_id: Annotated[str, InjectedToolCallId],
         state: Annotated[State, InjectedState],
         config: RunnableConfig,
-    ) -> Command:
+    ) -> str:
         """Given the requirements if a project architecture or design needs to be created.
 
         Args:
@@ -110,7 +108,7 @@ def create_coder_new_pr_tool(
         tool_call_id: Annotated[str, InjectedToolCallId],
         state: Annotated[State, InjectedState],
         config: RunnableConfig,
-    ) -> Command:
+    ) -> str:
         """Given the requirements and design if code needs to be written and a PR created.
 
         Args:
@@ -140,7 +138,7 @@ def create_coder_change_request_tool(
         tool_call_id: Annotated[str, InjectedToolCallId],
         state: Annotated[State, InjectedState],
         config: RunnableConfig,
-    ) -> Command:
+    ) -> str:
         """Given the an existing PR if any changes need to be made.
 
         Args:
@@ -170,7 +168,7 @@ def create_tester_tool(
         tool_call_id: Annotated[str, InjectedToolCallId],
         state: Annotated[State, InjectedState],
         config: RunnableConfig,
-    ) -> Command:
+    ) -> str:
         """Given a PR if it needs to be tested.
 
         Args:
@@ -200,7 +198,7 @@ def create_code_reviewer_tool(
         tool_call_id: Annotated[str, InjectedToolCallId],
         state: Annotated[State, InjectedState],
         config: RunnableConfig,
-    ) -> Command:
+    ) -> str:
         """Given a PR if a code review is to be made.
 
         Args:
@@ -231,7 +229,7 @@ def memorize(
         "tester",
         "code_reviewer",
     ],
-):
+) -> str:
     """Store information in the agent's memory for future reference.
 
     This tool allows the orchestrator to memorize important information, instructions,
@@ -258,7 +256,7 @@ def memorize(
 async def summarize(
     summary: str,
     tool_call_id: Annotated[str, InjectedToolCallId],
-):
+) -> str:
     """Summarize the agent output.
 
     Args:

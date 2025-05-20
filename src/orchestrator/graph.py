@@ -73,7 +73,7 @@ def _create_orchestrate_condition(
     """
 
     async def orchestrate(state: State, config: RunnableConfig):
-        if state.messages[-1].tool_calls:
+        if state.messages and state.messages[-1].tool_calls:
             return tool_node.name
         elif state.summary:
             return END

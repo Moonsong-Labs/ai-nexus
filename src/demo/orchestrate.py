@@ -24,7 +24,6 @@ from termcolor import colored
 
 from orchestrator.configuration import (
     ArchitectAgentConfig,
-    ArchitectConfiguration,
     RequirementsAgentConfig,
     RequirementsConfiguration,
 )
