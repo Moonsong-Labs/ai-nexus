@@ -110,3 +110,10 @@ jobs:
           cd tests/smoke/langgraph_dev
           npm i
           npm test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: langgraph-test-result.png
+          path: langgraph-test-result.png
+          if-no-files-found: error
+          retention-days: 10
