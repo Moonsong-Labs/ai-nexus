@@ -38,12 +38,11 @@ from requirement_gatherer.configuration import (
     Configuration as RequirementsConfiguration,
 )
 from requirement_gatherer.graph import RequirementsGraph
-from requirement_gatherer.state import State as RequirementsState
-from task_manager.graph import TaskManagerGraph
-from task_manager.state import State as TaskManagerState
 from task_manager.configuration import (
     Configuration as TaskManagerConfiguration,
 )
+from task_manager.graph import TaskManagerGraph
+from tester.graph import TesterAgentGraph
 
 logger = logging.getLogger(__name__)
 
@@ -209,6 +208,7 @@ class OrchestratorGraph(AgentGraph):
         all_tools = [
             tools.create_requirements_tool(self._agent_config, requirements_graph),
             tools.create_architect_tool(self._agent_config, architect_graph),
+            tools.create_task_manager_tool(self._agent_config, task_manager_graph),
             tools.create_coder_new_pr_tool(self._agent_config, coder_new_pr_graph),
             tools.create_coder_change_request_tool(
                 self._agent_config, coder_change_request_graph
