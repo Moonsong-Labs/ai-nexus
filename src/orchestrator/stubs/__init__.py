@@ -9,16 +9,18 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.runnables import RunnableConfig
-from langgraph.graph import START, StateGraph
+from langgraph.graph import END, START, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
 from architect.state import State as ArchitectState
+from code_reviewer.state import State as CodeReviewerState
 from coder.state import State as CoderState
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from orchestrator.state import State
 from requirement_gatherer.state import State as RequirementsState
+from tester.state import State as TesterState
 
 T = TypeVar("T")
 
@@ -46,6 +48,7 @@ class StubGraph(AgentGraph, Generic[T]):
         builder = StateGraph(self._state_type)
         builder.add_node("run", self._run_fn)
         builder.add_edge(START, "run")
+        builder.add_edge("run", END)
         return builder
 
 
@@ -107,7 +110,7 @@ model_tester_messages = MessageWheel(
         """Everything looks good.""",
     ]
 )
-model_reviewer_messages = MessageWheel(
+model_code_reviewer_messages = MessageWheel(
     [
         """I found issues with code. Here are the details:
     Add a new line in the end.
@@ -125,64 +128,13 @@ class RequirementsGathererStub(StubGraph[RequirementsState]):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        async def run(state: RequirementsState, config: RunnableConfig | None = None):
-            return {
-                "messages": state.messages,
-                "summary": model_requirements_messages.next(),
-            }
-
         super().__init__(
             name="Requirements Gatherer Stub",
             state_type=RequirementsState,
-            run_fn=run,
-            agent_config=agent_config,
-            checkpointer=checkpointer,
-            store=store,
-        )
-
-
-class CoderNewPRStub(StubGraph[CoderState]):
-    def __init__(
-        self,
-        *,
-        agent_config: Optional[AgentConfiguration] = None,
-        checkpointer: Optional[Checkpointer] = None,
-        store: Optional[BaseStore] = None,
-    ):
-        async def run(state: CoderState, config: RunnableConfig | None = None):
-            return {
-                "messages": [AIMessage(content=model_coder_new_pr_messages.next())],
-            }
-
-        super().__init__(
-            name="Coder New PR Stub",
-            state_type=CoderState,
-            run_fn=run,
-            agent_config=agent_config,
-            checkpointer=checkpointer,
-            store=store,
-        )
-
-
-class CoderChangeRequestStub(StubGraph[CoderState]):
-    def __init__(
-        self,
-        *,
-        agent_config: Optional[AgentConfiguration] = None,
-        checkpointer: Optional[Checkpointer] = None,
-        store: Optional[BaseStore] = None,
-    ):
-        async def run(state: CoderState, config: RunnableConfig | None = None):
-            return {
-                "messages": [
-                    AIMessage(content=model_coder_change_request_messages.next())
-                ],
-            }
-
-        super().__init__(
-            name="Coder Change Request Stub",
-            state_type=CoderState,
-            run_fn=run,
+            run_fn=lambda state, config: {
+                "messages": state.messages,
+                "summary": model_requirements_messages.next(),
+            },
             agent_config=agent_config,
             checkpointer=checkpointer,
             store=store,
@@ -197,48 +149,34 @@ class ArchitectStub(StubGraph[ArchitectState]):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        async def run(state: RequirementsState, config: RunnableConfig | None = None):
-            return {
-                "messages": [AIMessage(content=model_architect_messages.next())],
+        print("CRFEATING ARCHITECT")
+
+        def run_fn(state, config):
+            print(f"run stub fn {model_architect_messages.peek()}")
+            res = {
+                "messages": state.messages,
+                "summary": model_architect_messages.next(),
             }
+
+            print(res)
+
+            return res
 
         super().__init__(
             name="Architect Stub",
-            state_type=RequirementsState,
-            run_fn=run,
+            state_type=ArchitectState,
+            # run_fn=lambda state, config: {
+            #     "messages": state.messages,
+            #     "summary": model_architect_messages.next(),
+            # },
+            run_fn=run_fn,
             agent_config=agent_config,
             checkpointer=checkpointer,
             store=store,
         )
 
 
-def coder_new_pr(state: State, config: RunnableConfig, store: BaseStore):
-    """Call code."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content=model_coder_new_pr_messages.next(),
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
-
-
-def coder_change_request(state: State, config: RunnableConfig, store: BaseStore):
-    """Call code."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content=model_coder_change_request_messages.next(),
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
-
-
-class ReviewerStub(AgentGraph):
+class CoderNewPRStub(StubGraph[CoderState]):
     def __init__(
         self,
         *,
@@ -246,20 +184,133 @@ class ReviewerStub(AgentGraph):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        super().__init__("Reviewer Stub", agent_config, checkpointer, store)
-
-        # stub the compiled_graph
-        def runnable(state: State, config: RunnableConfig, store: BaseStore):
-            return {
+        print("CREATE STUB CODER NEW PR")
+        super().__init__(
+            name="Coder New PR Stub",
+            state_type=CoderState,
+            run_fn=lambda state, config: {
                 "messages": state.messages,
-                "summary": model_reviewer_messages.next(),
-            }
+                "summary": model_coder_new_pr_messages.next(),
+            },
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
 
-        self._compiled_graph = runnable
 
-    def create_builder(self) -> StateGraph:
-        """Return None to indicate that no builder is provided for this stub implementation."""
-        return None
+class CoderChangeRequestStub(StubGraph[CoderState]):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__(
+            name="Coder Change Request Stub",
+            state_type=CoderState,
+            run_fn=lambda state, config: {
+                "messages": state.messages,
+                "summary": model_coder_change_request_messages.next(),
+            },
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
+
+
+# def coder_new_pr(state: State, config: RunnableConfig, store: BaseStore):
+#     """Call code."""
+#     tool_call_id = state.messages[-1].tool_calls[0]["id"]
+#     return {
+#         "messages": [
+#             ToolMessage(
+#                 content=model_coder_new_pr_messages.next(),
+#                 tool_call_id=tool_call_id,
+#             )
+#         ]
+#     }
+
+
+# def coder_change_request(state: State, config: RunnableConfig, store: BaseStore):
+#     """Call code."""
+#     tool_call_id = state.messages[-1].tool_calls[0]["id"]
+#     return {
+#         "messages": [
+#             ToolMessage(
+#                 content=model_coder_change_request_messages.next(),
+#                 tool_call_id=tool_call_id,
+#             )
+#         ]
+#     }
+
+
+class TesterStub(StubGraph[TesterState]):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__(
+            name="Tester Stub",
+            state_type=TesterState,
+            run_fn=lambda state, config: {
+                "messages": state.messages,
+                "summary": model_tester_messages.next(),
+            },
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
+
+
+class CodeReviewerStub(StubGraph[CodeReviewerState]):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__(
+            name="CodeReviewer Stub",
+            state_type=CodeReviewerState,
+            run_fn=lambda state, config: {
+                "messages": state.messages,
+                "summary": model_code_reviewer_messages.next(),
+            },
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
+
+
+# def tester(state: State, config: RunnableConfig, store: BaseStore):
+#     """Call test."""
+#     tool_call_id = state.messages[-1].tool_calls[0]["id"]
+#     return {
+#         "messages": [
+#             ToolMessage(
+#                 content=model_tester_messages.next(),
+#                 tool_call_id=tool_call_id,
+#             )
+#         ]
+#     }
+
+
+# def reviewer(state: State, config: RunnableConfig, store: BaseStore):
+#     """Call review."""
+#     tool_call_id = state.messages[-1].tool_calls[0]["id"]
+#     return {
+#         "messages": [
+#             ToolMessage(
+#                 content=model_reviewer_messages.next(),
+#                 tool_call_id=tool_call_id,
+#             )
+#         ]
+#     }
 
 
 def memorizer(state: State, config: RunnableConfig, store: BaseStore):

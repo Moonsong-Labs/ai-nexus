@@ -42,15 +42,16 @@ from requirement_gatherer.configuration import (
 )
 from requirement_gatherer.graph import RequirementsGraph
 from requirement_gatherer.state import State as RequirementsState
+from tester.graph import TesterAgentGraph
 
 logger = logging.getLogger(__name__)
 
 
-def _create_orchestrate(
+def _create_orchestrator(
     agent_config: Configuration,
     llm: Runnable[LanguageModelInput, BaseMessage],
 ) -> Coroutine[Any, Any, dict]:
-    async def orchestrate(
+    async def orchestrator(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:
         """Extract the user's state from the conversation and update the memory."""
@@ -61,9 +62,11 @@ def _create_orchestrate(
             config,
         )
 
+        print(f"ORCH \n{state.messages}\n{msg}")
+
         return {"messages": [msg]}
 
-    return orchestrate
+    return orchestrator
 
 
 # def _create_delegate_to(
@@ -195,9 +198,9 @@ def _create_orchestrate(
 #     return requirements
 
 
-def _create_orchestrate(
+def _create_orchestrate_edge(
     agent_config: Configuration,
-    call_model: Coroutine[Any, Any, dict],
+    orchestrator: Coroutine[Any, Any, dict],
     tool_node: ToolNode,
 ):
     """Create an asynchronous function to determine the next step in the requirements gathering graph.
@@ -206,151 +209,153 @@ def _create_orchestrate(
     """
 
     async def orchestrate(state: State, config: RunnableConfig):
+        print(f"\nCOND {state.messages[-1].model_dump_json(indent=2)}\n")
         if state.messages[-1].tool_calls:
             return tool_node.name
         elif state.summary:
             return END
         else:
-            return call_model.__name__
-
-    return orchestrate
-
-def _create_architect_node(
-    agent_config: Configuration,
-    architect_graph: ArchitectGraph,
-    recursion_limit: int = 100,
-):
-    """Create an asynchronous architect node for the orchestrator graph.
-
-    The returned function processes a tool call from the conversation state, invokes the architect graph with the tool call content as input, and returns a tool message containing the summarized architect linked to the original tool call ID.
-
-    Args:
-        architect_graph: The architect graph to invoke for architecting.
-        recursion_limit: Maximum recursion depth allowed for the requirements graph (default is 100).
-
-    Returns:
-        An asynchronous function that architects the project and returns a dictionary with a tool message containing the summary.
-    """
-
-    async def architect(state: State, config: RunnableConfig, store: BaseStore):
-        tool_call = state.messages[-1].tool_calls[0]
-        config_with_recursion = RunnableConfig(**config)
-        config_with_recursion["recursion_limit"] = recursion_limit
-
-        result = await architect_graph.compiled_graph.ainvoke(
-            ArchitectState(
-                messages=[HumanMessage(content=tool_call["args"]["content"])]
-            ),
-            config_with_recursion,
-        )
-
-        return {
-            "messages": [
-                ToolMessage(
-                    content=result["messages"][-1].content,
-                    tool_call_id=tool_call["id"],
-                )
-            ]
-        }
-
-    return architect
-
-
-def _create_requirements_node(
-    agent_config: Configuration,
-    call_model: Coroutine[Any, Any, dict],
-    tool_node: ToolNode,
-):
-    """Create an asynchronous function to determine the next step in the requirements gathering graph.
-
-    The returned function inspects the conversation state to decide whether to route to a tool node, end the process, or continue the conversation with the model.
-    """
-
-    async def orchestrate(state: State, config: RunnableConfig):
-        if state.messages[-1].tool_calls:
-            return tool_node.name
-        elif state.summary:
-            return END
-        else:
-            return call_model.__name__
+            return orchestrator.__name__
 
     return orchestrate
 
 
-def _create_coder_new_pr_node(
-    coder_new_pr_graph: CoderNewPRGraph, recursion_limit: int = 100
-):
-    """Create an asynchronous coder_new_pr node for the orchestrator graph.
+# def _create_architect_node(
+#     agent_config: Configuration,
+#     architect_graph: ArchitectGraph,
+#     recursion_limit: int = 100,
+# ):
+#     """Create an asynchronous architect node for the orchestrator graph.
 
-    The returned function processes a tool call from the conversation state, invokes the coder_new_pr graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
+#     The returned function processes a tool call from the conversation state, invokes the architect graph with the tool call content as input, and returns a tool message containing the summarized architect linked to the original tool call ID.
 
-    Args:
-        coder_new_pr_graph: The coder_new_pr graph to invoke for coder_new_pr gathering.
-        recursion_limit: Maximum recursion depth allowed for the coder_new_pr graph (default is 100).
+#     Args:
+#         architect_graph: The architect graph to invoke for architecting.
+#         recursion_limit: Maximum recursion depth allowed for the requirements graph (default is 100).
 
-    Returns:
-        An asynchronous function that processes the coding of new functionality and returns a dictionary with a tool message containing the changes.
-    """
+#     Returns:
+#         An asynchronous function that architects the project and returns a dictionary with a tool message containing the summary.
+#     """
 
-    async def coder_new_pr(state: State, config: RunnableConfig, store: BaseStore):
-        tool_call = state.messages[-1].tool_calls[0]
-        config_with_recursion = RunnableConfig(**config)
-        config_with_recursion["recursion_limit"] = recursion_limit
+#     async def architect(state: State, config: RunnableConfig, store: BaseStore):
+#         tool_call = state.messages[-1].tool_calls[0]
+#         config_with_recursion = RunnableConfig(**config)
+#         config_with_recursion["recursion_limit"] = recursion_limit
 
-        result = await coder_new_pr_graph.compiled_graph.ainvoke(
-            CoderState(messages=[HumanMessage(content=tool_call["args"]["content"])]),
-            config_with_recursion,
-        )
+#         result = await architect_graph.compiled_graph.ainvoke(
+#             ArchitectState(
+#                 messages=[HumanMessage(content=tool_call["args"]["content"])]
+#             ),
+#             config_with_recursion,
+#         )
 
-        return {
-            "messages": [
-                ToolMessage(
-                    content=result["messages"][-1].content,
-                    tool_call_id=tool_call["id"],
-                )
-            ]
-        }
+#         return {
+#             "messages": [
+#                 ToolMessage(
+#                     content=result["messages"][-1].content,
+#                     tool_call_id=tool_call["id"],
+#                 )
+#             ]
+#         }
 
-    return coder_new_pr
+#     return architect
 
 
-def _create_coder_change_request_node(
-    coder_change_request_graph: CoderChangeRequestGraph, recursion_limit: int = 100
-):
-    """Create an asynchronous coder_change_request node for the orchestrator graph.
+# def _create_requirements_node(
+#     agent_config: Configuration,
+#     call_model: Coroutine[Any, Any, dict],
+#     tool_node: ToolNode,
+# ):
+#     """Create an asynchronous function to determine the next step in the requirements gathering graph.
 
-    The returned function processes a tool call from the conversation state, invokes the coder_change_request graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
+#     The returned function inspects the conversation state to decide whether to route to a tool node, end the process, or continue the conversation with the model.
+#     """
 
-    Args:
-        coder_change_request_graph: The coder_change_request graph to invoke for coder_change_request gathering.
-        recursion_limit: Maximum recursion depth allowed for the coder_change_request graph (default is 100).
+#     async def orchestrate(state: State, config: RunnableConfig):
+#         if state.messages[-1].tool_calls:
+#             return tool_node.name
+#         elif state.summary:
+#             return END
+#         else:
+#             return call_model.__name__
 
-    Returns:
-        An asynchronous function that processes the coding of changes and returns a dictionary with a tool message containing the changes.
-    """
+#     return orchestrate
 
-    async def coder_change_request(
-        state: State, config: RunnableConfig, store: BaseStore
-    ):
-        tool_call = state.messages[-1].tool_calls[0]
-        config_with_recursion = RunnableConfig(**config)
-        config_with_recursion["recursion_limit"] = recursion_limit
 
-        result = await coder_change_request_graph.compiled_graph.ainvoke(
-            CoderState(messages=[HumanMessage(content=tool_call["args"]["content"])]),
-            config_with_recursion,
-        )
+# def _create_coder_new_pr_node(
+#     coder_new_pr_graph: CoderNewPRGraph, recursion_limit: int = 100
+# ):
+#     """Create an asynchronous coder_new_pr node for the orchestrator graph.
 
-        return {
-            "messages": [
-                ToolMessage(
-                    content=result["messages"][-1].content,
-                    tool_call_id=tool_call["id"],
-                )
-            ]
-        }
+#     The returned function processes a tool call from the conversation state, invokes the coder_new_pr graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
 
-    return coder_change_request
+#     Args:
+#         coder_new_pr_graph: The coder_new_pr graph to invoke for coder_new_pr gathering.
+#         recursion_limit: Maximum recursion depth allowed for the coder_new_pr graph (default is 100).
+
+#     Returns:
+#         An asynchronous function that processes the coding of new functionality and returns a dictionary with a tool message containing the changes.
+#     """
+
+#     async def coder_new_pr(state: State, config: RunnableConfig, store: BaseStore):
+#         tool_call = state.messages[-1].tool_calls[0]
+#         config_with_recursion = RunnableConfig(**config)
+#         config_with_recursion["recursion_limit"] = recursion_limit
+
+#         result = await coder_new_pr_graph.compiled_graph.ainvoke(
+#             CoderState(messages=[HumanMessage(content=tool_call["args"]["content"])]),
+#             config_with_recursion,
+#         )
+
+#         return {
+#             "messages": [
+#                 ToolMessage(
+#                     content=result["messages"][-1].content,
+#                     tool_call_id=tool_call["id"],
+#                 )
+#             ]
+#         }
+
+#     return coder_new_pr
+
+
+# def _create_coder_change_request_node(
+#     coder_change_request_graph: CoderChangeRequestGraph, recursion_limit: int = 100
+# ):
+#     """Create an asynchronous coder_change_request node for the orchestrator graph.
+
+#     The returned function processes a tool call from the conversation state, invokes the coder_change_request graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
+
+#     Args:
+#         coder_change_request_graph: The coder_change_request graph to invoke for coder_change_request gathering.
+#         recursion_limit: Maximum recursion depth allowed for the coder_change_request graph (default is 100).
+
+#     Returns:
+#         An asynchronous function that processes the coding of changes and returns a dictionary with a tool message containing the changes.
+#     """
+
+#     async def coder_change_request(
+#         state: State, config: RunnableConfig, store: BaseStore
+#     ):
+#         tool_call = state.messages[-1].tool_calls[0]
+#         config_with_recursion = RunnableConfig(**config)
+#         config_with_recursion["recursion_limit"] = recursion_limit
+
+#         result = await coder_change_request_graph.compiled_graph.ainvoke(
+#             CoderState(messages=[HumanMessage(content=tool_call["args"]["content"])]),
+#             config_with_recursion,
+#         )
+
+#         return {
+#             "messages": [
+#                 ToolMessage(
+#                     content=result["messages"][-1].content,
+#                     tool_call_id=tool_call["id"],
+#                 )
+#             ]
+#         }
+
+#     return coder_change_request
 
 
 class OrchestratorGraph(AgentGraph):
@@ -384,11 +389,6 @@ class OrchestratorGraph(AgentGraph):
 
         Initializes all nodes and edges representing the orchestrator, requirements gathering, and role-specific stubs, wiring them into a StateGraph that defines the control flow for the orchestration process.
         """
-        # Initialize the language model to be used for memory extraction
-        llm = init_chat_model(self._agent_config.model).bind_tools(
-            [tools.Delegate, tools.store_memory]
-        )
-        call_orchestrator = _create_orchestrate(self._agent_config, llm)
         requirements_graph = (
             stubs.RequirementsGathererStub(
                 agent_config=self._agent_config,
@@ -402,26 +402,20 @@ class OrchestratorGraph(AgentGraph):
                 store=self._store,
             )
         )
-        ## NEW 
-        # requirements = tools.create_requirements_tool(self._agent_config, requirements_graph)
-
-        all_tools = [
-            tools.create_requirements_tool(self._agent_config, requirements_graph),
-            stubs.architect,
-            stubs.coder,
-            stubs.tester,
-            stubs.reviewer,
-            stubs.memorizer,
-        ]
-        tool_node = ToolNode(all_tools, name="tools")
-
-        # delegate_to = _create_delegate_to(self._agent_config, orchestrate)
-
-        ## NEW END
-        
-        ## OLD
-        github_source = maybe_mock_github()
-        github_tools = get_github_tools(github_source)
+        architect_graph = (
+            stubs.ArchitectStub(
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+            if self._agent_config.architect_agent.use_stub
+            else ArchitectGraph(
+                agent_config=self._agent_config.architect_agent.config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+        )
+        github_tools = get_github_tools(maybe_mock_github())
         coder_new_pr_graph = (
             stubs.CoderNewPRStub(
                 agent_config=self._agent_config,
@@ -450,25 +444,113 @@ class OrchestratorGraph(AgentGraph):
                 github_tools=github_tools,
             )
         )
-        architect_graph = (
-            stubs.ArchitectStub(
+        tester_graph = (
+            stubs.TesterStub(
                 agent_config=self._agent_config,
                 checkpointer=self._checkpointer,
                 store=self._store,
             )
-            if self._agent_config.architect_agent.use_stub
-            else ArchitectGraph(
-                agent_config=self._agent_config.architect_agent.config,
+            if self._agent_config.tester_agent.use_stub
+            else TesterAgentGraph(
+                agent_config=self._agent_config.tester_agent.config,
                 checkpointer=self._checkpointer,
                 store=self._store,
             )
         )
-        requirements = _create_requirements_node(self._agent_config, requirements_graph)
-        architect = _create_architect_node(self._agent_config, architect_graph)
-        coder_new_pr = _create_coder_new_pr_node(coder_new_pr_graph)
-        coder_change_request = _create_coder_change_request_node(
-            coder_change_request_graph
+        code_reviewer_graph = stubs.CodeReviewerStub(
+            agent_config=self._agent_config,
+            checkpointer=self._checkpointer,
+            store=self._store,
         )
+        # code_reviewer_graph = (
+        #     stubs.CodeReviewerStub(
+        #         agent_config=self._agent_config,
+        #         checkpointer=self._checkpointer,
+        #         store=self._store,
+        #     )
+        #     if self._agent_config.code_reviewer_agent.use_stub
+        #     else CodeReviewerAgentGraph(
+        #         agent_config=self._agent_config.code_reviewer_agent.config,
+        #         checkpointer=self._checkpointer,
+        #         store=self._store,
+        #     )
+        # )
+        ## NEW
+        # requirements = tools.create_requirements_tool(self._agent_config, requirements_graph)
+
+        all_tools = [
+            tools.create_requirements_tool(self._agent_config, requirements_graph),
+            tools.create_architect_tool(self._agent_config, architect_graph),
+            tools.create_coder_new_pr_tool(self._agent_config, coder_new_pr_graph),
+            tools.create_coder_change_request_tool(
+                self._agent_config, coder_change_request_graph
+            ),
+            tools.create_tester_tool(self._agent_config, tester_graph),
+            tools.create_code_reviewer_tool(self._agent_config, code_reviewer_graph),
+            # stubs.coder,
+            # stubs.tester,
+            # stubs.reviewer,
+            tools.store_memory,
+            tools.summarize,
+        ]
+        tool_node = ToolNode(all_tools, name="tools")
+        # Initialize the language model to be used for memory extraction
+        llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
+        orchestrator = _create_orchestrator(self._agent_config, llm)
+        # delegate_to = _create_delegate_to(self._agent_config, orchestrate)
+
+        ## NEW END
+
+        ## OLD
+        # github_source = maybe_mock_github()
+        # github_tools = get_github_tools(github_source)
+        # coder_new_pr_graph = (
+        #     stubs.CoderNewPRStub(
+        #         agent_config=self._agent_config,
+        #         checkpointer=self._checkpointer,
+        #         store=self._store,
+        #     )
+        #     if self._agent_config.coder_new_pr_agent.use_stub
+        #     else CoderNewPRGraph(
+        #         agent_config=self._agent_config.coder_new_pr_agent.config,
+        #         checkpointer=self._checkpointer,
+        #         store=self._store,
+        #         github_tools=github_tools,
+        #     )
+        # )
+        # coder_change_request_graph = (
+        #     stubs.CoderChangeRequestStub(
+        #         agent_config=self._agent_config,
+        #         checkpointer=self._checkpointer,
+        #         store=self._store,
+        #     )
+        #     if self._agent_config.coder_change_request_agent.use_stub
+        #     else CoderChangeRequestGraph(
+        #         agent_config=self._agent_config.coder_change_request_agent.config,
+        #         checkpointer=self._checkpointer,
+        #         store=self._store,
+        #         github_tools=github_tools,
+        #     )
+        # )
+        # architect_graph = (
+        #     stubs.ArchitectStub(
+        #         agent_config=self._agent_config,
+        #         checkpointer=self._checkpointer,
+        #         store=self._store,
+        #     )
+        #     if self._agent_config.architect_agent.use_stub
+        #     else ArchitectGraph(
+        #         agent_config=self._agent_config.architect_agent.config,
+        #         checkpointer=self._checkpointer,
+        #         store=self._store,
+        #     )
+        # )
+        # requirements = _create_requirements_node(self._agent_config, requirements_graph)
+        # architect = _create_architect_node(self._agent_config, architect_graph)
+        # coder_new_pr = _create_coder_new_pr_node(coder_new_pr_graph)
+        # coder_change_request = _create_coder_change_request_node(
+        #     coder_change_request_graph
+        # )
         # delegate_to = _create_delegate_to(self._agent_config, orchestrate)
 
         ## OLD END
@@ -477,7 +559,7 @@ class OrchestratorGraph(AgentGraph):
         builder = StateGraph(State, config_schema=Configuration)
 
         # Define the flow of the memory extraction process
-        builder.add_node(call_orchestrator)
+        builder.add_node(orchestrator)
         builder.add_node(tool_node.name, tool_node)
         # builder.add_node(requirements)
         # builder.add_node(stubs.architect)
@@ -494,11 +576,15 @@ class OrchestratorGraph(AgentGraph):
         # builder.add_node(stubs.reviewer)
         # builder.add_node(stubs.memorizer)
 
-        builder.add_edge(START, call_orchestrator.__name__)
+        orchestrate_condition = _create_orchestrate_edge(
+            self._agent_config, orchestrator, tool_node
+        )
+        builder.add_edge(START, orchestrator.__name__)
+        builder.add_edge(tool_node.name, orchestrator.__name__)
         builder.add_conditional_edges(
-            call_orchestrator.__name__,
-            tool_condition,
-            [tool_node.name, call_orchestrator.__name__, END],
+            orchestrator.__name__,
+            orchestrate_condition,
+            [tool_node.name, orchestrator.__name__, END],
         )
         # builder.add_conditional_edges(
         #     orchestrate.__name__,
@@ -528,7 +614,7 @@ graph = OrchestratorGraph(
             use_stub=False, config=RequirementsConfiguration(use_human_ai=False)
         ),
         architect_agent=ArchitectAgentConfig(
-            use_stub=False, config=ArchitectConfiguration(use_human_ai=False)
+            use_stub=False, config=ArchitectConfiguration()
         ),
         coder_new_pr_agent=SubAgentConfig(use_stub=False, config=AgentConfiguration()),
         coder_change_request_agent=SubAgentConfig(
