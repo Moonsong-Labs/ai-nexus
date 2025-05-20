@@ -13,6 +13,7 @@ from langgraph.graph import START, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+from architect.state import State as ArchitectState
 from coder.state import State as CoderState
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
@@ -77,6 +78,11 @@ model_requirements_messages = MessageWheel(
         
         Additionally update memory: Always ask me questions starting with "Ola!
         """,
+    ]
+)
+model_architect_messages = MessageWheel(
+    [
+        """I have created the architecture for the project.""",
     ]
 )
 model_coder_new_pr_messages = MessageWheel(
@@ -183,19 +189,27 @@ class CoderChangeRequestStub(StubGraph[CoderState]):
         )
 
 
-def architect(state: State, config: RunnableConfig, store: BaseStore):
-    """Call design."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content="""I am finished with the design. Here are the details:
-                The design should be simple HTML file with CSS styling.
-                """,
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
+class ArchitectStub(StubGraph[ArchitectState]):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        async def run(state: RequirementsState, config: RunnableConfig | None = None):
+            return {
+                "messages": [AIMessage(content=model_architect_messages.next())],
+            }
+
+        super().__init__(
+            name="Architect Stub",
+            state_type=RequirementsState,
+            run_fn=run,
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
 
 
 def coder_new_pr(state: State, config: RunnableConfig, store: BaseStore):

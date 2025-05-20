@@ -17,6 +17,11 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+from architect.configuration import (
+    Configuration as ArchitectConfiguration,
+)
+from architect.graph import ArchitectGraph
+from architect.state import State as ArchitectState
 from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
 from coder.state import State as CoderState
 from common.components.github_mocks import maybe_mock_github
@@ -25,6 +30,7 @@ from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from orchestrator import stubs, tools
 from orchestrator.configuration import (
+    ArchitectAgentConfig,
     Configuration,
     RequirementsAgentConfig,
     SubAgentConfig,
@@ -89,7 +95,7 @@ def _create_delegate_to(
                 elif tool_call["args"]["to"] == "requirements":
                     return "requirements"
                 elif tool_call["args"]["to"] == "architect":
-                    return stubs.architect.__name__
+                    return "architect"
                 elif tool_call["args"]["to"] == "coder_new_pr":
                     return "coder_new_pr"
                 elif tool_call["args"]["to"] == "coder_change_request":
@@ -104,6 +110,47 @@ def _create_delegate_to(
                     raise ValueError
 
     return delegate_to
+
+
+def _create_architect_node(
+    agent_config: Configuration,
+    architect_graph: ArchitectGraph,
+    recursion_limit: int = 100,
+):
+    """Create an asynchronous architect node for the orchestrator graph.
+
+    The returned function processes a tool call from the conversation state, invokes the architect graph with the tool call content as input, and returns a tool message containing the summarized architect linked to the original tool call ID.
+
+    Args:
+        architect_graph: The architect graph to invoke for architecting.
+        recursion_limit: Maximum recursion depth allowed for the requirements graph (default is 100).
+
+    Returns:
+        An asynchronous function that architects the project and returns a dictionary with a tool message containing the summary.
+    """
+
+    async def architect(state: State, config: RunnableConfig, store: BaseStore):
+        tool_call = state.messages[-1].tool_calls[0]
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = recursion_limit
+
+        result = await architect_graph.compiled_graph.ainvoke(
+            ArchitectState(
+                messages=[HumanMessage(content=tool_call["args"]["content"])]
+            ),
+            config_with_recursion,
+        )
+
+        return {
+            "messages": [
+                ToolMessage(
+                    content=result["messages"][-1].content,
+                    tool_call_id=tool_call["id"],
+                )
+            ]
+        }
+
+    return architect
 
 
 def _create_requirements_node(
@@ -302,11 +349,25 @@ class OrchestratorGraph(AgentGraph):
                 github_tools=github_tools,
             )
         )
+        architect_graph = (
+            stubs.ArchitectStub(
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+            if self._agent_config.architect_agent.use_stub
+            else ArchitectGraph(
+                agent_config=self._agent_config.architect_agent.config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+        )
+        requirements = _create_requirements_node(self._agent_config, requirements_graph)
+        architect = _create_architect_node(self._agent_config, architect_graph)
         coder_new_pr = _create_coder_new_pr_node(coder_new_pr_graph)
         coder_change_request = _create_coder_change_request_node(
             coder_change_request_graph
         )
-        requirements = _create_requirements_node(self._agent_config, requirements_graph)
         delegate_to = _create_delegate_to(self._agent_config, orchestrate)
 
         # Create the graph + all nodes
@@ -315,7 +376,7 @@ class OrchestratorGraph(AgentGraph):
         # Define the flow of the memory extraction process
         builder.add_node(orchestrate)
         builder.add_node(requirements)
-        builder.add_node(stubs.architect)
+        builder.add_node(architect)
         builder.add_node(coder_new_pr)
         builder.add_node(coder_change_request)
         builder.add_node(stubs.tester)
@@ -328,7 +389,7 @@ class OrchestratorGraph(AgentGraph):
             delegate_to,
         )
         builder.add_edge(requirements.__name__, orchestrate.__name__)
-        builder.add_edge(stubs.architect.__name__, orchestrate.__name__)
+        builder.add_edge(architect.__name__, orchestrate.__name__)
         builder.add_edge(coder_new_pr.__name__, orchestrate.__name__)
         builder.add_edge(coder_change_request.__name__, orchestrate.__name__)
         builder.add_edge(stubs.tester.__name__, orchestrate.__name__)
@@ -343,6 +404,9 @@ graph = OrchestratorGraph(
     agent_config=Configuration(
         requirements_agent=RequirementsAgentConfig(
             use_stub=False, config=RequirementsConfiguration(use_human_ai=False)
+        ),
+        architect_agent=ArchitectAgentConfig(
+            use_stub=False, config=ArchitectConfiguration(use_human_ai=False)
         ),
         coder_new_pr_agent=SubAgentConfig(use_stub=False, config=AgentConfiguration()),
         coder_change_request_agent=SubAgentConfig(
