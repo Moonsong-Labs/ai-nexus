@@ -1,4 +1,4 @@
-.PHONY: all clean check deps sync run fmt lint spell_check spell_fix test test_unit test_integration test_watch help extended_tests
+.PHONY: all clean check deps sync run fmt lint spell_check spell_fix test test_unit test_integration test_watch help extended_tests ci-build-check
 
 # Default target executed when no arguments are given to make.
 all: help
@@ -14,6 +14,9 @@ deps: sync
 
 run: deps
 	uv run --env-file .env -- langgraph dev --allow-blocking --debug-port 2025
+
+ci-build-check: deps
+	@timeout 30s uv run --env-file .env -- langgraph dev --no-browser --no-reload; status=$$?; [ $$status -eq 0 ] || [ $$status -eq 124 ]
 
 # Define a variable for the test file path.
 UNIT_TEST_FILE ?= tests/unit_tests/
@@ -106,4 +109,5 @@ help:
 	@echo 'tests                        - run unit tests'
 	@echo 'test TEST_FILE=<test_file>   - run all tests in file'
 	@echo 'test_watch                   - run unit tests in watch mode'
+	@echo 'ci-build-check               - run build check for CI'
 

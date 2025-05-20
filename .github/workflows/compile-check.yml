@@ -1,0 +1,30 @@
+# This workflow will run a compile check for the current project
+
+name: Compile Check
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile-check:
+    name: Compile Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create .env file
+        run: echo "GOOGLE_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install dependencies
+        run: make deps
+      - name: Compile check
+        run: make ci-build-check
