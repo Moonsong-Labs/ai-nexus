@@ -89,8 +89,15 @@ AI Nexus employs a few architectural patterns for its agents:
 #### 5.1. Orchestrator (`src/orchestrator/`) (REVISED)
 *   **Architecture:** Uses the `AgentGraph` pattern. `OrchestratorGraph` in `src/orchestrator/graph.py` subclasses `common.graph.AgentGraph`.
 *   **Configuration (`src/orchestrator/configuration.py` - REVISED):**
-    *   `Configuration` class subclasses `common.configuration.AgentConfiguration`.
-    *   `ArchitectAgentConfig`'s nested `config: architect.configuration.Configuration` will reflect the removal of `use_human_ai` from the Architect's configuration.
+    *   The `OrchestratorConfiguration` class (defined in this file, subclasses `common.configuration.AgentConfiguration`) specifies the configuration for the Orchestrator agent itself and how it integrates with its sub-agents. It includes fields for:
+        *   `requirements_agent` (type `RequirementsAgentConfig`)
+        *   `architect_agent` (type `ArchitectAgentConfig`)
+        *   `coder_new_pr_agent` (type `SubAgentConfig`)
+        *   `coder_change_request_agent` (type `SubAgentConfig`)
+        *   `tester_agent` (type `SubAgentConfig`)
+        *   `code_reviewer_agent` (type `SubAgentConfig`)
+    *   These sub-agent configurations (e.g., `SubAgentConfig`, `ArchitectAgentConfig`, `RequirementsAgentConfig`, also defined/imported in this module) typically allow specifying whether to use a full agent or a stub, and can contain agent-specific nested configurations.
+    *   As an example of nested configuration, the `ArchitectAgentConfig` contains a nested `config: architect.configuration.Configuration` field, and this nested Architect configuration is what reflects changes like the removal of `use_human_ai` from the Architect's own configuration file.
 *   **State (`src/orchestrator/state.py` - REVISED):** Added `summary: str = ""` field to its `State` dataclass.
 *   **Graph (`src/orchestrator/graph.py` - REVISED):**
     *   The graph structure has been refactored to use a `ToolNode` for invoking all agent-specific tasks and other utilities.
@@ -255,11 +262,11 @@ ai-nexus/
 │   │   ├── graph.py
 │   │   └── utils/
 │   ├── demo/
-│   │   └── orchestrate.py        # MOVED & RENAMED from src/orchestrator/test.py; UPDATED to use create_runnable_config and compiled_graph.ainvoke, includes Architect agent config, stub usage, and message printing logic
+│   │   └── orchestrate.py        # MOVED & RENAMED from src/orchestrator/test.py; UPDATED to use create_runnable_config and compiled_graph.ainvoke. The demo now explicitly configures coder_new_pr_agent and coder_change_request_agent (using SubAgentConfig, set to use stubs), in addition to Architect agent config. Demonstrates stub usage and message printing logic.
 │   ├── grumpy/
 │   ├── orchestrator/
 │   │   ├── __init__.py
-│   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration, ArchitectAgentConfig reflects Architect's config changes (no use_human_ai)
+│   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration. Defines OrchestratorConfiguration including fields for sub-agent configs (e.g., ArchitectAgentConfig, SubAgentConfig for coders, tester, reviewer).
 │   │   ├── graph.py              # UPDATED: Major refactor to use ToolNode, direct agent tool calls (requirements, architect, coder_new_pr, coder_change_request, tester, code_reviewer), memorize, and summarize tools. Removed Delegate pattern.
 │   │   ├── memory/
 │   │   │   ├── absolute.md       # UPDATED: Reflects new tools and workflow
