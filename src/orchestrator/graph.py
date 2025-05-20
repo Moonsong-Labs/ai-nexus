@@ -88,46 +88,6 @@ def _create_orchestrate_condition(
 
     return orchestrate
 
-
-def _create_task_manager_node(
-    task_manager_graph: TaskManagerGraph, recursion_limit: int = 100
-):
-    """Create an asynchronous task_manager node for the orchestrator graph.
-
-    The returned function processes a tool call from the conversation state, invokes the task_manager graph with the tool call content as input, and returns a tool message containing the summarized requirements linked to the original tool call ID.
-
-    Args:
-        task_manager_graph: The task_manager graph to invoke for task_manager gathering.
-        recursion_limit: Maximum recursion depth allowed for the task_manager graph (default is 100).
-
-    Returns:
-        An asynchronous function that processes the task_manager and returns a dictionary with a tool message containing the changes.
-    """
-
-    async def task_manager(state: State, config: RunnableConfig, store: BaseStore):
-        tool_call = state.messages[-1].tool_calls[0]
-        config_with_recursion = RunnableConfig(**config)
-        config_with_recursion["recursion_limit"] = recursion_limit
-
-        result = await task_manager_graph.compiled_graph.ainvoke(
-            TaskManagerState(
-                messages=[HumanMessage(content=tool_call["args"]["content"])]
-            ),
-            config_with_recursion,
-        )
-
-        return {
-            "messages": [
-                ToolMessage(
-                    content=result["messages"][-1].content,
-                    tool_call_id=tool_call["id"],
-                )
-            ]
-        }
-
-    return task_manager
-
-
 class OrchestratorGraph(AgentGraph):
     """Orchestrator graph."""
 
@@ -181,6 +141,19 @@ class OrchestratorGraph(AgentGraph):
             if self._agent_config.architect_agent.use_stub
             else ArchitectGraph(
                 agent_config=self._agent_config.architect_agent.config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+        )
+        task_manager_graph = (
+            stubs.TaskManagerStub(
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
+            if self._agent_config.task_manager_agent.use_stub
+            else TaskManagerGraph(
+                agent_config=self._agent_config.task_manager_agent.config,
                 checkpointer=self._checkpointer,
                 store=self._store,
             )

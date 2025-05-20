@@ -65,6 +65,7 @@ def print_messages_any(messages: list[dict]):
                 if tool_call["name"] in [
                     "requirements",
                     "architect",
+                    "task_manager",
                     "coder_new_pr",
                     "coder_change_request",
                     "tester",
