@@ -15,7 +15,8 @@ async function runTest(): Promise<void> {
     "uv",
     [
       "run",
-      // "--env-file", ".env",
+      "--env-file",
+      ".env",
       "--",
       "langgraph",
       "dev",
