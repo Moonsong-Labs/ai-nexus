@@ -11,7 +11,6 @@ class Configuration(AgentConfiguration):
     """Main configuration class for the memory graph system."""
 
     architect_system_prompt: str = prompts.SYSTEM_PROMPT
-    use_human_ai: bool = False
 
 
 __all__ = ["Configuration"]

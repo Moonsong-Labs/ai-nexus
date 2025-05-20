@@ -13,6 +13,8 @@ class State:
 
     messages: Annotated[list[AnyMessage], add_messages]
     """The messages in the conversation."""
+    summary: str = ""
+    """The orchestrator summary."""
 
 
 __all__ = [
