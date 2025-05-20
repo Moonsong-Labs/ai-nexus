@@ -85,6 +85,7 @@ def coder_change_request_config():
             "get_pull_request",
             "list_pull_requests_files",
             "get_pull_request_head_branch",
+            "get_latest_pr_workflow_run",
         ],
     )
 

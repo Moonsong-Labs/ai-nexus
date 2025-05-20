@@ -2,7 +2,12 @@
 
 from typing import List, Type, Union
 
+import logging
+
+from os import listdir
 import requests
+import tempfile
+import zipfile
 from github.PullRequest import ReviewComment
 from langchain_community.agent_toolkits.github.toolkit import (
     BranchName,
@@ -34,6 +39,8 @@ from pydantic import BaseModel, Field
 
 from common.components.github_mocks import MockGithubApi
 
+logger = logging.getLogger(__name__)
+
 GITHUB_TOOLS = [
     "set_active_branch",
     "create_a_new_branch",
@@ -50,6 +57,7 @@ GITHUB_TOOLS = [
     # "overview_of_files_in_current_working_branch",
     # "search_code",
     # custom tools
+    "get_latest_pr_workflow_run",
     "get_pull_request_head_branch",
     "get_pull_request_diff",
     "create_pull_request_review",
@@ -197,6 +205,61 @@ class GetPullRequestHeadBranch(BaseTool):
         pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
         return pull_request.head.ref
 
+GET_LATEST_PR_WORKFLOW_RUN_PROMPT = "This tool will get the most recent workflow run for a given PR. **VERY IMPORTANT**: You must specify the PR number as an integer."
+class GetLatestPRWorkflowRun(BaseTool):
+    """Get the most recent workflow run for a PR."""
+
+    name: str = "get_latest_pr_workflow_run"
+    description: str = GET_LATEST_PR_WORKFLOW_RUN_PROMPT
+    args_schema: Type[BaseModel] = GetPR
+    github_api_wrapper: GitHubAPIWrapper
+
+    def _run(self, pr_number: int) -> str:
+        raise NotImplementedError("fixme")
+
+    async def _arun(self, pr_number: int) -> str:
+        repo = self.github_api_wrapper.github_repo_instance
+        pull_request = repo.get_pull(pr_number)
+        pr_commit = pull_request.head.sha
+        workflow_runs = repo.get_workflow_runs(head_sha=pr_commit, event="pull_request")
+        logger.info(f"num workflow runs: {workflow_runs.totalCount}")
+        if workflow_runs.totalCount > 0:
+            page = workflow_runs.get_page(0)
+            logs_url = page[0].logs_url
+
+            logger.info(f"auth token: {repo.requester.auth.token}")
+            auth_token = repo.requester.auth.token
+
+            response = requests.get(
+                logs_url, headers={
+                    "Accept": "application/vnd.github+text",
+                    "Authorization": "Bearer " + auth_token,
+                }
+            )
+            response.raise_for_status()
+
+            # generate a random temp dir for extracting the logs (which is a zip file)
+            dir = tempfile.TemporaryDirectory()
+            dirname = f"{dir.name}/workflow_run_logs.zip"
+
+            file = open(f"{dir.name}/workflow_run_logs.zip", "wb")
+            file.write(response.content)
+            file.close()
+
+            zip = zipfile.ZipFile(f"{dir.name}/workflow_run_logs.zip", "r")
+            zip.extractall(dir.name)
+
+            content = ""
+            log_files = [f for f in listdir(dir.name) if f.endswith(".txt")]
+            for file in log_files:
+                with open(f"{dir.name}/{file}", "r") as f:
+                    content += f.read()
+                    content += "\n\n"
+            
+            dir.cleanup()
+            return content
+
+        return None
 
 def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
     """Configure and return GitHub tools for the code agent."""
@@ -209,6 +272,7 @@ def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
     all_github_tools = [
         make_gemini_compatible(tool) for tool in github_toolkit.get_tools()
     ] + [
+        GetLatestPRWorkflowRun(github_api_wrapper=github_api_wrapper),
         CreatePullRequestReviewComment(github_api_wrapper=github_api_wrapper),
         GetPullRequestHeadBranch(github_api_wrapper=github_api_wrapper),
         GetPullRequestDiff(github_api_wrapper=github_api_wrapper),
