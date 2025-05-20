@@ -117,6 +117,7 @@ class ArchitectGraph(AgentGraph):
         all_tools = [
             tools.create_memorize_tool(self._agent_config),
             tools.create_recall_tool(self._agent_config),
+            tools.summarize,
             tools.read_file,
             tools.create_file,
             tools.list_files,
