@@ -190,7 +190,10 @@ AI Nexus employs a few architectural patterns for its agents:
             *   Uploads `tests/smoke/langgraph_dev/langgraph-test-result.png` as an artifact with a 10-day retention period if the test runs (regardless of pass/fail).
     *   `compile-check.yml`: Ensures the LangGraph graphs can be compiled.
     *   `update_project_memory.yml`: (As previously described)
-*   (Other workflow aspects like `Makefile`, `pyproject.toml` setup, `pytest.ini` as previously described, or minor updates not impacting core logic)
+*   **Dependency Management (`pyproject.toml` - UPDATED):**
+    *   Dependency version specifiers have been changed from `>=` (greater than or equal to) to `~=` (compatible release, e.g., `~=1.2.3` implies `>=1.2.3` and `<1.3.0`). This change restricts updates to patch versions for the specified minor versions of main and development dependencies, aiming to enhance build stability.
+    *   The `[tool.setuptools]` `packages` list within `pyproject.toml` has also been reformatted for improved readability.
+*   (Other workflow aspects like `Makefile`, `pytest.ini` setup as previously described, or minor updates not impacting core logic)
 
 
 ## 8. Overall Project Structure Summary
@@ -217,7 +220,7 @@ ai-nexus/
 ├── project_memories/
 │   ├── PRD.md
 │   └── global.md
-├── pyproject.toml
+├── pyproject.toml                # UPDATED: Dependency constraints changed to `~=`; package list reformatted.
 ├── pytest.ini                    # UPDATED: Minor formatting
 ├── scripts/
 │   └── generate_project_memory.sh
