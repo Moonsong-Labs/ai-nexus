@@ -26,6 +26,7 @@ from orchestrator.configuration import (
     ArchitectAgentConfig,
     RequirementsAgentConfig,
     RequirementsConfiguration,
+    SubAgentConfig,
 )
 from orchestrator.configuration import (
     Configuration as OrchestratorConfiguration,
@@ -106,6 +107,12 @@ if __name__ == "__main__":
                     config=RequirementsConfiguration(use_human_ai=use_human_ai),
                 ),
                 architect_agent=ArchitectAgentConfig(
+                    use_stub=True,
+                ),
+                coder_new_pr_agent=SubAgentConfig(
+                    use_stub=True,
+                ),
+                coder_change_request_agent=SubAgentConfig(
                     use_stub=True,
                 ),
             ),
