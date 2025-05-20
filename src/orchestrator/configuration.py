@@ -57,7 +57,7 @@ class Configuration(AgentConfiguration):
     )
     architect_agent: ArchitectAgentConfig = field(default_factory=ArchitectAgentConfig)
     task_manager_agent: TaskManagerAgentConfig = field(
-        default_factory=TaskManagerConfiguration
+        default_factory=TaskManagerAgentConfig
     )
     coder_new_pr_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
     coder_change_request_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
