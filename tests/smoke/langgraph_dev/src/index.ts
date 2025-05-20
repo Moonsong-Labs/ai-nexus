@@ -11,13 +11,11 @@ async function runTest(): Promise<void> {
   console.log("Starting langgraph CLI smoke test...");
 
   // Launch the langgraph CLI
-  // In a real scenario, this would start a server on port 8080
   langgraphProcessRef = spawn(
     "uv",
     [
       "run",
-      "--env-file",
-      ".env",
+      // "--env-file", ".env",
       "--",
       "langgraph",
       "dev",
