@@ -113,10 +113,13 @@ help:
 	@echo 'demo                         - run demo orchestration script'
 
 # Run the demo orchestration script
-demo:
-ifdef HUMAN_AI
-	uv run --env-file .env -- python ./src/demo/orchestrate.py exec ai
-else
-	uv run --env-file .env -- python ./src/demo/orchestrate.py exec human
-endif
+demo-%:
+	@if [ "$*" = "ai" ]; then \
+		uv run --env-file .env -- python ./src/demo/orchestrate.py exec ai; \
+	elif [ "$*" = "human" ]; then \
+		uv run --env-file .env -- python ./src/demo/orchestrate.py exec human; \
+	else \
+		echo "Unknown mode: $*, (need: human|ai)"; \
+	fi
+
 
