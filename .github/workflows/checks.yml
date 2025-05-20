@@ -114,6 +114,6 @@ jobs:
         if: always()
         with:
           name: langgraph-test-result.png
-          path: langgraph-test-result.png
+          path: ./tests/smoke/langgraph_dev/langgraph-test-result.png
           if-no-files-found: error
           retention-days: 10
