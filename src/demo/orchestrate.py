@@ -57,10 +57,8 @@ def print_messages_any(messages: list[dict]):
             f"{colored(msg_type, 'green'):<30}: {colored(msg_content, 'light_yellow')}"
         )
         if "tool_calls" in msg:
-            # print(msg["tool_calls"])
             for tool_call in msg["tool_calls"]:
                 tool = f"[{tool_call['name']}]"
-                # next_tool_name = None
                 next_tool_name = tool_call["name"]
                 if tool_call["name"] in [
                     "requirements",

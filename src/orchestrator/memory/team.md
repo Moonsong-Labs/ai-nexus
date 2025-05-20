@@ -30,12 +30,12 @@
 - MUST delegate to it when any code needs to be validated and tested.
 
 ## Code Reviewer
-- MUST use `reviewer` tool with the content set to `content`.
+- MUST use `code_reviewer` tool with the content set to `content`.
 - This agent uses the existing requirements, design, and code and reviews it for correctness and completeness.
 - MUST delegate to it when any code needs to be reviewed.
 
 
-You MUST use tools:  `requirements`, `architect`, `coder_new_pr`, `coder_change_request`, `tester`, and `reviewer`, with the `content` set. 
+You MUST use tools:  `requirements`, `architect`, `coder_new_pr`, `coder_change_request`, `tester`, and `code_reviewer`, with the `content` set. 
 You MUST use the `memorize` toll with `origin` and `content` set.
 
 You may NOT delegate the task to anyone else except from this list. You must always call the tools when delegating tasks and waiting.
