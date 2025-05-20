@@ -19,8 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
       - name: Create .env file
         run: echo "GOOGLE_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
       - name: Install uv
