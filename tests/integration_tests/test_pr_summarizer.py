@@ -1,5 +1,3 @@
-import subprocess
-import tempfile
 
 import pytest
 from datasets.pr_summarizer_dataset import PR_SUMMARIZER_DATASET_NAME as DATASET_NAME
@@ -8,6 +6,8 @@ from testing import get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
+from pr_summarizer.tools import invoke_project_memory_from_pr
+
 # from requirement_gatherer.graph import RequirementsGraph
 
 ## Setup basic logging for the test
@@ -15,44 +15,6 @@ logger = get_logger(__name__)
 
 # Create a LLMJudge
 llm_judge = LLMJudge()
-
-def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
-    """
-    Invoke the `update_project_memory_from_pr` script
-
-    Will take care of checking out the PR in a temporary directory and doing the necessary setup for the script to run
-
-    Will return a diff of the applied changes from the agent
-    """
-    #TODO: ensure GEMINI_API_KEY is set?
-    #TODO: ensure git, gh, jq, curl are available?
-    #TODO: ensure gh is authenticated?
-
-    # retrieve last commit of the PR to create checkout from
-    # choosing this instead of `main` to avoid out-of-sync PRs
-    result = subprocess.run(f"gh pr view {pr} -R {repo} --json commits | jq '.commits | last | .oid'", shell=True,  capture_output=True)
-
-    # drop trailing newline
-    rev = result.stdout.decode('utf-8').strip()
-
-    memory_changes = None
-
-    # script excepts to be run in a checkout
-    # so set it up for given PR at tmpdir to not pollute environment
-    with tempfile.TemporaryDirectory() as dir:
-        subprocess.run(f"git clone https://github.com/{repo} --depth=1 --revision={rev} .", shell=True, cwd=dir)
-
-        # mark scripts as runnable
-        subprocess.run("chmod +x ./scripts/update_project_memory_from_pr.sh ./scripts/fetch_pr_details.sh", shell=True, cwd=dir)
-
-        # invoke scripts/update_project_memory_from_pr.sh
-        subprocess.run(f"./scripts/update_project_memory_from_pr.sh -r {repo} -p {pr}", shell=True, cwd=dir)
-
-        # retrieve the updates that were made from the script
-        memory_changes = subprocess.run("git diff", shell=True, cwd=dir, capture_output=True).stdout.decode('utf-8').strip()
-
-    return memory_changes
-
 
 @pytest.mark.asyncio
 async def test_pr_summarizer(pytestconfig):
