@@ -24,7 +24,6 @@ from termcolor import colored
 
 from orchestrator.configuration import (
     ArchitectAgentConfig,
-    ArchitectConfiguration,
     RequirementsAgentConfig,
     RequirementsConfiguration,
 )
@@ -46,25 +45,30 @@ def print_messages_any(messages: list[dict]):
     next_tool_name = None
     for msg in messages:
         msg_type = msg["type"]
-        msg_content = msg["content"].rstrip()
+        msg_content = msg["content"].strip()
         if msg["type"] == "tool" and next_tool_name is not None:
-            msg_type = f"tool ({next_tool_name})"
+            msg_type = f"{next_tool_name}"
             next_tool_name = None
+        elif msg["type"] == "ai":
+            msg_type = "orchestrator"
+
         print(
             f"{colored(msg_type, 'green'):<30}: {colored(msg_content, 'light_yellow')}"
         )
         if "tool_calls" in msg:
-            # print(msg["tool_calls"])
             for tool_call in msg["tool_calls"]:
                 tool = f"[{tool_call['name']}]"
-                next_tool_name = None
-                if tool_call["name"] == "Delegate":
-                    next_tool_name = tool_call["args"]["to"]
+                next_tool_name = tool_call["name"]
+                if tool_call["name"] in [
+                    "requirements",
+                    "architect",
+                    "coder_new_pr",
+                    "coder_change_request",
+                    "tester",
+                    "code_reviewer",
+                ]:
                     print(
-                        f"{'    ' * 6}└── {colored(tool, 'cyan'):20}: {colored(tool_call['args']['to'], 'light_cyan')}"
-                    )
-                    print(
-                        f"{'    ' * 9}     {colored(tool_call['args']['content'], 'light_grey')}"
+                        f"{'    ' * 6}└── {colored(tool, 'cyan'):20} {colored(tool_call['args']['content'], 'light_grey')}"
                     )
                 else:
                     print(
@@ -98,12 +102,11 @@ if __name__ == "__main__":
         orchestrator = OrchestratorGraph(
             agent_config=OrchestratorConfiguration(
                 requirements_agent=RequirementsAgentConfig(
-                    use_stub=False,
+                    use_stub=True,
                     config=RequirementsConfiguration(use_human_ai=use_human_ai),
                 ),
                 architect_agent=ArchitectAgentConfig(
-                    use_stub=False,
-                    config=ArchitectConfiguration(use_human_ai=use_human_ai),
+                    use_stub=True,
                 ),
             ),
             checkpointer=InMemorySaver(),

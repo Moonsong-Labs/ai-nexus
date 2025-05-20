@@ -26,6 +26,9 @@ class State:
     workflow_stage: WorkflowStage = WorkflowStage.TESTING
     """The current stage of the workflow."""
 
+    summary: str = ""
+    """The testing summary."""
+
 
 __all__ = [
     "State",
