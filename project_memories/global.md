@@ -198,7 +198,9 @@ AI Nexus employs a few architectural patterns for its agents:
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`) (UPDATED)
 
 *   **`Makefile` (UPDATED):**
-    *   Added a `demo` target to run the demo orchestration script (`src/demo/orchestrate.py`).
+    *   Changed `demo` target to `demo-%` (e.g., `make demo-ai`, `make demo-human`) for explicit mode selection when running the demo orchestration script (`src/demo/orchestrate.py`).
+*   **`README.md` (UPDATED):**
+    *   Updated "Local Demo" instructions to use the new `make demo-ai` and `make demo-human` commands.
 *   **CI/CD (GitHub Actions - `.github/workflows/`):**
     *   `checks.yml` (UPDATED):
         *   Includes jobs for linting, type checking, unit tests, and integration tests.
@@ -214,6 +216,8 @@ AI Nexus employs a few architectural patterns for its agents:
 *   **Dependency Management (`pyproject.toml` - UPDATED):**
     *   Dependency version specifiers have been changed from `>=` (greater than or equal to) to `~=` (compatible release, e.g., `~=1.2.3` implies `>=1.2.3` and `<1.3.0`). This change restricts updates to patch versions for the specified minor versions of main and development dependencies, aiming to enhance build stability.
     *   The `[tool.setuptools]` `packages` list within `pyproject.toml` has also been reformatted for improved readability.
+*   **LangSmith Tracing (NEW aspect for demo):**
+    *   The demo script (`src/demo/orchestrate.py`) now integrates LangSmith tracing, providing a trace URL for each run. This includes user identification and run metadata.
 *   (Other workflow aspects like `pytest.ini` setup as previously described, or minor updates not impacting core logic)
 
 
@@ -233,8 +237,8 @@ ai-nexus/
 │       ├── checks.yml            # UPDATED: Added smoke-test job
 │       ├── compile-check.yml
 │       └── update_project_memory.yml
-├── Makefile                      # UPDATED: Added demo target
-├── README.md
+├── Makefile                      # UPDATED: Changed demo target to demo-% (e.g., demo-ai, demo-human).
+├── README.md                     # UPDATED: Local demo instructions updated.
 ├── agent_memories/
 │   └── grumpy/
 ├── langgraph.json
@@ -286,7 +290,7 @@ ai-nexus/
 │   │   ├── graph.py
 │   │   └── utils/
 │   ├── demo/
-│   │   └── orchestrate.py        # MOVED & RENAMED from src/orchestrator/test.py; UPDATED to use create_runnable_config and compiled_graph.ainvoke. The demo now explicitly configures coder_new_pr_agent and coder_change_request_agent (using SubAgentConfig, set to use stubs), in addition to Architect agent config. UPDATED: Imports TaskManagerAgentConfig, TaskManagerConfiguration; configures task_manager_agent; prints task_manager tool calls.
+│   │   └── orchestrate.py        # MOVED & RENAMED from src/orchestrator/test.py; UPDATED to use create_runnable_config and compiled_graph.ainvoke. UPDATED: Imports TaskManagerAgentConfig, TaskManagerConfiguration; configures task_manager_agent; prints task_manager tool calls. UPDATED: Integrates LangSmith tracing (prints trace URL, uses @traceable). The demo script's configuration for the Orchestrator now sets `use_stub=False` by default for the Requirements, Architect, Coder New PR, and Coder Change Request agents. The Task Manager agent remains configured with `use_stub=True` in the demo.
 │   ├── grumpy/
 │   ├── orchestrator/
 │   │   ├── __init__.py
