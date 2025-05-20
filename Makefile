@@ -48,7 +48,7 @@ test-task-manager:
 test_coder:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_coder.py
 
-test_pr_summarizer:
+test-pr-summarizer:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_pr_summarizer.py
 
 test_unit:
