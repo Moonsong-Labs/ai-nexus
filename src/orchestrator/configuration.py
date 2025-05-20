@@ -14,6 +14,7 @@ from task_manager.configuration import (
     Configuration as TaskManagerAgentConfig,
 )
 
+
 @dataclass(kw_only=True)
 class SubAgentConfig:
     """Sub-agent configuration for orchestrator."""
@@ -47,7 +48,9 @@ class Configuration(AgentConfiguration):
         default_factory=RequirementsAgentConfig
     )
     architect_agent: ArchitectAgentConfig = field(default_factory=ArchitectAgentConfig)
-    task_manager_agent: TaskManagerAgentConfig = field(default_factory=TaskManagerAgentConfig)
+    task_manager_agent: TaskManagerAgentConfig = field(
+        default_factory=TaskManagerAgentConfig
+    )
     coder_new_pr_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
     coder_change_request_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
     tester_agent: SubAgentConfig = field(default_factory=SubAgentConfig)

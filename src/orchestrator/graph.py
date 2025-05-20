@@ -274,6 +274,7 @@ def _create_coder_change_request_node(
 
     return coder_change_request
 
+
 def _create_task_manager_node(
     task_manager_graph: TaskManagerGraph, recursion_limit: int = 100
 ):
@@ -289,15 +290,15 @@ def _create_task_manager_node(
         An asynchronous function that processes the task_manager and returns a dictionary with a tool message containing the changes.
     """
 
-    async def task_manager(
-        state: State, config: RunnableConfig, store: BaseStore
-    ):
+    async def task_manager(state: State, config: RunnableConfig, store: BaseStore):
         tool_call = state.messages[-1].tool_calls[0]
         config_with_recursion = RunnableConfig(**config)
         config_with_recursion["recursion_limit"] = recursion_limit
 
         result = await task_manager_graph.compiled_graph.ainvoke(
-            TaskManagerState(messages=[HumanMessage(content=tool_call["args"]["content"])]),
+            TaskManagerState(
+                messages=[HumanMessage(content=tool_call["args"]["content"])]
+            ),
             config_with_recursion,
         )
 

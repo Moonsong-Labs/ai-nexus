@@ -217,6 +217,7 @@ class ArchitectStub(StubGraph[ArchitectState]):
             store=store,
         )
 
+
 class TaskManagerStub(StubGraph[TaskManagerState]):
     def __init__(
         self,
