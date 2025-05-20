@@ -142,8 +142,11 @@ You MUST NOT proceed to step 7 until ALL core files are complete based on the pr
 - `codingContext.md`
 - `testingContext.md`
 
-### 7. Finalize - ** IMPORTANT **
-If NO files are pending AND the final detailed architecture summary report has been generated ONLY then you MUST END.
+### 7. Summarize
+YOU MUST write a `summary` containing a brief information of the architecture and you MUST call `summarize`.
+
+### 8. Finalize - ** IMPORTANT **
+If **NO files are pending** AND the final detailed architecture summary report has been generated ONLY then you MUST END.
 
 
 {user_info}

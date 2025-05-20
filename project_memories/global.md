@@ -24,12 +24,12 @@
     *   Requirement Gatherer: Uses a custom `memorize` tool (created by `create_memorize_tool`) and `human_feedback` tool.
     *   Tester: Its custom `upsert_memory` tool has been removed.
     *   Code Reviewer: Can use GitHub tools like `get_pull_request_diff` and `create_pull_request_review`.
-    *   Architect (NEW): Uses `create_memorize_tool` and `create_recall_tool` for memory, and file system tools (`read_file`, `create_file`, `list_files`). Its `use_human_ai` configuration field has been removed. Its previous `upsert_memory` tool has been removed.
+    *   Architect (NEW, REVISED): Uses `create_memorize_tool` and `create_recall_tool` for memory, file system tools (`read_file`, `create_file`, `list_files`), and a new `summarize` tool (from `architect.tools.summarize`) for outputting its final architecture summary. Its `use_human_ai` configuration field has been removed. Its previous `upsert_memory` tool has been removed.
     *   Task Manager: Uses file system tools.
     *   General: Tools like `file_dump` can be used by agents.
 5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes.
     *   Orchestrator (REVISED): Its system prompt, dynamically loaded from markdown files in `src/orchestrator/memory/`, has been updated to reflect its new toolset (direct agent calls like `requirements`, `architect`, `coder_new_pr`, `coder_change_request`, `tester`, `code_reviewer`, plus `memorize` and `summarize`) and refined workflow logic (e.g., using the `summarize` tool when no tasks are pending). The static `ORCHESTRATOR_SYSTEM_PROMPT` string in `src/orchestrator/prompts.py` has been removed.
-    *   Other agents: System prompts are accessed by the agent's graph logic (e.g., in custom `call_model` implementations). The Tester agent features enhanced prompt management. The Code Reviewer agent has `PR_REVIEW_PROMPT`. The Architect agent has `architect_system_prompt`.
+    *   Other agents: System prompts are accessed by the agent's graph logic (e.g., in custom `call_model` implementations). The Tester agent features enhanced prompt management. The Code Reviewer agent has `PR_REVIEW_PROMPT`. The Architect agent has `architect_system_prompt` (REVISED to include a dedicated "Summarize" step using its new `summarize` tool before finalization).
 6.  **Configuration Management (REVISED):** Agents have configurable parameters, including LLM models, system prompts, and memory settings.
     *   `MemoryConfiguration` (`common.components.memory.MemoryConfiguration`).
     *   Common `AgentConfiguration` (`src/common/configuration.py`).
@@ -59,7 +59,7 @@ The original "Memory Bank" concept described a system of structured Markdown fil
     *   Requirement Gatherer: Uses `create_memorize_tool` and `human_feedback` tool.
     *   Tester: Custom `upsert_memory` tool removed.
     *   Code Reviewer: Uses GitHub tools.
-    *   Architect (NEW): Uses `create_memorize_tool`, `create_recall_tool`, and file system tools. `use_human_ai` removed from its config.
+    *   Architect (NEW, REVISED): Uses `create_memorize_tool`, `create_recall_tool`, file system tools, and a new `summarize` tool. `use_human_ai` removed from its config.
 *   **Static Memories:** JSON files in `.langgraph/static_memories/` can be loaded.
 *   **Shift:** Externalized memory via `langmem`, integrated via `AgentGraph` and configured through `AgentConfiguration` and `MemoryConfiguration`.
 
@@ -128,10 +128,16 @@ AI Nexus employs a few architectural patterns for its agents:
     *   `src/orchestrator/prompts.py`: The static `ORCHESTRATOR_SYSTEM_PROMPT` string definition has been removed. The `get_prompt()` function continues to load prompt content from markdown files.
     *   `src/orchestrator/memory/absolute.md`, `process.md`, `project_states.md`, `team.md`: These markdown files, which constitute the Orchestrator's system prompt, have been significantly updated to reflect the new toolset (direct agent invocation tools, `memorize`, `summarize`) and the refined operational workflow (e.g., explicit instruction to use the `summarize` tool when no tasks are pending). `project_states.md` now includes a Mermaid flowchart illustrating the project stages.
 
-#### 5.2. Architect (`src/architect/`) (REWORKED)
+#### 5.2. Architect (`src/architect/`) (REWORKED, REVISED)
 *   **Configuration (`src/architect/configuration.py` - REVISED):**
     *   The `use_human_ai: bool = False` field has been removed.
 *   **State (`src/architect/state.py` - REVISED):** Added `summary: str = ""` field.
+*   **Graph (`src/architect/graph.py` - REVISED):**
+    *   The Architect's graph now includes a `summarize` tool (from `architect.tools.summarize`) in its set of available tools.
+*   **Tools (`src/architect/tools.py` - REVISED):**
+    *   Added a new `summarize` tool. This tool takes a `summary` string, prints it, and returns a `Command` to update the agent's state with a `ToolMessage` containing the summary and updates the `summary` field in the state.
+*   **Prompts (`src/architect/prompts.py` - REVISED):**
+    *   The Architect's system prompt (`architect_system_prompt`) has been updated to include a new "Summarize" step. This step instructs the agent to write a `summary` of the architecture and call its `summarize` tool before proceeding to the "Finalize" step.
 
 #### 5.3. Coder (`src/coder/`)
 *   **State (`src/coder/state.py` - REVISED):**
@@ -190,7 +196,10 @@ AI Nexus employs a few architectural patterns for its agents:
             *   Uploads `tests/smoke/langgraph_dev/langgraph-test-result.png` as an artifact with a 10-day retention period if the test runs (regardless of pass/fail).
     *   `compile-check.yml`: Ensures the LangGraph graphs can be compiled.
     *   `update_project_memory.yml`: (As previously described)
-*   (Other workflow aspects like `Makefile`, `pyproject.toml` setup, `pytest.ini` as previously described, or minor updates not impacting core logic)
+*   **Dependency Management (`pyproject.toml` - UPDATED):**
+    *   Dependency version specifiers have been changed from `>=` (greater than or equal to) to `~=` (compatible release, e.g., `~=1.2.3` implies `>=1.2.3` and `<1.3.0`). This change restricts updates to patch versions for the specified minor versions of main and development dependencies, aiming to enhance build stability.
+    *   The `[tool.setuptools]` `packages` list within `pyproject.toml` has also been reformatted for improved readability.
+*   (Other workflow aspects like `Makefile`, `pytest.ini` setup as previously described, or minor updates not impacting core logic)
 
 
 ## 8. Overall Project Structure Summary
@@ -217,7 +226,7 @@ ai-nexus/
 ├── project_memories/
 │   ├── PRD.md
 │   └── global.md
-├── pyproject.toml
+├── pyproject.toml                # UPDATED: Dependency constraints changed to `~=`; package list reformatted.
 ├── pytest.ini                    # UPDATED: Minor formatting
 ├── scripts/
 │   └── generate_project_memory.sh
@@ -233,10 +242,10 @@ ai-nexus/
 │   ├── architect/
 │   │   ├── __init__.py
 │   │   ├── configuration.py      # UPDATED: Subclasses common.configuration.AgentConfiguration, defines architect_system_prompt, use_human_ai removed
-│   │   ├── graph.py
-│   │   ├── prompts.py
+│   │   ├── graph.py              # UPDATED: Added tools.summarize to the agent's toolset
+│   │   ├── prompts.py            # UPDATED: System prompt includes new "Summarize" step and use of summarize tool
 │   │   ├── state.py              # UPDATED: summary field added
-│   │   └── tools.py
+│   │   └── tools.py              # UPDATED: Added new 'summarize' tool
 │   ├── code_reviewer/
 │   │   ├── __init__.py
 │   │   ├── graph.py

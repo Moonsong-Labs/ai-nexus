@@ -4,10 +4,12 @@ import os
 import uuid
 from typing import Annotated, Optional
 
+from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import BaseTool, InjectedToolArg, tool
+from langchain_core.tools import BaseTool, InjectedToolArg, InjectedToolCallId, tool
 from langgraph.prebuilt import InjectedStore
 from langgraph.store.base import BaseStore
+from langgraph.types import Command
 
 from architect.configuration import Configuration
 
@@ -47,6 +49,34 @@ def create_memorize_tool(agent_config: Configuration) -> BaseTool:
         return f"Stored memory {mem_id}"
 
     return memorize
+
+
+# ruff: noqa: T201
+@tool("summarize", parse_docstring=True)
+async def summarize(
+    summary: str,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+):
+    """Summarize the agent output.
+
+    Args:
+        summary: The entire summary.
+    """
+    print("=== Summary ===")
+    print(f"{summary}")
+    print("=================")
+
+    return Command(
+        update={
+            "messages": [
+                ToolMessage(
+                    content=summary,
+                    tool_call_id=tool_call_id,
+                )
+            ],
+            "summary": summary,
+        }
+    )
 
 
 def create_recall_tool(agent_config: Configuration) -> BaseTool:
