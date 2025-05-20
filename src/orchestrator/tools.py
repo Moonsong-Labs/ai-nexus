@@ -15,6 +15,8 @@ from orchestrator.configuration import Configuration
 from orchestrator.state import State
 from requirement_gatherer.graph import RequirementsGraph
 from requirement_gatherer.state import State as RequirementsState
+from task_manager.graph import TaskManagerGraph
+from task_manager.state import State as TaskManagerState
 from tester.state import State as TesterState
 
 
@@ -95,6 +97,40 @@ def create_architect_tool(
         return result["summary"]
 
     return architect
+
+
+# ruff: noqa: D103
+def create_task_manager_tool(
+    agent_config: Configuration,
+    task_manager_graph: TaskManagerGraph,
+    recursion_limit: int = 100,
+):
+    @tool("task_manager", parse_docstring=True)
+    async def task_manager(
+        content: str,
+        tool_call_id: Annotated[str, InjectedToolCallId],
+        state: Annotated[State, InjectedState],
+        config: RunnableConfig,
+    ) -> str:
+        """If tasks need to be created or updated.
+
+        Args:
+            content: The input to the task manager agent.
+
+        Returns:
+            A Command that updates the agent's state with task manager's response.
+        """
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = recursion_limit
+
+        result = await task_manager_graph.compiled_graph.ainvoke(
+            TaskManagerState(messages=[HumanMessage(content=content)]),
+            config_with_recursion,
+        )
+
+        return result["summary"]
+
+    return task_manager
 
 
 # ruff: noqa: D103

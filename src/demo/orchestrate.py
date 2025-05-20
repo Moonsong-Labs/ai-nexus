@@ -27,6 +27,8 @@ from orchestrator.configuration import (
     RequirementsAgentConfig,
     RequirementsConfiguration,
     SubAgentConfig,
+    TaskManagerAgentConfig,
+    TaskManagerConfiguration,
 )
 from orchestrator.configuration import (
     Configuration as OrchestratorConfiguration,
@@ -63,6 +65,7 @@ def print_messages_any(messages: list[dict]):
                 if tool_call["name"] in [
                     "requirements",
                     "architect",
+                    "task_manager",
                     "coder_new_pr",
                     "coder_change_request",
                     "tester",
@@ -108,6 +111,10 @@ if __name__ == "__main__":
                 ),
                 architect_agent=ArchitectAgentConfig(
                     use_stub=True,
+                ),
+                task_manager_agent=TaskManagerAgentConfig(
+                    use_stub=True,
+                    config=TaskManagerConfiguration(),
                 ),
                 coder_new_pr_agent=SubAgentConfig(
                     use_stub=True,

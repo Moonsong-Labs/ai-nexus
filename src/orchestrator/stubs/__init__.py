@@ -15,6 +15,7 @@ from coder.state import State as CoderState
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from requirement_gatherer.state import State as RequirementsState
+from task_manager.state import State as TaskManagerState
 from tester.state import State as TesterState
 
 T = TypeVar("T")
@@ -81,6 +82,11 @@ model_requirements_messages = MessageWheel(
 model_architect_messages = MessageWheel(
     [
         """I have created the architecture for the project.""",
+    ]
+)
+model_task_manager_messages = MessageWheel(
+    [
+        """I have finished creating all the tasks and planning for the project.""",
     ]
 )
 model_coder_new_pr_messages = MessageWheel(
@@ -150,6 +156,27 @@ class ArchitectStub(StubGraph[ArchitectState]):
             run_fn=lambda state, config: {
                 "messages": state.messages,
                 "summary": model_architect_messages.next(),
+            },
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
+
+
+class TaskManagerStub(StubGraph[TaskManagerState]):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__(
+            name="Task Manager Stub",
+            state_type=TaskManagerState,
+            run_fn=lambda state, config: {
+                "messages": state.messages,
+                "summary": model_task_manager_messages.next(),
             },
             agent_config=agent_config,
             checkpointer=checkpointer,
