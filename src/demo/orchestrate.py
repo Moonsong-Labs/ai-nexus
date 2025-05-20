@@ -105,7 +105,7 @@ if __name__ == "__main__":
         orchestrator = OrchestratorGraph(
             agent_config=OrchestratorConfiguration(
                 requirements_agent=RequirementsAgentConfig(
-                    use_stub=False,
+                    use_stub=True,
                     config=RequirementsConfiguration(use_human_ai=use_human_ai),
                 ),
                 architect_agent=ArchitectAgentConfig(

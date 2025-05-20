@@ -4,10 +4,6 @@
 
 from typing import Any, Awaitable, Callable, Dict, Generic, List, Optional, TypeVar
 
-from langchain_core.messages import (
-    AIMessage,
-    ToolMessage,
-)
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.store.base import BaseStore
@@ -18,7 +14,6 @@ from code_reviewer.state import State as CodeReviewerState
 from coder.state import State as CoderState
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
-from orchestrator.state import State
 from requirement_gatherer.state import State as RequirementsState
 from tester.state import State as TesterState
 
@@ -149,27 +144,13 @@ class ArchitectStub(StubGraph[ArchitectState]):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        print("CRFEATING ARCHITECT")
-
-        def run_fn(state, config):
-            print(f"run stub fn {model_architect_messages.peek()}")
-            res = {
-                "messages": state.messages,
-                "summary": model_architect_messages.next(),
-            }
-
-            print(res)
-
-            return res
-
         super().__init__(
             name="Architect Stub",
             state_type=ArchitectState,
-            # run_fn=lambda state, config: {
-            #     "messages": state.messages,
-            #     "summary": model_architect_messages.next(),
-            # },
-            run_fn=run_fn,
+            run_fn=lambda state, config: {
+                "messages": state.messages,
+                "summary": model_architect_messages.next(),
+            },
             agent_config=agent_config,
             checkpointer=checkpointer,
             store=store,
@@ -184,7 +165,6 @@ class CoderNewPRStub(StubGraph[CoderState]):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        print("CREATE STUB CODER NEW PR")
         super().__init__(
             name="Coder New PR Stub",
             state_type=CoderState,
@@ -217,32 +197,6 @@ class CoderChangeRequestStub(StubGraph[CoderState]):
             checkpointer=checkpointer,
             store=store,
         )
-
-
-# def coder_new_pr(state: State, config: RunnableConfig, store: BaseStore):
-#     """Call code."""
-#     tool_call_id = state.messages[-1].tool_calls[0]["id"]
-#     return {
-#         "messages": [
-#             ToolMessage(
-#                 content=model_coder_new_pr_messages.next(),
-#                 tool_call_id=tool_call_id,
-#             )
-#         ]
-#     }
-
-
-# def coder_change_request(state: State, config: RunnableConfig, store: BaseStore):
-#     """Call code."""
-#     tool_call_id = state.messages[-1].tool_calls[0]["id"]
-#     return {
-#         "messages": [
-#             ToolMessage(
-#                 content=model_coder_change_request_messages.next(),
-#                 tool_call_id=tool_call_id,
-#             )
-#         ]
-#     }
 
 
 class TesterStub(StubGraph[TesterState]):
@@ -285,47 +239,3 @@ class CodeReviewerStub(StubGraph[CodeReviewerState]):
             checkpointer=checkpointer,
             store=store,
         )
-
-
-# def tester(state: State, config: RunnableConfig, store: BaseStore):
-#     """Call test."""
-#     tool_call_id = state.messages[-1].tool_calls[0]["id"]
-#     return {
-#         "messages": [
-#             ToolMessage(
-#                 content=model_tester_messages.next(),
-#                 tool_call_id=tool_call_id,
-#             )
-#         ]
-#     }
-
-
-# def reviewer(state: State, config: RunnableConfig, store: BaseStore):
-#     """Call review."""
-#     tool_call_id = state.messages[-1].tool_calls[0]["id"]
-#     return {
-#         "messages": [
-#             ToolMessage(
-#                 content=model_reviewer_messages.next(),
-#                 tool_call_id=tool_call_id,
-#             )
-#         ]
-#     }
-
-
-def memorizer(state: State, config: RunnableConfig, store: BaseStore):
-    """Memorize instructions."""
-    message = state.messages[-1]
-    tool_call_id = message.tool_calls[0]["id"]
-    origin = message.tool_calls[0]["args"]["origin"]
-    content = message.tool_calls[0]["args"]["content"]
-    # msg = f"[MEMORIZE] for {origin}: {content}"
-    # print(msg)  # noqa: T201
-    return {
-        "messages": [
-            ToolMessage(
-                content=f"Memorized '{content}' for '{origin}'",
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }

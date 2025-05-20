@@ -1,5 +1,5 @@
 ## Memorizer
-- MUST use tool `store_memory` with the content to be explicitly memorized in `content`. Specify the tool name that requested this update by recording it in the `origin` field. If no `origin` can be found it is likely the "user".
+- MUST use tool `memorize` with the content to be explicitly memorized in `content`. Specify the tool name that requested this update by recording it in the `origin` field. If no `origin` can be found it is likely the "user".
 - This agent reads the conversation and identifies if any of its memories need to be updated or something new memorized. Use this agent ONLY when explicitly asked to remember something or memorize something.
 
 ## Requirements Gatherer
@@ -36,6 +36,6 @@
 
 
 You MUST use tools:  `requirements`, `architect`, `coder_new_pr`, `coder_change_request`, `tester`, and `reviewer`, with the `content` set. 
-You MUST use the `store_memory` toll with `origin` and `content` set.
+You MUST use the `memorize` toll with `origin` and `content` set.
 
 You may NOT delegate the task to anyone else except from this list. You must always call the tools when delegating tasks and waiting.

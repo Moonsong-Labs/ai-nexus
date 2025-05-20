@@ -19,69 +19,6 @@ from requirement_gatherer.graph import RequirementsGraph
 from requirement_gatherer.state import State as RequirementsState
 from tester.state import State as TesterState
 
-# @dataclass
-# class Delegate:
-#     """Decision on where to delegate a task.
-
-#     - If requirements, then "requirements".
-#     - If architecture and design, then "architect".
-#     - If coding and implementation, then "coder_new_pr".
-#     - If coding and implementation, then "coder_change_request".
-#     - If code needs testing, then "tester".
-#     - If code needs review, then "reviewer".
-#     """
-
-#     to: Literal[
-#         "orchestrator",
-#         "requirements",
-#         "architect",
-#         "coder_new_pr",
-#         "coder_change_request",
-#         "tester",
-#         "reviewer",
-#     ]
-#     content: str
-
-
-# def _create_delegate_to(
-#     agent_config: Configuration, orchestrate: Coroutine[Any, Any, dict]
-# ):
-#     @tool("delegate_to", parse_docstring=True)
-#     async def delegate_to(
-#         delegate: Delegate,
-#         tool_call_id: Annotated[str, InjectedToolCallId],
-#         state: Annotated[State, InjectedState],
-#         config: RunnableConfig,
-#     ) -> Literal[
-#         "__end__",
-#         "orchestrate",
-#         "requirements",
-#         "architect",
-#         "coder",
-#         "tester",
-#         "reviewer",
-#         "memorizer",
-#     ]:
-#         """Determine the next step based on the presence of tool calls."""
-#         if delegate.to == "orchestrator":
-#             return orchestrate.__name__
-#         elif delegate.to == "requirements":
-#             return "requirements"
-#         elif delegate.to == "architect":
-#             return stubs.architect.__name__
-#         elif delegate.to == "coder":
-#             return stubs.coder.__name__
-#         elif delegate.to == "tester":
-#             return stubs.tester.__name__
-#         elif delegate.to == "reviewer":
-#             return stubs.reviewer.__name__
-#         # elif tool_call["args"]["to"] == "memorizer":
-#         #     return stubs.memorizer.__name__
-#         else:
-#             raise ValueError
-
-#     return delegate_to
-
 
 def create_requirements_tool(
     agent_config: Configuration,
@@ -123,8 +60,6 @@ def create_requirements_tool(
             config_with_recursion,
         )
 
-        print(f"REQ {result}")
-
         return result["summary"]
 
     return requirements
@@ -151,7 +86,6 @@ def create_architect_tool(
         Returns:
             A Command that updates the agent's state with architect's response.
         """
-        print("CALL ARCHIOTECT")
         config_with_recursion = RunnableConfig(**config)
         config_with_recursion["recursion_limit"] = recursion_limit
 
@@ -159,7 +93,6 @@ def create_architect_tool(
             ArchitectState(messages=[HumanMessage(content=content)]),
             config_with_recursion,
         )
-        print(f"ARC RES {result}")
 
         return result["summary"]
 
@@ -191,8 +124,6 @@ def create_coder_new_pr_tool(
             config,
         )
 
-        print(f"CODER NEW PR {result}")
-
         return result["summary"]
 
     return coder_new_pr
@@ -222,7 +153,6 @@ def create_coder_change_request_tool(
             CoderState(messages=[HumanMessage(content=content)]),
             config,
         )
-        print(f"CODER CHANGE RES {result}")
 
         return result["summary"]
 
@@ -254,8 +184,6 @@ def create_tester_tool(
             config,
         )
 
-        print(f"TESTER RES {result}")
-
         return result["summary"]
 
     return tester
@@ -286,15 +214,13 @@ def create_code_reviewer_tool(
             config,
         )
 
-        print(f"REVIEWER RES {result}")
-
         return result["summary"]
 
     return code_reviewer
 
 
-@tool("store_memory", parse_docstring=True)
-def store_memory(
+@tool("memorize", parse_docstring=True)
+def memorize(
     content: str,
     origin: Literal[
         "user",
@@ -323,7 +249,7 @@ def store_memory(
         str: A confirmation message indicating that the content has been memorized
              for the specified origin.
     """
-    print(f"[MEMORIZE] for {origin}: {content}")  # noqa: T201
+    # print(f"[MEMORIZE] for {origin}: {content}")  # noqa: T201
     return f"Memorized '{content}' for '{origin}'"
 
 
