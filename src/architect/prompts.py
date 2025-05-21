@@ -71,21 +71,21 @@ flowchart TD
    - Problems it solves
    - User experience goals
 
-2. `systemPatterns.md`
+3. `systemPatterns.md`
    - System architecture
    - Key technical decisions
    - Design patterns in use
    - Component relationships
    - Critical implementation paths
 
-3. `techPatterns.md`
+4. `techPatterns.md`
    - Technologies used
    - Development setup
    - Technical constraints
    - Dependencies
    - Tool usage patterns
 
-4. `progress.md`
+5. `progress.md`
    - What works
    - What's left to build
    - Current status
