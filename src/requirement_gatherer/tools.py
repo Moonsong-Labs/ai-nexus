@@ -152,34 +152,6 @@ def create_memorize_tool(agent_config: Configuration) -> BaseTool:
 
 
 # ruff: noqa: T201
-@tool("summarize", parse_docstring=True)
-async def summarize(
-    summary: str,
-    tool_call_id: Annotated[str, InjectedToolCallId],
-):
-    """Summarize the agent output.
-
-    Args:
-        summary: The entire summary.
-    """
-    print("=== Summary ===")
-    print(f"{summary}")
-    print("=================")
-
-    return Command(
-        update={
-            "messages": [
-                ToolMessage(
-                    content=summary,
-                    tool_call_id=tool_call_id,
-                )
-            ],
-            "summary": summary,
-        }
-    )
-
-
-# ruff: noqa: T201
 @tool("set_project", parse_docstring=True)
 async def set_project(
     name: str,

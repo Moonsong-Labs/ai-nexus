@@ -2,11 +2,10 @@
 
 from typing import Annotated, Literal
 
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolCallId, tool
 from langgraph.prebuilt import InjectedState
-from langgraph.types import Command
 
 from architect.state import State as ArchitectState
 from code_reviewer.state import State as CodeReviewerState
@@ -301,31 +300,3 @@ def memorize(
     """
     # print(f"[MEMORIZE] for {origin}: {content}")  # noqa: T201
     return f"Memorized '{content}' for '{origin}'"
-
-
-# ruff: noqa: T201
-@tool("summarize", parse_docstring=True)
-async def summarize(
-    summary: str,
-    tool_call_id: Annotated[str, InjectedToolCallId],
-) -> str:
-    """Summarize the agent output.
-
-    Args:
-        summary: The entire summary.
-    """
-    print("=== Summary ===")
-    print(f"{summary}")
-    print("=================")
-
-    return Command(
-        update={
-            "messages": [
-                ToolMessage(
-                    content=summary,
-                    tool_call_id=tool_call_id,
-                )
-            ],
-            "summary": summary,
-        }
-    )

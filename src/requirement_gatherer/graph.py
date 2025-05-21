@@ -16,6 +16,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+import common.tools
 from common.graph import AgentGraph
 from requirement_gatherer import tools
 from requirement_gatherer.configuration import Configuration
@@ -130,7 +131,7 @@ class RequirementsGraph(AgentGraph):
             ),
             tools.set_project,
             tools.create_memorize_tool(self._agent_config),
-            tools.summarize,
+            common.tools.summarize,
         ]
 
         llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)

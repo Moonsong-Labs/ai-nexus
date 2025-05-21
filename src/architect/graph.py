@@ -16,6 +16,7 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+import common.tools
 from architect import tools
 from architect.configuration import Configuration
 from architect.state import State
@@ -122,7 +123,7 @@ class ArchitectGraph(AgentGraph):
         all_tools = [
             tools.create_memorize_tool(self._agent_config),
             tools.create_recall_tool(self._agent_config),
-            tools.summarize,
+            common.tools.summarize,
             tools.read_file,
             tools.create_file,
             tools.list_files,
