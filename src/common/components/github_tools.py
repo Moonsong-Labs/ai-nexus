@@ -68,9 +68,8 @@ CREATE_ISSUE_COMMENT_PROMPT = """
 This tool is a wrapper for the GitHub API, useful when you want to comment on a pull request or issue. **VERY IMPORTANT**: Your input to this tool MUST strictly follow these rules:
 
 - First you must specify the PR number. **VERY IMPORTANT**: You must specify the PR number as an integer, not a float."
-- Then you must specify the body of your comment.
+- Then you must specify your comment.
 """
-
 
 class IssueComment(BaseModel):
     """Schema for creating an issue comment."""
@@ -88,7 +87,8 @@ class CreateIssueComment(BaseTool):
     github_api_wrapper: GitHubAPIWrapper
 
     def _run(self, pr_number: int, body: str):
-        return asyncio.run(self._arun(pr_number, body))
+        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
+        pull_request.create_issue_comment(body)
 
     async def _arun(self, pr_number: int, body: str):
         pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
