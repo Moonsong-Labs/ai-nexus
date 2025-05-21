@@ -270,7 +270,7 @@ class GetLatestPRWorkflowRun(BaseTool):
             dir.cleanup()
             return content
 
-        return None
+        return ""
 
 def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
     """Configure and return GitHub tools for the code agent."""
