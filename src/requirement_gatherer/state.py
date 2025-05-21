@@ -6,6 +6,8 @@ from langchain_core.messages import AnyMessage
 from langgraph.graph import add_messages
 from typing_extensions import Annotated
 
+from common.state import Project
+
 
 @dataclass(kw_only=True)
 class State:
@@ -15,6 +17,8 @@ class State:
     """The messages in the conversation."""
     summary: str = ""
     """The requirements summary."""
+    project: Project = None
+    """The project."""
 
 
 __all__ = [

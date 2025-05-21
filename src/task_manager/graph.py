@@ -16,6 +16,7 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+from common import utils
 from common.graph import AgentGraph
 from task_manager import tools
 from task_manager.configuration import TASK_MANAGER_MODEL, Configuration
@@ -70,7 +71,11 @@ def _create_call_model(
 
         # This helps the model understand the context and temporal relevance
         sys_prompt = agent_config.task_manager_system_prompt.format(
-            user_info=formatted, time=datetime.now().isoformat(), project_context=""
+            user_info=formatted,
+            time=datetime.now().isoformat(),
+            project_name=state.project.name,
+            project_path=state.project.path,
+            project_context="",
         )
 
         config_with_recursion = RunnableConfig(**config)
@@ -81,6 +86,9 @@ def _create_call_model(
             [SystemMessage(content=sys_prompt), *state.messages],
             config_with_recursion,
         )
+        
+        print(utils.format_message(msg, actor="TASK MANAGER"))  # noqa: T201
+
         return {"messages": [msg]}
 
     return call_model

@@ -12,7 +12,7 @@ from architect.state import State as ArchitectState
 from code_reviewer.state import State as CodeReviewerState
 from coder.state import State as CoderState
 from orchestrator.configuration import Configuration
-from orchestrator.state import State
+from orchestrator.state import Project, State
 from requirement_gatherer.graph import RequirementsGraph
 from requirement_gatherer.state import State as RequirementsState
 from task_manager.graph import TaskManagerGraph
@@ -60,7 +60,19 @@ def create_requirements_tool(
             config_with_recursion,
         )
 
-        return result["summary"]
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["summary"],
+                        tool_call_id=tool_call_id,
+                    )
+                ],
+                "project": result["project"],
+            }
+        )
+
+        # return result["summary"]
 
     return requirements
 
@@ -90,7 +102,9 @@ def create_architect_tool(
         config_with_recursion["recursion_limit"] = recursion_limit
 
         result = await architect_graph.compiled_graph.ainvoke(
-            ArchitectState(messages=[HumanMessage(content=content)]),
+            ArchitectState(
+                messages=[HumanMessage(content=content)], project=state.project
+            ),
             config_with_recursion,
         )
 
@@ -124,7 +138,9 @@ def create_task_manager_tool(
         config_with_recursion["recursion_limit"] = recursion_limit
 
         result = await task_manager_graph.compiled_graph.ainvoke(
-            TaskManagerState(messages=[HumanMessage(content=content)]),
+            TaskManagerState(
+                messages=[HumanMessage(content=content)], project=state.project
+            ),
             config_with_recursion,
         )
 
