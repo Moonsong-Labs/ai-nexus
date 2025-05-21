@@ -135,6 +135,7 @@ class RequirementsGathererStub(StubGraph[RequirementsState]):
             run_fn=lambda state, config: {
                 "messages": state.messages,
                 "summary": model_requirements_messages.next(),
+                "project_name": "My Stub Project",
             },
             agent_config=agent_config,
             checkpointer=checkpointer,

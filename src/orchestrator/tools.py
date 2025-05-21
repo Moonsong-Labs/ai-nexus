@@ -2,10 +2,11 @@
 
 from typing import Annotated, Literal
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolCallId, tool
 from langgraph.prebuilt import InjectedState
+from langgraph.types import Command
 
 from architect.state import State as ArchitectState
 from code_reviewer.state import State as CodeReviewerState
@@ -59,7 +60,17 @@ def create_requirements_tool(
             config_with_recursion,
         )
 
-        return result["summary"]
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["summary"],
+                        tool_call_id=tool_call_id,
+                    )
+                ],
+                "project": result["project"],
+            }
+        )
 
     return requirements
 
@@ -89,7 +100,9 @@ def create_architect_tool(
         config_with_recursion["recursion_limit"] = recursion_limit
 
         result = await architect_graph.compiled_graph.ainvoke(
-            ArchitectState(messages=[HumanMessage(content=content)]),
+            ArchitectState(
+                messages=[HumanMessage(content=content)], project=state.project
+            ),
             config_with_recursion,
         )
 
@@ -123,7 +136,9 @@ def create_task_manager_tool(
         config_with_recursion["recursion_limit"] = recursion_limit
 
         result = await task_manager_graph.compiled_graph.ainvoke(
-            TaskManagerState(messages=[HumanMessage(content=content)]),
+            TaskManagerState(
+                messages=[HumanMessage(content=content)], project=state.project
+            ),
             config_with_recursion,
         )
 

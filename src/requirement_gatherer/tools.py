@@ -12,6 +12,7 @@ from langgraph.store.base import BaseStore
 from langgraph.types import Command, interrupt
 from termcolor import colored
 
+from common.state import Project
 from requirement_gatherer.configuration import Configuration
 from requirement_gatherer.state import State
 
@@ -150,4 +151,31 @@ def create_memorize_tool(agent_config: Configuration) -> BaseTool:
     return memorize
 
 
-# The summarize tool has been moved to src/common/tools/summarize.py
+# ruff: noqa: T201
+@tool("set_project", parse_docstring=True)
+async def set_project(
+    name: str,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+):
+    """Set the project name.
+
+    Args:
+        name: The project name.
+    """
+    project = Project.from_name(name)
+
+    print("=== Project ===")
+    print(f"{project}")
+    print("=================")
+
+    return Command(
+        update={
+            "messages": [
+                ToolMessage(
+                    content=name,
+                    tool_call_id=tool_call_id,
+                )
+            ],
+            "project": project,
+        }
+    )

@@ -114,14 +114,14 @@ if __name__ == "__main__":
                     use_stub=False,
                 ),
                 task_manager_agent=TaskManagerAgentConfig(
-                    use_stub=True,
+                    use_stub=False,
                     config=TaskManagerConfiguration(),
                 ),
                 coder_new_pr_agent=SubAgentConfig(
-                    use_stub=False,
+                    use_stub=True,
                 ),
                 coder_change_request_agent=SubAgentConfig(
-                    use_stub=False,
+                    use_stub=True,
                 ),
             ),
             checkpointer=InMemorySaver(),
