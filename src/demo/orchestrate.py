@@ -1,8 +1,8 @@
 """Test the orchestrator locally."""
 
 import asyncio
+import getpass
 import json
-import os
 import sys
 import uuid
 from dataclasses import asdict
@@ -129,7 +129,7 @@ if __name__ == "__main__":
         )
 
         run_id = str(uuid.uuid4())
-        user = os.getlogin()
+        user = getpass.getuser()
 
         @traceable(
             run_type="chain",
