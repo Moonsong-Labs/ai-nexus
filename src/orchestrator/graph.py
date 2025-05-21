@@ -16,6 +16,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+import common.tools
 from architect.configuration import (
     Configuration as ArchitectConfiguration,
 )
@@ -217,7 +218,7 @@ class OrchestratorGraph(AgentGraph):
             tools.create_tester_tool(self._agent_config, tester_graph),
             tools.create_code_reviewer_tool(self._agent_config, code_reviewer_graph),
             tools.memorize,
-            tools.summarize,
+            common.tools.summarize,
         ]
         tool_node = ToolNode(all_tools, name="tools")
         llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
