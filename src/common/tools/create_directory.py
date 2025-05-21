@@ -17,7 +17,7 @@ def create_directory(directory_path: str) -> str:
     """
     try:
         # Create parent directories if they don't exist
-        os.makedirs(directory_path, exist_ok=False)
+        os.makedirs(directory_path, exist_ok=True)
 
         return f"Successfully created directory: {directory_path}"
     except Exception as e:
