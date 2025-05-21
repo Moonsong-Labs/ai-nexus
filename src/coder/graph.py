@@ -67,7 +67,6 @@ def coder_new_pr_config():
             "read_file",
             "delete_file",
             "get_latest_pr_workflow_run",
-            "create_issue_comment",
         ],
     )
 
