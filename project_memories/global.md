@@ -216,6 +216,8 @@ AI Nexus employs a few architectural patterns for its agents:
             *   Uploads `tests/smoke/langgraph_dev/langgraph-test-result.png` as an artifact with a 10-day retention period if the test runs (regardless of pass/fail).
     *   `compile-check.yml`: Ensures the LangGraph graphs can be compiled.
     *   `update_project_memory.yml`: (As previously described)
+*   **Project Maintenance Scripts (UPDATED):**
+    *   The `generate_project_memory.sh`, `update_project_memory_from_pr.sh`, and `update_project_readmes.sh` scripts now use the `gemini-2.5-flash-preview-05-20` model for their API calls.
 *   **Dependency Management (`pyproject.toml` - UPDATED):**
     *   Dependency version specifiers have been changed from `>=` (greater than or equal to) to `~=` (compatible release, e.g., `~=1.2.3` implies `>=1.2.3` and `<1.3.0`). This change restricts updates to patch versions for the specified minor versions of main and development dependencies, aiming to enhance build stability.
     *   The `[tool.setuptools]` `packages` list within `pyproject.toml` has also been reformatted for improved readability.
@@ -253,6 +255,7 @@ ai-nexus/
 ├── scripts/
 │   └── generate_project_memory.sh
 │   └── update_project_memory_from_pr.sh
+│   └── update_project_readmes.sh
 ├── src/
 │   ├── agent_template/
 │   │   ├── __init__.py
@@ -355,7 +358,6 @@ ai-nexus/
     │           ├── featuresContext.md
     │           ├── progress.md
     │           ├── projectRequirements.md
-    │           ├── projectbrief.md
     │           ├── securityContext.md
     │           ├── systemPatterns.md
     │           ├── techContext.md
