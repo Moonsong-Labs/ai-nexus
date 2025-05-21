@@ -261,11 +261,11 @@ class GetLatestPRWorkflowRun(BaseTool):
             dir = tempfile.TemporaryDirectory()
             dirname = f"{dir.name}/workflow_run_logs.zip"
 
-            file = open(f"{dir.name}/workflow_run_logs.zip", "wb")
+            file = open(dirname, "wb")
             file.write(response.content)
             file.close()
 
-            zip = zipfile.ZipFile(f"{dir.name}/workflow_run_logs.zip", "r")
+            zip = zipfile.ZipFile(dirname, "r")
             zip.extractall(dir.name)
 
             content = ""
