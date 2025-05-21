@@ -244,6 +244,10 @@ class MockGithubApi:
         # TODO: fn signature
         raise NotImplementedError("create_pull_request_review mock is not implemented")
 
+    def get_latest_pr_workflow_run(self, pr_number: str) -> str:
+        """Get the most recent workflow run for a PR."""
+        raise NotImplementedError("get_latest_pr_workflow_run mock is not implemented")
+
 
 def maybe_mock_github() -> Union[GitHubAPIWrapper, MockGithubApi]:
     """Get either a real GitHub API wrapper or a mock based on environment variables.

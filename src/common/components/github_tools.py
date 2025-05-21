@@ -71,16 +71,11 @@ This tool is a wrapper for the GitHub API, useful when you want to comment on a 
 - Then you must specify the body of your comment.
 """
 
-
 class IssueComment(BaseModel):
     """Schema for creating an issue comment."""
 
     pr_number: int = Field(0, description="The PR number as an integer, e.g. `12`")
-    body: str = Field(
-        1, description="The comment to be left on the issue or pull request."
-    )
-
-
+    body: str = Field(1, description="Text of the review comment.")
 class CreateIssueComment(BaseTool):
     """Create an Issue or Pull Request Comment."""
 
@@ -415,12 +410,21 @@ def mock_github_tools(mock_api: MockGithubApi):
         ),
         RunnableLambda(
             _convert_args_schema_to_string(
-                mock_api.create_issue_comment, CreateIssueComment
+                mock_api.create_issue_comment, IssueComment
             )
         ).as_tool(
             name="create_issue_comment",
             description=CREATE_ISSUE_COMMENT_PROMPT,
-            args_schema=CreateIssueComment,
+            args_schema=IssueComment,
+        ),
+        RunnableLambda(
+            _convert_args_schema_to_string(
+                mock_api.get_latest_pr_workflow_run, GetPR
+            )
+        ).as_tool(
+            name="get_latest_pr_workflow_run",
+            description=GET_LATEST_PR_WORKFLOW_RUN_PROMPT,
+            args_schema=GetPR,
         ),
     ]
 

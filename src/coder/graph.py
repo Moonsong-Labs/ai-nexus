@@ -66,6 +66,7 @@ def coder_new_pr_config():
             "update_file",
             "read_file",
             "delete_file",
+            "get_latest_pr_workflow_run",
             "create_issue_comment",
         ],
     )
@@ -163,7 +164,7 @@ class CallModel:
 
     async def __call__(self, state: State) -> dict:
         system_msg = SystemMessage(content=self.system_prompt)
-        messages = [system_msg] + state.messages
+        messages = [system_msg] + state["messages"]
         messages_after_invoke = await llm.bind_tools(self.github_tools).ainvoke(
             messages
         )
