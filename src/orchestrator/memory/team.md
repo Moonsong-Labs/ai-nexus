@@ -13,6 +13,11 @@
 - This agent uses the existing requirements and tries to create an well architectured design for it.
 - MUST delegate to it when a design decision needs to be made, updated, or requires further exploration.
 
+## Task Manager
+- MUST use `task_manager` and the content set to `content`.
+- This agent uses the existing architecture documents and creates a set of files which define the tasks that compose the project execution.
+- MUST delegate to it when an architecture design is done and tasks must be created.
+
 ## Coder (New PR)
 - MUST use `coder_new_pr` tool with the content set to `content`.
 - This agent uses the existing requirements and design and writes code for it when no PR currently exists.

@@ -1,4 +1,4 @@
-.PHONY: all clean check deps sync run fmt lint spell_check spell_fix test test_unit test_integration test_watch help extended_tests ci-build-check
+.PHONY: all clean check deps sync run fmt lint spell_check spell_fix test test_unit test_integration test_watch help extended_tests ci-build-check demo
 
 # Default target executed when no arguments are given to make.
 all: help
@@ -110,4 +110,16 @@ help:
 	@echo 'test TEST_FILE=<test_file>   - run all tests in file'
 	@echo 'test_watch                   - run unit tests in watch mode'
 	@echo 'ci-build-check               - run build check for CI'
+	@echo 'demo                         - run demo orchestration script'
+
+# Run the demo orchestration script
+demo-%:
+	@if [ "$*" = "ai" ]; then \
+		uv run --env-file .env -- python ./src/demo/orchestrate.py exec ai; \
+	elif [ "$*" = "human" ]; then \
+		uv run --env-file .env -- python ./src/demo/orchestrate.py exec human; \
+	else \
+		echo "Unknown mode: $*, (need: human|ai)"; \
+	fi
+
 

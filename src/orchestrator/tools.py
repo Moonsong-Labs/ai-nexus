@@ -15,6 +15,8 @@ from orchestrator.configuration import Configuration
 from orchestrator.state import State
 from requirement_gatherer.graph import RequirementsGraph
 from requirement_gatherer.state import State as RequirementsState
+from task_manager.graph import TaskManagerGraph
+from task_manager.state import State as TaskManagerState
 from tester.state import State as TesterState
 
 
@@ -58,7 +60,17 @@ def create_requirements_tool(
             config_with_recursion,
         )
 
-        return result["summary"]
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["summary"],
+                        tool_call_id=tool_call_id,
+                    )
+                ],
+                "project": result["project"],
+            }
+        )
 
     return requirements
 
@@ -88,13 +100,51 @@ def create_architect_tool(
         config_with_recursion["recursion_limit"] = recursion_limit
 
         result = await architect_graph.compiled_graph.ainvoke(
-            ArchitectState(messages=[HumanMessage(content=content)]),
+            ArchitectState(
+                messages=[HumanMessage(content=content)], project=state.project
+            ),
             config_with_recursion,
         )
 
         return result["summary"]
 
     return architect
+
+
+# ruff: noqa: D103
+def create_task_manager_tool(
+    agent_config: Configuration,
+    task_manager_graph: TaskManagerGraph,
+    recursion_limit: int = 100,
+):
+    @tool("task_manager", parse_docstring=True)
+    async def task_manager(
+        content: str,
+        tool_call_id: Annotated[str, InjectedToolCallId],
+        state: Annotated[State, InjectedState],
+        config: RunnableConfig,
+    ) -> str:
+        """If tasks need to be created or updated.
+
+        Args:
+            content: The input to the task manager agent.
+
+        Returns:
+            A Command that updates the agent's state with task manager's response.
+        """
+        config_with_recursion = RunnableConfig(**config)
+        config_with_recursion["recursion_limit"] = recursion_limit
+
+        result = await task_manager_graph.compiled_graph.ainvoke(
+            TaskManagerState(
+                messages=[HumanMessage(content=content)], project=state.project
+            ),
+            config_with_recursion,
+        )
+
+        return result["summary"]
+
+    return task_manager
 
 
 # ruff: noqa: D103
@@ -249,31 +299,3 @@ def memorize(
     """
     # print(f"[MEMORIZE] for {origin}: {content}")  # noqa: T201
     return f"Memorized '{content}' for '{origin}'"
-
-
-# ruff: noqa: T201
-@tool("summarize", parse_docstring=True)
-async def summarize(
-    summary: str,
-    tool_call_id: Annotated[str, InjectedToolCallId],
-) -> str:
-    """Summarize the agent output.
-
-    Args:
-        summary: The entire summary.
-    """
-    print("=== Summary ===")
-    print(f"{summary}")
-    print("=================")
-
-    return Command(
-        update={
-            "messages": [
-                ToolMessage(
-                    content=summary,
-                    tool_call_id=tool_call_id,
-                )
-            ],
-            "summary": summary,
-        }
-    )

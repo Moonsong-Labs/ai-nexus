@@ -2,11 +2,12 @@ A project usually involves the following stages:
 
 1. Gather requirements.
 2. Architect the design.
-3. Code and implement the design or changes.
-4. Test the code.
-5. If success, proceed to the next step. If failure, update code and test the code again. 
-6. Review the code. 
-7. If success, proceed to the next step. If failure, update code and test the code again.
+3. Create tasks
+4. Pick the tasks in order and secuentally. Code and implement according to task description.
+5. Test the code.
+6. If success, proceed to the next step. If failure, update code and test the code again. 
+7. Review the code. 
+8. If success, proceed to the next step. If failure, update code and test the code again.
 
 ## Flowchart
 
@@ -14,7 +15,8 @@ A project usually involves the following stages:
 graph TD;
     START --> RQ[Gather Requirements];
     RQ --> AR[Architecture Design];
-    AR --> CI[Code Initial Design];
+    AR --> TM[Tasks creation];
+    TM --> CI[Code Initial Design]
     CI --> TS[Test Code];
     TS --> TR[Test Results];
     TR --> |SUCCESS| RW[Review Code];

@@ -16,9 +16,11 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+import common.tools
 from architect import tools
 from architect.configuration import Configuration
 from architect.state import State
+from common import utils
 from common.graph import AgentGraph
 
 logger = logging.getLogger(__name__)
@@ -71,7 +73,9 @@ def _create_call_model(
         # Prepare the system prompt with user memories and current time
         # This helps the model understand the context and temporal relevance
         sys_prompt = agent_config.architect_system_prompt.format(
-            user_info=formatted, time=datetime.now().isoformat()
+            user_info=formatted,
+            time=datetime.now().isoformat(),
+            project_dir=state.project.path,
         )
 
         # Invoke the language model with the prepared prompt and tools
@@ -79,6 +83,8 @@ def _create_call_model(
             [SystemMessage(content=sys_prompt), *state.messages],
             config=config,
         )
+
+        print(utils.format_message(msg, actor="ARCHITECT"))  # noqa: T201
 
         return {"messages": [msg]}
 
@@ -117,6 +123,7 @@ class ArchitectGraph(AgentGraph):
         all_tools = [
             tools.create_memorize_tool(self._agent_config),
             tools.create_recall_tool(self._agent_config),
+            common.tools.summarize,
             tools.read_file,
             tools.create_file,
             tools.list_files,

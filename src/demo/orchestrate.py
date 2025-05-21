@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 import sys
 import uuid
 from dataclasses import asdict
@@ -16,7 +17,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
 from langgraph.types import Command
-from langsmith import RunTree
+from langsmith import RunTree, traceable
 from langsmith.client import Client
 from langsmith.evaluation import EvaluationResult
 from pydantic import BaseModel
@@ -27,6 +28,8 @@ from orchestrator.configuration import (
     RequirementsAgentConfig,
     RequirementsConfiguration,
     SubAgentConfig,
+    TaskManagerAgentConfig,
+    TaskManagerConfiguration,
 )
 from orchestrator.configuration import (
     Configuration as OrchestratorConfiguration,
@@ -63,6 +66,7 @@ def print_messages_any(messages: list[dict]):
                 if tool_call["name"] in [
                     "requirements",
                     "architect",
+                    "task_manager",
                     "coder_new_pr",
                     "coder_change_request",
                     "tester",
@@ -103,11 +107,15 @@ if __name__ == "__main__":
         orchestrator = OrchestratorGraph(
             agent_config=OrchestratorConfiguration(
                 requirements_agent=RequirementsAgentConfig(
-                    use_stub=True,
+                    use_stub=False,
                     config=RequirementsConfiguration(use_human_ai=use_human_ai),
                 ),
                 architect_agent=ArchitectAgentConfig(
-                    use_stub=True,
+                    use_stub=False,
+                ),
+                task_manager_agent=TaskManagerAgentConfig(
+                    use_stub=False,
+                    config=TaskManagerConfiguration(),
                 ),
                 coder_new_pr_agent=SubAgentConfig(
                     use_stub=True,
@@ -120,6 +128,14 @@ if __name__ == "__main__":
             store=InMemoryStore(),
         )
 
+        run_id = str(uuid.uuid4())
+        user = os.getlogin()
+
+        @traceable(
+            run_type="chain",
+            name="Orchestrator Demo",
+            tags=["demo", f"user:{user}"],
+        )
         async def _exec():
             """
             Executes the orchestrator asynchronously, handling user input for any interrupts.
@@ -155,7 +171,14 @@ if __name__ == "__main__":
 
             return result
 
-        result = asyncio.run(_exec())
+        organization_id = "265bce82-15be-4d5e-9ae9-55d5e7b4e96e"
+        project_id = "a6835858-9241-4360-9c88-44d5fe9ca98e"  # ai-nexus
+        trace_url = f"https://smith.langchain.com/o/{organization_id}/projects/p/{project_id}/r/{run_id}?traceId={run_id}&mode=graph"
+        print(
+            f"{'-' * 120}\nTrace: {colored(trace_url, 'magenta', attrs=['bold'])}\n{'-' * 120}"
+        )
+
+        result = asyncio.run(_exec(langsmith_extra={"run_id": run_id}))
 
         # print(result["messages"])
 

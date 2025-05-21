@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def _create_call_model(
+    agent_config: Configuration,
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
 ) -> Coroutine[Any, Any, dict]:
     async def call_model(
@@ -66,7 +67,7 @@ def _create_call_model(
             stage_prompt = get_stage_prompt(current_stage)
 
             # Prepare the system prompt with workflow stage, memories, and current time
-            sys_prompt = config["configurable"]["system_prompt"].format(
+            sys_prompt = agent_config.system_prompt.format(
                 workflow_stage=stage_prompt,
                 user_info=formatted,
                 time=datetime.now().isoformat(),
@@ -157,7 +158,7 @@ class TesterAgentGraph(AgentGraph):
 
         llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
         tool_node = ToolNode(all_tools, name=tool_node_name)
-        call_model = _create_call_model(llm)
+        call_model = _create_call_model(self._agent_config, llm)
         workflow = _create_workflow(call_model_name, tool_node_name)
 
         # Create the graph
