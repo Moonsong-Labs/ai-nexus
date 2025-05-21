@@ -1,6 +1,7 @@
 """Test the orchestrator locally."""
 
 import asyncio
+import getpass
 import json
 import sys
 import uuid
@@ -16,18 +17,22 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
 from langgraph.types import Command
-from langsmith import RunTree
+from langsmith import RunTree, traceable
 from langsmith.client import Client
 from langsmith.evaluation import EvaluationResult
 from pydantic import BaseModel
 from termcolor import colored
 
 from orchestrator.configuration import (
-    Configuration as OrchestratorConfiguration,
-)
-from orchestrator.configuration import (
+    ArchitectAgentConfig,
     RequirementsAgentConfig,
     RequirementsConfiguration,
+    SubAgentConfig,
+    TaskManagerAgentConfig,
+    TaskManagerConfiguration,
+)
+from orchestrator.configuration import (
+    Configuration as OrchestratorConfiguration,
 )
 from orchestrator.graph import OrchestratorGraph
 from orchestrator.state import State
@@ -44,25 +49,31 @@ def print_messages_any(messages: list[dict]):
     next_tool_name = None
     for msg in messages:
         msg_type = msg["type"]
-        msg_content = msg["content"].rstrip()
+        msg_content = msg["content"].strip()
         if msg["type"] == "tool" and next_tool_name is not None:
-            msg_type = f"tool ({next_tool_name})"
+            msg_type = f"{next_tool_name}"
             next_tool_name = None
+        elif msg["type"] == "ai":
+            msg_type = "orchestrator"
+
         print(
             f"{colored(msg_type, 'green'):<30}: {colored(msg_content, 'light_yellow')}"
         )
         if "tool_calls" in msg:
-            # print(msg["tool_calls"])
             for tool_call in msg["tool_calls"]:
                 tool = f"[{tool_call['name']}]"
-                next_tool_name = None
-                if tool_call["name"] == "Delegate":
-                    next_tool_name = tool_call["args"]["to"]
+                next_tool_name = tool_call["name"]
+                if tool_call["name"] in [
+                    "requirements",
+                    "architect",
+                    "task_manager",
+                    "coder_new_pr",
+                    "coder_change_request",
+                    "tester",
+                    "code_reviewer",
+                ]:
                     print(
-                        f"{'    ' * 6}└── {colored(tool, 'cyan'):20}: {colored(tool_call['args']['to'], 'light_cyan')}"
-                    )
-                    print(
-                        f"{'    ' * 9}     {colored(tool_call['args']['content'], 'light_grey')}"
+                        f"{'    ' * 6}└── {colored(tool, 'cyan'):20} {colored(tool_call['args']['content'], 'light_grey')}"
                     )
                 else:
                     print(
@@ -98,12 +109,33 @@ if __name__ == "__main__":
                 requirements_agent=RequirementsAgentConfig(
                     use_stub=False,
                     config=RequirementsConfiguration(use_human_ai=use_human_ai),
-                )
+                ),
+                architect_agent=ArchitectAgentConfig(
+                    use_stub=False,
+                ),
+                task_manager_agent=TaskManagerAgentConfig(
+                    use_stub=False,
+                    config=TaskManagerConfiguration(),
+                ),
+                coder_new_pr_agent=SubAgentConfig(
+                    use_stub=True,
+                ),
+                coder_change_request_agent=SubAgentConfig(
+                    use_stub=True,
+                ),
             ),
             checkpointer=InMemorySaver(),
             store=InMemoryStore(),
         )
 
+        run_id = str(uuid.uuid4())
+        user = getpass.getuser()
+
+        @traceable(
+            run_type="chain",
+            name="Orchestrator Demo",
+            tags=["demo", f"user:{user}"],
+        )
         async def _exec():
             """
             Executes the orchestrator asynchronously, handling user input for any interrupts.
@@ -139,7 +171,14 @@ if __name__ == "__main__":
 
             return result
 
-        result = asyncio.run(_exec())
+        organization_id = "265bce82-15be-4d5e-9ae9-55d5e7b4e96e"
+        project_id = "a6835858-9241-4360-9c88-44d5fe9ca98e"  # ai-nexus
+        trace_url = f"https://smith.langchain.com/o/{organization_id}/projects/p/{project_id}/r/{run_id}?traceId={run_id}&mode=graph"
+        print(
+            f"{'-' * 120}\nTrace: {colored(trace_url, 'magenta', attrs=['bold'])}\n{'-' * 120}"
+        )
+
+        result = asyncio.run(_exec(langsmith_extra={"run_id": run_id}))
 
         # print(result["messages"])
 

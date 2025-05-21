@@ -15,7 +15,7 @@ set -o pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &>/dev/null && pwd )"
 FETCH_PR_SCRIPT_PATH="${SCRIPT_DIR}/fetch_pr_details.sh"
 
-GEMINI_MODEL_NAME="gemini-2.5-pro-preview-05-06" # Or your preferred Gemini model
+GEMINI_MODEL_NAME="gemini-2.5-flash-preview-05-20" # Or your preferred Gemini model
 GEMINI_API_ENDPOINT="https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_NAME}:generateContent"
 
 # --- Functions ---

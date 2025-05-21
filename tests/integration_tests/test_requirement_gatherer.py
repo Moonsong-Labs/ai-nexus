@@ -12,9 +12,6 @@ from requirement_gatherer.graph import RequirementsGraph
 ## Setup basic logging for the test
 logger = get_logger(__name__)
 
-# Define the LangSmith dataset ID
-LANGSMITH_DATASET_NAME = "grumpy-failed-questions"
-
 # Create a LLMJudge
 llm_judge = LLMJudge()
 
@@ -95,7 +92,9 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
     memory_store = InMemoryStore()
 
     # Compile the graph - needs checkpointer for stateful execution during evaluation
-    graph = RequirementsGraph(checkpointer=memory_saver, store=memory_store)
+    graph = RequirementsGraph(
+        checkpointer=memory_saver, store=memory_store
+    ).compiled_graph
 
     # Define the function to be evaluated for each dataset example
     results = await client.aevaluate(

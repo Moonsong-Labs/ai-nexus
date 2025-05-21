@@ -159,7 +159,11 @@ make spell_fix
 ### Local Demo
 
 ```sh
-uv run --env-file .env -- python ./src/demo/orchestrate.py exec ai
+make demo-ai
+
+# or
+
+make demo-human
 ```
 
 ### Example Agent Usage

@@ -78,7 +78,7 @@ async def test_tester_agent_langsmith(pytestconfig):
 
     logger.info(f"evaluating dataset: {LANGSMITH_DATASET_NAME}")
 
-    graph_compiled = TesterAgentGraph(checkpointer=MemorySaver())
+    graph_compiled = TesterAgentGraph(checkpointer=MemorySaver()).compiled_graph
 
     results = await client.aevaluate(
         create_async_graph_caller(graph_compiled),

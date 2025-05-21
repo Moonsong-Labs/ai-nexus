@@ -16,6 +16,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+import common.tools
 from common.graph import AgentGraph
 from requirement_gatherer import tools
 from requirement_gatherer.configuration import Configuration
@@ -85,7 +86,7 @@ def _create_gather_requirements(
     """
 
     async def gather_requirements(state: State, config: RunnableConfig):
-        if state.messages[-1].tool_calls:
+        if state.messages and state.messages[-1].tool_calls:
             return tool_node.name
         elif state.summary:
             return END
@@ -128,8 +129,9 @@ class RequirementsGraph(AgentGraph):
             tools.create_human_feedback_tool(
                 self._agent_config,
             ),
+            tools.set_project,
             tools.create_memorize_tool(self._agent_config),
-            tools.summarize,
+            common.tools.summarize,
         ]
 
         llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)

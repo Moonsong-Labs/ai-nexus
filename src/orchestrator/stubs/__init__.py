@@ -4,20 +4,19 @@
 
 from typing import Any, Awaitable, Callable, Dict, Generic, List, Optional, TypeVar
 
-from langchain_core.messages import (
-    AIMessage,
-    ToolMessage,
-)
 from langchain_core.runnables import RunnableConfig
-from langgraph.graph import START, StateGraph
+from langgraph.graph import END, START, StateGraph
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+from architect.state import State as ArchitectState
+from code_reviewer.state import State as CodeReviewerState
 from coder.state import State as CoderState
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
-from orchestrator.state import State
 from requirement_gatherer.state import State as RequirementsState
+from task_manager.state import State as TaskManagerState
+from tester.state import State as TesterState
 
 T = TypeVar("T")
 
@@ -45,6 +44,7 @@ class StubGraph(AgentGraph, Generic[T]):
         builder = StateGraph(self._state_type)
         builder.add_node("run", self._run_fn)
         builder.add_edge(START, "run")
+        builder.add_edge("run", END)
         return builder
 
 
@@ -79,6 +79,16 @@ model_requirements_messages = MessageWheel(
         """,
     ]
 )
+model_architect_messages = MessageWheel(
+    [
+        """I have created the architecture for the project.""",
+    ]
+)
+model_task_manager_messages = MessageWheel(
+    [
+        """I have finished creating all the tasks and planning for the project.""",
+    ]
+)
 model_coder_new_pr_messages = MessageWheel(
     [
         """I have finished coding the new PR is #69 and the branch is code-agent-new-pr.""",
@@ -101,7 +111,7 @@ model_tester_messages = MessageWheel(
         """Everything looks good.""",
     ]
 )
-model_reviewer_messages = MessageWheel(
+model_code_reviewer_messages = MessageWheel(
     [
         """I found issues with code. Here are the details:
     Add a new line in the end.
@@ -119,16 +129,56 @@ class RequirementsGathererStub(StubGraph[RequirementsState]):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        async def run(state: RequirementsState, config: RunnableConfig | None = None):
-            return {
-                "messages": state.messages,
-                "summary": model_requirements_messages.next(),
-            }
-
         super().__init__(
             name="Requirements Gatherer Stub",
             state_type=RequirementsState,
-            run_fn=run,
+            run_fn=lambda state, config: {
+                "messages": state.messages,
+                "summary": model_requirements_messages.next(),
+                "project_name": "My Stub Project",
+            },
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
+
+
+class ArchitectStub(StubGraph[ArchitectState]):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__(
+            name="Architect Stub",
+            state_type=ArchitectState,
+            run_fn=lambda state, config: {
+                "messages": state.messages,
+                "summary": model_architect_messages.next(),
+            },
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
+
+
+class TaskManagerStub(StubGraph[TaskManagerState]):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__(
+            name="Task Manager Stub",
+            state_type=TaskManagerState,
+            run_fn=lambda state, config: {
+                "messages": state.messages,
+                "summary": model_task_manager_messages.next(),
+            },
             agent_config=agent_config,
             checkpointer=checkpointer,
             store=store,
@@ -143,15 +193,13 @@ class CoderNewPRStub(StubGraph[CoderState]):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        async def run(state: CoderState, config: RunnableConfig | None = None):
-            return {
-                "messages": [AIMessage(content=model_coder_new_pr_messages.next())],
-            }
-
         super().__init__(
             name="Coder New PR Stub",
             state_type=CoderState,
-            run_fn=run,
+            run_fn=lambda state, config: {
+                "messages": state.messages,
+                "summary": model_coder_new_pr_messages.next(),
+            },
             agent_config=agent_config,
             checkpointer=checkpointer,
             store=store,
@@ -166,103 +214,56 @@ class CoderChangeRequestStub(StubGraph[CoderState]):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        async def run(state: CoderState, config: RunnableConfig | None = None):
-            return {
-                "messages": [
-                    AIMessage(content=model_coder_change_request_messages.next())
-                ],
-            }
-
         super().__init__(
             name="Coder Change Request Stub",
             state_type=CoderState,
-            run_fn=run,
+            run_fn=lambda state, config: {
+                "messages": state.messages,
+                "summary": model_coder_change_request_messages.next(),
+            },
             agent_config=agent_config,
             checkpointer=checkpointer,
             store=store,
         )
 
 
-def architect(state: State, config: RunnableConfig, store: BaseStore):
-    """Call design."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content="""I am finished with the design. Here are the details:
-                The design should be simple HTML file with CSS styling.
-                """,
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
+class TesterStub(StubGraph[TesterState]):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__(
+            name="Tester Stub",
+            state_type=TesterState,
+            run_fn=lambda state, config: {
+                "messages": state.messages,
+                "summary": model_tester_messages.next(),
+            },
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
 
 
-def coder_new_pr(state: State, config: RunnableConfig, store: BaseStore):
-    """Call code."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content=model_coder_new_pr_messages.next(),
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
-
-
-def coder_change_request(state: State, config: RunnableConfig, store: BaseStore):
-    """Call code."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content=model_coder_change_request_messages.next(),
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
-
-
-def tester(state: State, config: RunnableConfig, store: BaseStore):
-    """Call test."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content=model_tester_messages.next(),
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
-
-
-def reviewer(state: State, config: RunnableConfig, store: BaseStore):
-    """Call review."""
-    tool_call_id = state.messages[-1].tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content=model_reviewer_messages.next(),
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
-
-
-def memorizer(state: State, config: RunnableConfig, store: BaseStore):
-    """Memorize instructions."""
-    message = state.messages[-1]
-    tool_call_id = message.tool_calls[0]["id"]
-    origin = message.tool_calls[0]["args"]["origin"]
-    content = message.tool_calls[0]["args"]["content"]
-    # msg = f"[MEMORIZE] for {origin}: {content}"
-    # print(msg)  # noqa: T201
-    return {
-        "messages": [
-            ToolMessage(
-                content=f"Memorized '{content}' for '{origin}'",
-                tool_call_id=tool_call_id,
-            )
-        ]
-    }
+class CodeReviewerStub(StubGraph[CodeReviewerState]):
+    def __init__(
+        self,
+        *,
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__(
+            name="CodeReviewer Stub",
+            state_type=CodeReviewerState,
+            run_fn=lambda state, config: {
+                "messages": state.messages,
+                "summary": model_code_reviewer_messages.next(),
+            },
+            agent_config=agent_config,
+            checkpointer=checkpointer,
+            store=store,
+        )
