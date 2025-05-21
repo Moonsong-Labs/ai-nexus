@@ -124,9 +124,10 @@ class ArchitectGraph(AgentGraph):
             tools.create_memorize_tool(self._agent_config),
             tools.create_recall_tool(self._agent_config),
             common.tools.summarize,
-            tools.read_file,
-            tools.create_file,
-            tools.list_files,
+            common.tools.create_directory,
+            common.tools.create_file,
+            common.tools.list_files,
+            common.tools.read_file,
         ]
 
         llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
