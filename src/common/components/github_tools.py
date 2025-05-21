@@ -5,6 +5,7 @@ from typing import List, Type, Union
 import logging
 
 from os import listdir
+import asyncio
 import requests
 import tempfile
 import zipfile
@@ -86,26 +87,11 @@ class CreateIssueComment(BaseTool):
     github_api_wrapper: GitHubAPIWrapper
 
     def _run(self, pr_number: int, body: str):
-        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
-        pull_request.create_issue_comment(body)
+        return asyncio.run(self._arun(pr_number, body))
 
     async def _arun(self, pr_number: int, body: str):
         pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
         pull_request.create_issue_comment(body)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 class PRReviewComment(BaseModel):
     """Schema for a Pull Request Review Comment."""
@@ -171,14 +157,7 @@ class CreatePullRequestReviewComment(BaseTool):
     def _run(
         self, pr_number: int, body: str, event: str, comments: List[PRReviewComment]
     ):
-        comments_mapped = list(map(lambda x: x.to_gh_review(), comments))
-
-        # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
-        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
-        commit = pull_request.head.sha
-        commit_obj = self.github_api_wrapper.github_repo_instance.get_commit(commit)
-
-        pull_request.create_review(commit_obj, body, event, comments_mapped)
+        return asyncio.run(self._arun(pr_number, body, event, comments))
 
     async def _arun(
         self, pr_number: int, body: str, event: str, comments: List[PRReviewComment]
@@ -205,16 +184,7 @@ class GetPullRequestDiff(BaseTool):
     github_api_wrapper: GitHubAPIWrapper
 
     def _run(self, pr_number: int) -> str:
-        # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
-        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
-        diff_url = pull_request.diff_url
-        response = requests.get(
-            diff_url, headers={"Accept": "application/vnd.github.v3.diff"}
-        )
-        response.raise_for_status()
-
-        diff_content = response.text
-        return diff_content
+        return asyncio.run(self._arun(pr_number))
 
     async def _arun(self, pr_number: int) -> str:
         # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
@@ -241,8 +211,7 @@ class GetPullRequestHeadBranch(BaseTool):
     github_api_wrapper: GitHubAPIWrapper
 
     def _run(self, pr_number: int) -> str:
-        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
-        return pull_request.head.ref
+        return asyncio.run(self._arun(pr_number))
 
     async def _arun(self, pr_number: int) -> str:
         pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
@@ -258,7 +227,7 @@ class GetLatestPRWorkflowRun(BaseTool):
     github_api_wrapper: GitHubAPIWrapper
 
     def _run(self, pr_number: int) -> str:
-        raise NotImplementedError("fixme")
+        return asyncio.run(self._arun(pr_number))
 
     async def _arun(self, pr_number: int) -> str:
         repo = self.github_api_wrapper.github_repo_instance
