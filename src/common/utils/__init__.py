@@ -28,4 +28,4 @@ def format_message(msg: AnyMessage, *, actor: str = None):
             content = tool_calls
         else:
             content = f"{content}\n{tool_calls}"
-    return f"\n{'=' * 50} {actor:^15} {'=' * 50}\n{content}\n{'=' * 112}\n"
+    return f"\n{'=' * 50} {actor:^15} {'=' * 50}\n{content}\n{'=' * 117}\n"
