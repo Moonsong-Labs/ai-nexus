@@ -14,7 +14,6 @@ from termcolor import colored
 
 from requirement_gatherer.configuration import Configuration
 from requirement_gatherer.state import State
-from common.tools.summarize import summarize
 
 
 # ruff: noqa: T201

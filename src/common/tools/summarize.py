@@ -32,4 +32,4 @@ async def summarize(
             ],
             "summary": summary,
         }
-    ) 
+    )
