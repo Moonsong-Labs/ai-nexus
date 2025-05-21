@@ -86,7 +86,7 @@ def _create_call_model(
             [SystemMessage(content=sys_prompt), *state.messages],
             config_with_recursion,
         )
-        
+
         print(utils.format_message(msg, actor="TASK MANAGER"))  # noqa: T201
 
         return {"messages": [msg]}

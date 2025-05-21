@@ -9,7 +9,7 @@ from common.configuration import AgentConfiguration
 @dataclass(kw_only=True)
 class Configuration(AgentConfiguration):
     """Main configuration class for the memory graph system."""
-    
+
     architect_system_prompt: str = prompts.SYSTEM_PROMPT
 
 

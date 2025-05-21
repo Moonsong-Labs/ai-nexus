@@ -21,7 +21,7 @@ def format_message(msg: AnyMessage, *, actor: str = None):
         actor = msg.type.upper()
     if msg.tool_calls:
         tool_calls = ",".join(
-            [f"{colored(tc["name"], "cyan")}" for tc in msg.tool_calls]
+            [f"{colored(tc['name'], 'cyan')}" for tc in msg.tool_calls]
         )
         tool_calls = f"tool(s): {tool_calls}"
         if content == "":

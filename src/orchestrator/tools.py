@@ -12,7 +12,7 @@ from architect.state import State as ArchitectState
 from code_reviewer.state import State as CodeReviewerState
 from coder.state import State as CoderState
 from orchestrator.configuration import Configuration
-from orchestrator.state import Project, State
+from orchestrator.state import State
 from requirement_gatherer.graph import RequirementsGraph
 from requirement_gatherer.state import State as RequirementsState
 from task_manager.graph import TaskManagerGraph

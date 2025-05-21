@@ -15,13 +15,12 @@ from langgraph.graph import START, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
-from termcolor import colored
 
 from architect import tools
 from architect.configuration import Configuration
 from architect.state import State
-from common.graph import AgentGraph
 from common import utils
+from common.graph import AgentGraph
 
 logger = logging.getLogger(__name__)
 

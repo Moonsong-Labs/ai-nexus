@@ -1,6 +1,6 @@
 """State for the graph."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from langchain_core.messages import AnyMessage
