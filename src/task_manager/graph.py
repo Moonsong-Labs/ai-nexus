@@ -16,6 +16,7 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+import common.tools
 from common import utils
 from common.graph import AgentGraph
 from task_manager import tools
@@ -130,6 +131,7 @@ class TaskManagerGraph(AgentGraph):
             tools.read_file,
             tools.create_file,
             tools.list_files,
+            common.tools.summarize,
         ]
 
         llm = init_chat_model(model=TASK_MANAGER_MODEL).bind_tools(all_tools)
