@@ -62,6 +62,7 @@ flowchart TD
 
 1. `projectbrief.md`
    - Foundation document that shapes all other files
+   - Contains high-level information
    - Defines core requirements and goals
    - Source of truth for project scope
 
