@@ -66,12 +66,10 @@ The original "Memory Bank" concept described a system of structured Markdown fil
 *   **Static Memories:** JSON files in `.langgraph/static_memories/` can be loaded.
 *   **Shift:** Externalized memory via `langmem`, integrated via `AgentGraph` and configured through `AgentConfiguration` and `MemoryConfiguration`.
 
-
 ## 3. Project-Level Standards & Goals (`project_memories/PRD.md`)
 
 This file outlines the overarching standards and technological choices for the AI Nexus project.
 *   (No changes from PR)
-
 
 ## 4. General Agent Architecture
 
@@ -85,7 +83,6 @@ AI Nexus employs a few architectural patterns for its agents:
 
 **4.3. Custom `StateGraph` Architecture (e.g., Code Reviewer - NEW)**
 *   (No changes from PR)
-
 
 ## 5. Specific Agent Details
 
@@ -205,8 +202,18 @@ AI Nexus employs a few architectural patterns for its agents:
 
 ## 6. Testing Framework (`tests/`) (UPDATED)
 
+*   **`tests/datasets/requirement_gatherer_dataset.py` (UPDATED):**
+    *   The dataset name has been updated to `"Requirement-gatherer-dataset-human-ai"`.
+    *   A new `FIRST_MESSAGE` constant has been added, providing a detailed initial project description for the agent.
+    *   The input content for the human message in the dataset examples now uses `FIRST_MESSAGE`.
+    *   The expected output content has been updated to `"Requirements are confirmed"`.
 *   **`tests/integration_tests/test_orchestrator.py` (UPDATED):**
     *   Tests updated to reflect the Orchestrator's new tool usage (e.g., `memorize` instead of `store_memory`, and direct agent tool calls like `code_reviewer` instead of generic `Delegate`).
+*   **`tests/integration_tests/test_requirement_gatherer.py` (UPDATED):**
+    *   The test setup now explicitly imports `Configuration` as `GathererConfig` from `requirement_gatherer.configuration`.
+    *   An `agent_config = GathererConfig(use_human_ai=True)` is now passed to the `RequirementsGraph` constructor.
+    *   The `client.aevaluate` call now uses `create_async_graph_caller_for_gatherer(graph)` instead of `create_async_graph_caller(graph)`.
+    *   The `num_repetitions` for evaluation has been reduced from `4` to `1`.
 *   **Smoke Tests (NEW - UPDATED):**
     *   **`tests/smoke/langgraph_dev/`**: Contains a smoke test for the `langgraph dev` CLI and its UI.
         *   **Purpose**: Verifies basic end-to-end functionality of launching `langgraph dev`, interacting with the LangGraph Studio UI for the `agent_template` graph, and ensuring it reaches an expected state (e.g., a human interrupt).
@@ -220,8 +227,9 @@ AI Nexus employs a few architectural patterns for its agents:
             6.  Asserts that the graph execution pauses for a human interrupt by verifying the presence of an 'Interrupt' label and subsequently either a 'Continue' or 'Resume' button in the UI.
         *   **Artifacts**: Produces `langgraph-test-result.png` (a screenshot of the UI state) which is uploaded by the CI workflow.
         *   **Configuration**: Requires `GOOGLE_API_KEY` (via `.env` file at project root) for the `langgraph dev` server.
+*   **`tests/testing/__init__.py` (UPDATED):**
+    *   A new helper function `create_async_graph_caller_for_gatherer` has been added. This function is specifically designed for the requirement gatherer evaluation, expecting the final output to be a `ToolMessage` with the name "summarize" and returning its content.
 *   (Other test files as previously described, or minor updates not impacting core logic)
-
 
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`) (UPDATED)
 
@@ -255,7 +263,6 @@ AI Nexus employs a few architectural patterns for its agents:
 *   `.gitignore` (UPDATED): Now excludes all files and directories under `projects/`.
 *   **Demo Configuration:** The demo script (`src/demo/orchestrate.py`) now configures `task_manager_agent` with `use_stub=False` and `coder_new_pr_agent`, `coder_change_request_agent` with `use_stub=True`.
 *   (Other workflow aspects like `pytest.ini` setup as previously described, or minor updates not impacting core logic)
-
 
 ## 8. Overall Project Structure Summary
 
@@ -382,7 +389,7 @@ ai-nexus/
 └── tests/
     ├── datasets/
     │   ├── coder_dataset.py
-    │   ├── requirement_gatherer_dataset.py
+    │   ├── requirement_gatherer_dataset.py # UPDATED: Dataset name, FIRST_MESSAGE, input/output content updated.
     │   └── task_manager_dataset.py
     ├── integration_tests/
     │   ├── test_architect_agent.py
@@ -391,7 +398,7 @@ ai-nexus/
     │   ├── test_graph.py
     │   ├── test_grumpy_agent.py
     │   ├── test_orchestrator.py    # UPDATED: Tests reflect new Orchestrator tool usage (e.g., memorize, direct agent calls like code_reviewer).
-    │   ├── test_requirement_gatherer.py
+    │   ├── test_requirement_gatherer.py # UPDATED: Uses create_async_graph_caller_for_gatherer, passes agent_config to RequirementsGraph, num_repetitions reduced.
     │   ├── test_task_manager.py
     │   ├── test_tester_agent.py
     │   └── inputs/
@@ -411,7 +418,7 @@ ai-nexus/
     │       │   └── index.ts        # ADDED
     │       └── tsconfig.json       # ADDED
     ├── testing/
-    │   ├── __init__.py
+    │   ├── __init__.py             # UPDATED: Added create_async_graph_caller_for_gatherer helper function.
     │   ├── evaluators.py
     │   └── formatter.py
     └── unit_tests/
