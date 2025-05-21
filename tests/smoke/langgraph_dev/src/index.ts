@@ -59,7 +59,7 @@ async function runTest(): Promise<void> {
     console.log("Launching browser for testing...");
     const viewport = { width: 2000, height: 1000 };
     const browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
       slowMo: 10,
       args: [
         "--no-sandbox",
