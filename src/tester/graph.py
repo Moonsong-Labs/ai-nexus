@@ -67,18 +67,11 @@ def _create_call_model(
             stage_prompt = get_stage_prompt(current_stage)
 
             # Prepare the system prompt with workflow stage, memories, and current time
-            system_prompt = getattr(agent_config, "system_prompt", None)
-            if not system_prompt:
-                logger.info(
-                    "No system prompt found in configuration. Using default prompt."
-                )
-                sys_prompt = "You are a helpful AI assistant."
-            else:
-                sys_prompt = system_prompt.format(
-                    workflow_stage=stage_prompt,
-                    user_info=formatted,
-                    time=datetime.now().isoformat(),
-                )
+            sys_prompt = agent_config.system_prompt.format(
+                workflow_stage=stage_prompt,
+                user_info=formatted,
+                time=datetime.now().isoformat(),
+            )
 
             # Invoke the language model with the prepared prompt and tools
             msg = await llm_with_tools.ainvoke(
