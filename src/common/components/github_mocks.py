@@ -232,13 +232,17 @@ class MockGithubApi:
     def get_pull_request_diff(self, pr_number: str) -> str:
         """Get the diff of a pull request."""
         # TODO: how to mock this...?
-        raise NotImplementedError("get_pull_request_diff is not implemented")
+        raise NotImplementedError("get_pull_request_diff mock is not implemented")
+
+    def comment_on_issue(self, pr_number: str, review: str) -> str:
+        """Comment on an issue."""
+        raise NotImplementedError("comment_on_issue mock is not implemented")
 
     def create_pull_request_review(self, pr_number: str, review: str) -> str:
-        """Comment on an issue."""
+        """Leave a PR review."""
         # TODO: store list of reviews?
         # TODO: fn signature
-        raise NotImplementedError("comment_on_issue is not implemented")
+        raise NotImplementedError("create_pull_request_review mock is not implemented")
 
 
 def maybe_mock_github() -> Union[GitHubAPIWrapper, MockGithubApi]:

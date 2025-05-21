@@ -66,6 +66,7 @@ def coder_new_pr_config():
             "update_file",
             "read_file",
             "delete_file",
+            "create_issue_comment",
         ],
     )
 
@@ -86,6 +87,7 @@ def coder_change_request_config():
             "list_pull_requests_files",
             "get_pull_request_head_branch",
             "get_latest_pr_workflow_run",
+            "create_issue_comment",
         ],
     )
 

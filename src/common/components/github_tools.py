@@ -61,7 +61,50 @@ GITHUB_TOOLS = [
     "get_pull_request_head_branch",
     "get_pull_request_diff",
     "create_pull_request_review",
+    "create_issue_comment",
 ]
+
+CREATE_ISSUE_COMMENT_PROMPT = """
+This tool is a wrapper for the GitHub API, useful when you want to comment on a pull request or issue. **VERY IMPORTANT**: Your input to this tool MUST strictly follow these rules:
+
+- First you must specify the PR number. **VERY IMPORTANT**: You must specify the PR number as an integer, not a float."
+- Then you must specify the body of your comment.
+"""
+
+class IssueComment(BaseModel):
+    """Schema for creating an issue comment."""
+
+    pr_number: int = Field(0, description="The PR number as an integer, e.g. `12`")
+    body: str = Field(1, description="The comment to be left on the issue or pull request.")
+
+class CreateIssueComment(BaseTool):
+    """Create an Issue or Pull Request Comment."""
+
+    name: str = "create_issue_comment"
+    description: str = CREATE_ISSUE_COMMENT_PROMPT
+    args_schema: Type[BaseModel] = IssueComment
+    github_api_wrapper: GitHubAPIWrapper
+
+    def _run(self, pr_number: int, body: str):
+        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
+        pull_request.create_issue_comment(body)
+
+    async def _arun(self, pr_number: int, body: str):
+        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
+        pull_request.create_issue_comment(body)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class PRReviewComment(BaseModel):
@@ -274,6 +317,7 @@ def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
     ] + [
         GetLatestPRWorkflowRun(github_api_wrapper=github_api_wrapper),
         CreatePullRequestReviewComment(github_api_wrapper=github_api_wrapper),
+        CreateIssueComment(github_api_wrapper=github_api_wrapper),
         GetPullRequestHeadBranch(github_api_wrapper=github_api_wrapper),
         GetPullRequestDiff(github_api_wrapper=github_api_wrapper),
     ]
