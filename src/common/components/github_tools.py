@@ -270,7 +270,6 @@ class GetLatestPRWorkflowRun(BaseTool):
             page = workflow_runs.get_page(0)
             logs_url = page[0].logs_url
 
-            logger.info(f"auth token: {repo.requester.auth.token}")
             auth_token = repo.requester.auth.token
 
             response = requests.get(
