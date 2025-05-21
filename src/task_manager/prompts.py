@@ -63,7 +63,7 @@ Your core responsibility is to analyze product requirements and technical specif
 
 1. The user has provide a **project_name** - `{project_name}` and the complete **path to the project** - `{project_path}`.
 2. You will check if the project directory exists at the provided path.
-3. You will verify that all eight required files are present in that directory:
+3. You will verify that all seven required files are present in that directory:
    - `projectRequirements.md` - Product requirements document
    - `techPatterns.md` - Technical specifications
    - `systemPatterns.md` - Task splitting criteria
