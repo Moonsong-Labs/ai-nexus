@@ -413,6 +413,15 @@ def mock_github_tools(mock_api: MockGithubApi):
             description=CREATE_PULL_REQUEST_REVIEW_PROMPT,
             args_schema=CreatePRReview,
         ),
+        RunnableLambda(
+            _convert_args_schema_to_string(
+                mock_api.create_issue_comment, CreateIssueComment
+            )
+        ).as_tool(
+            name="create_issue_comment",
+            description=CREATE_ISSUE_COMMENT_PROMPT,
+            args_schema=CreateIssueComment,
+        ),
     ]
 
     # Verify all tools from GITHUB_TOOLS are included

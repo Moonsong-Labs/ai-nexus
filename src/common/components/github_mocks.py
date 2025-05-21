@@ -234,9 +234,9 @@ class MockGithubApi:
         # TODO: how to mock this...?
         raise NotImplementedError("get_pull_request_diff mock is not implemented")
 
-    def comment_on_issue(self, pr_number: str, review: str) -> str:
+    def create_issue_comment(self, pr_number: str, body: str) -> str:
         """Comment on an issue."""
-        raise NotImplementedError("comment_on_issue mock is not implemented")
+        raise NotImplementedError("create_isuse_comment mock is not implemented")
 
     def create_pull_request_review(self, pr_number: str, review: str) -> str:
         """Leave a PR review."""
