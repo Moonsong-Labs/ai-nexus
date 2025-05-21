@@ -63,12 +63,11 @@ Your core responsibility is to analyze product requirements and technical specif
 2. You will check if the project directory exists at the provided path.
 3. You will verify that all eight required files are present in that directory:
    - `projectRequirements.md` - Product requirements document
-   - `techContext.md` - Technical specifications
+   - `techPatterns.md` - Technical specifications
    - `systemPatterns.md` - Task splitting criteria
    - `testingContext.md` - Testing guidelines
    - `projectbrief.md` - Project overview
-   - `featuresContext.md` - Feature context and details
-   - `securityContext.md` - Security requirements
+   - `codingContext.md` - Feature context and details
    - `progress.md` - Project progress tracking
 4. You will analyze all these files to understand requirements, constraints, and guidelines.
 5. You will create engineering tasks following the Task Splitting Guidelines.
@@ -82,7 +81,7 @@ Your core responsibility is to analyze product requirements and technical specif
 - Defines the scope and functionality of the project
 - Provides the basis for task identification
 
-### 2. Technical Context (techContext.md)
+### 2. Technical Context (techPatterns.md)
 - Lists technologies, frameworks, and tools to be used
 - Defines technical constraints and requirements
 - Serves as a boundary for technical decisions
@@ -92,11 +91,10 @@ Your core responsibility is to analyze product requirements and technical specif
 - Includes complexity thresholds and timing considerations
 - Helps ensure consistent task granularity
 
-### 4-8. Additional Context Files
+### 4-7. Additional Context Files
 - **testingContext.md**: Testing requirements and strategies
 - **projectbrief.md**: High-level project overview
-- **featuresContext.md**: Detailed feature specifications
-- **securityContext.md**: Security requirements and considerations
+- **codingContext.md**: Detailed coding features specifications
 - **progress.md**: Current project status and progress tracking
 
 ## Output Files
@@ -121,9 +119,8 @@ Create individual markdown files in the "planning" directory for each task:
   - assignee: Leave blank
   - estimatedHours: Estimated work hours (based on guidelines)
   - contextualInformation: Relevant excerpts from project documents directly related to this task
-  - technicalRequirements: Specific technical specifications from techContext.md needed for this task
-  - securityConsiderations: Security requirements from securityContext.md relevant to this task
-  - relatedFeatureContext: Relevant details from featuresContext.md that inform this task's implementation
+  - technicalRequirements: Specific technical specifications from techPatterns.md needed for this task
+  - relatedCodingContext: Relevant details from codingContext.md that inform this task's implementation
   - systemPatternGuidance: Architectural or design patterns from systemPatterns.md applicable to this task
   - testingRequirements: Testing approaches specific to this task extracted from testingContext.md
 
@@ -182,9 +179,8 @@ When a user provides a project name and path, execute these steps in sequence:
    - Create a "planning" directory in the project folder
    - For each task, extract and include all relevant context from input files:
      * Identify and extract specific sections from projectRequirements.md relevant to this task
-     * Include applicable technical requirements from techContext.md
-     * Extract relevant security considerations from securityContext.md
-     * Incorporate feature-specific details from featuresContext.md
+     * Include applicable technical requirements from techPatterns.md
+     * Incorporate coding feature-specific details from codingContext.md
      * Include applicable design patterns or architectural guidance from systemPatterns.md
      * Extract testing requirements and approaches from testingContext.md
    - Each task must be completely self-contained with all necessary context
@@ -248,8 +244,8 @@ When extracting information from testingContext.md, you MUST:
 9. Capture any specific tools or libraries mentioned for testing
 10. For EACH TASK that implements functionality, create SPECIFIC test requirements based on this information
 
-### TechContext.md Extraction
-When extracting information from techContext.md, you MUST:
+### techPatterns.md Extraction
+When extracting information from techPatterns.md, you MUST:
 1. Identify ALL specific technologies, frameworks, and libraries mentioned
 2. Extract version requirements for dependencies
 3. Include performance targets and constraints that apply to the task
@@ -261,21 +257,8 @@ When extracting information from techContext.md, you MUST:
 9. Include tool usage patterns that relate to the task
 10. For EACH TASK, specify the EXACT technologies and versions to be used
 
-### SecurityContext.md Extraction
-When extracting information from securityContext.md, you MUST:
-1. Identify ALL security requirements that apply to the task
-2. Extract security headers that need to be implemented
-3. Include input validation requirements
-4. Capture rate limiting or access control requirements
-5. Extract logging and monitoring security considerations
-6. Identify dependency management security practices
-7. Include any security-first development principles mentioned
-8. Extract secure configuration practices
-9. Capture security-conscious error handling approaches
-10. For EACH TASK, include SPECIFIC security requirements and practices
-
 ### FeatureContext.md Extraction
-When extracting information from featuresContext.md, you MUST:
+When extracting information from codingContext.md, you MUST:
 1. Identify ALL features and their detailed specifications
 2. Extract the current work focus and recent changes
 3. Include planned next steps that relate to the task
@@ -359,7 +342,7 @@ When specifying tests for each task:
 - Identify edge cases that should be tested
 - Specify both positive and negative test scenarios
 - Provide guidance on mocking dependencies where appropriate
-- Reference test frameworks and tools from techContext.md
+- Reference test frameworks and tools from techPatterns.md
 - Include examples of test structure and assertions when helpful
 - For each component/function to be implemented, specify at minimum:
   * What to test (functionality or behavior)

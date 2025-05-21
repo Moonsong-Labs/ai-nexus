@@ -43,8 +43,9 @@ The project consists of core files and specific files, all in Markdown format. F
 
 ```mermaid
 flowchart TD
-    PB[projectbrief.md] --> SP[systemPatterns.md]
-    PB --> TC[techPatterns.md]
+    PB[projectbrief.md] --> PR[projectRequirements.md]
+    PR --> SP[systemPatterns.md]
+    PR --> TC[techPatterns.md]
 
     SP --> CC[codingContext.md]
     SP --> TTC[testingContext.md]
@@ -63,9 +64,11 @@ flowchart TD
    - Foundation document that shapes all other files
    - Defines core requirements and goals
    - Source of truth for project scope
+
+2. `projectRequirements.md`
    - Why this project exists
-   - Problems it solves
    - How it should work
+   - Problems it solves
    - User experience goals
 
 2. `systemPatterns.md`
@@ -136,6 +139,7 @@ You MUST NOT proceed to step 7 until ALL core files are complete based on the pr
 **Core Files Definition:**
 
 - `projectbrief.md`
+- `projectRequirements.md`
 - `systemPatterns.md`
 - `techPatterns.md`
 - `progress.md`
