@@ -18,6 +18,7 @@ from requirement_gatherer.state import State as RequirementsState
 from task_manager.graph import TaskManagerGraph
 from task_manager.state import State as TaskManagerState
 from tester.state import State as TesterState
+from common.tools.summarize import summarize
 
 
 def create_requirements_tool(
@@ -286,30 +287,3 @@ def memorize(
     # print(f"[MEMORIZE] for {origin}: {content}")  # noqa: T201
     return f"Memorized '{content}' for '{origin}'"
 
-
-# ruff: noqa: T201
-@tool("summarize", parse_docstring=True)
-async def summarize(
-    summary: str,
-    tool_call_id: Annotated[str, InjectedToolCallId],
-) -> str:
-    """Summarize the agent output.
-
-    Args:
-        summary: The entire summary.
-    """
-    print("=== Summary ===")
-    print(f"{summary}")
-    print("=================")
-
-    return Command(
-        update={
-            "messages": [
-                ToolMessage(
-                    content=summary,
-                    tool_call_id=tool_call_id,
-                )
-            ],
-            "summary": summary,
-        }
-    )
