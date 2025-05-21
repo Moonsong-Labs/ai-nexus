@@ -17,6 +17,11 @@ class Project:
     def _name_to_id(cls, name: str):
         id = re.sub(r"[^\w\s]", "", name.lower())
         id = re.sub(r"\s+", "-", id)
+
+        # If no alphanumeric characters were present
+        if not id:
+            id = "new-project"
+
         return id
 
     @classmethod

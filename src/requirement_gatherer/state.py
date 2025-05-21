@@ -1,6 +1,7 @@
 """Define the shared values."""
 
 from dataclasses import dataclass
+from typing import Optional
 
 from langchain_core.messages import AnyMessage
 from langgraph.graph import add_messages
@@ -17,7 +18,7 @@ class State:
     """The messages in the conversation."""
     summary: str = ""
     """The requirements summary."""
-    project: Project = None
+    project: Optional[Project] = None
     """The project."""
 
 
