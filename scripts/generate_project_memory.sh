@@ -15,7 +15,7 @@ set -o pipefail
 # Determine the absolute path of the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &>/dev/null && pwd )"
 
-GEMINI_MODEL_NAME="gemini-2.5-pro-preview-05-06"
+GEMINI_MODEL_NAME="gemini-2.5-flash-preview-05-20"
 GEMINI_API_ENDPOINT="https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_NAME}:generateContent"
 
 GLOBAL_MEMORY_FILE="project_memories/global.md"
