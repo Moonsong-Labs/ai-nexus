@@ -1,14 +1,13 @@
 """Tools for the code agent."""
 
-from typing import List, Type, Union
-
-import logging
-
-from os import listdir
 import asyncio
-import requests
+import logging
 import tempfile
 import zipfile
+from os import listdir
+from typing import List, Type, Union
+
+import requests
 from github.PullRequest import ReviewComment
 from langchain_community.agent_toolkits.github.toolkit import (
     BranchName,
@@ -72,11 +71,15 @@ This tool is a wrapper for the GitHub API, useful when you want to comment on a 
 - Then you must specify the body of your comment.
 """
 
+
 class IssueComment(BaseModel):
     """Schema for creating an issue comment."""
 
     pr_number: int = Field(0, description="The PR number as an integer, e.g. `12`")
-    body: str = Field(1, description="The comment to be left on the issue or pull request.")
+    body: str = Field(
+        1, description="The comment to be left on the issue or pull request."
+    )
+
 
 class CreateIssueComment(BaseTool):
     """Create an Issue or Pull Request Comment."""
@@ -92,6 +95,7 @@ class CreateIssueComment(BaseTool):
     async def _arun(self, pr_number: int, body: str):
         pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
         pull_request.create_issue_comment(body)
+
 
 class PRReviewComment(BaseModel):
     """Schema for a Pull Request Review Comment."""
@@ -217,7 +221,10 @@ class GetPullRequestHeadBranch(BaseTool):
         pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
         return pull_request.head.ref
 
+
 GET_LATEST_PR_WORKFLOW_RUN_PROMPT = "This tool will get the most recent workflow run for a given PR. **VERY IMPORTANT**: You must specify the PR number as an integer."
+
+
 class GetLatestPRWorkflowRun(BaseTool):
     """Get the most recent workflow run for a PR."""
 
@@ -242,10 +249,11 @@ class GetLatestPRWorkflowRun(BaseTool):
             auth_token = repo.requester.auth.token
 
             response = requests.get(
-                logs_url, headers={
+                logs_url,
+                headers={
                     "Accept": "application/vnd.github+text",
                     "Authorization": "Bearer " + auth_token,
-                }
+                },
             )
             response.raise_for_status()
 
@@ -263,14 +271,15 @@ class GetLatestPRWorkflowRun(BaseTool):
             content = ""
             log_files = [f for f in listdir(dir.name) if f.endswith(".txt")]
             for file in log_files:
-                with open(f"{dir.name}/{file}", "r") as f:
+                with open(f"{dir.name}/{file}") as f:
                     content += f.read()
                     content += "\n\n"
-            
+
             dir.cleanup()
             return content
 
         return ""
+
 
 def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
     """Configure and return GitHub tools for the code agent."""
