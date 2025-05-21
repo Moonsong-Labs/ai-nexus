@@ -2,10 +2,11 @@
 
 from typing import Annotated, Literal
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolCallId, tool
 from langgraph.prebuilt import InjectedState
+from langgraph.types import Command
 
 from architect.state import State as ArchitectState
 from code_reviewer.state import State as CodeReviewerState
@@ -70,8 +71,6 @@ def create_requirements_tool(
                 "project": result["project"],
             }
         )
-
-        # return result["summary"]
 
     return requirements
 
