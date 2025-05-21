@@ -182,17 +182,17 @@ AI Nexus employs a few architectural patterns for its agents:
 
 *   **`tests/integration_tests/test_orchestrator.py` (UPDATED):**
     *   Tests updated to reflect the Orchestrator's new tool usage (e.g., `memorize` instead of `store_memory`, and direct agent tool calls like `code_reviewer` instead of generic `Delegate`).
-*   **Smoke Tests (NEW):**
+*   **Smoke Tests (NEW - UPDATED):**
     *   **`tests/smoke/langgraph_dev/`**: Contains a smoke test for the `langgraph dev` CLI and its UI.
-        *   **Purpose**: Verifies basic end-to-end functionality of launching `langgraph dev`, interacting with the LangGraph Studio UI for the `orchestrator` agent, and ensuring it reaches an expected state (e.g., human interrupt for the Requirement Gatherer).
+        *   **Purpose**: Verifies basic end-to-end functionality of launching `langgraph dev`, interacting with the LangGraph Studio UI for the `agent_template` graph, and ensuring it reaches an expected state (e.g., a human interrupt).
         *   **Technology**: Node.js, TypeScript, Puppeteer.
         *   **Execution**:
             1.  Launches the `langgraph dev` server for the AI Nexus project.
             2.  Uses Puppeteer to open a browser and navigate to the LangGraph Studio (`https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:8080`).
-            3.  Selects the `orchestrator` graph.
+            3.  Waits for the `agent_template` graph to be listed and then selects it.
             4.  Inputs a test message (e.g., "I want to build a website").
             5.  Submits the message and waits for the graph to process.
-            6.  Asserts that the graph execution pauses for a human interrupt (e.g., from the Requirement Gatherer).
+            6.  Asserts that the graph execution pauses for a human interrupt by verifying the presence of an 'Interrupt' label and subsequently either a 'Continue' or 'Resume' button in the UI.
         *   **Artifacts**: Produces `langgraph-test-result.png` (a screenshot of the UI state) which is uploaded by the CI workflow.
         *   **Configuration**: Requires `GOOGLE_API_KEY` (via `.env` file at project root) for the `langgraph dev` server.
 *   (Other test files as previously described, or minor updates not impacting core logic)
