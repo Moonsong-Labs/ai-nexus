@@ -68,4 +68,5 @@ def create_async_graph_caller_for_gatherer(
 __all__ = [
     get_logger.__name__,
     create_async_graph_caller.__name__,
+    create_async_graph_caller_for_gatherer.__name__,
 ]
