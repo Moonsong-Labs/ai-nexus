@@ -3,10 +3,11 @@ from datasets.requirement_gatherer_dataset import REQUIREMENT_GATHERER_DATASET_N
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.memory import InMemoryStore
 from langsmith import Client
-from testing import create_async_graph_caller, get_logger
+from testing import create_async_graph_caller_for_gatherer, get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
+from requirement_gatherer.configuration import Configuration as GathererConfig
 from requirement_gatherer.graph import RequirementsGraph
 
 ## Setup basic logging for the test
@@ -90,15 +91,16 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
     logger.info(f"evaluating dataset: {REQUIREMENT_GATHERER_DATASET_NAME}")
     memory_saver = MemorySaver()  # Checkpointer for the graph
     memory_store = InMemoryStore()
-
+    agent_config = GathererConfig(use_human_ai=True)
+    
     # Compile the graph - needs checkpointer for stateful execution during evaluation
     graph = RequirementsGraph(
-        checkpointer=memory_saver, store=memory_store
+        checkpointer=memory_saver, store=memory_store, agent_config=agent_config
     ).compiled_graph
 
     # Define the function to be evaluated for each dataset example
     results = await client.aevaluate(
-        create_async_graph_caller(graph),
+        create_async_graph_caller_for_gatherer(graph),
         data=REQUIREMENT_GATHERER_DATASET_NAME,  # The whole dataset is used
         evaluators=[
             llm_judge.create_correctness_evaluator(
@@ -106,7 +108,7 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
             )
         ],
         experiment_prefix="requirement-gatherer-gemini-2.5-correctness-eval-plain",
-        num_repetitions=4,
+        num_repetitions=1,
         max_concurrency=4,
     )
 

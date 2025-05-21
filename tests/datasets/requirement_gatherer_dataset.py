@@ -1,6 +1,13 @@
 from langsmith import Client
 
-REQUIREMENT_GATHERER_DATASET_NAME = "Requirement-gatherer-naive-dataset"
+REQUIREMENT_GATHERER_DATASET_NAME = "Requirement-gatherer-dataset-human-ai"
+FIRST_MESSAGE = """
+I want to build a **Hobby** project called 'Buen Fla Project'.\n
+Its a Rust based stack (data structure).\n
+The **vision** is "learning and having fun"\n
+For the **functional requirements**, it just need to have pop, push and is_empty functions.\n
+You can fill the rest with what you think important. **DONT ASK MORE QUESTIONS** 
+"""
 
 
 def create_dataset():
@@ -18,12 +25,12 @@ def create_dataset():
                 "messages": [
                     {
                         "role": "human",
-                        "content": "Start the requirement gathering process",
+                        "content": FIRST_MESSAGE,
                     }
                 ]
             },
             "outputs": {
-                "message": {"content": "Hello! This seems a good project to work!"}
+                "message": {"content": "Requirements are confirmed"}
             },
         },
     ]
