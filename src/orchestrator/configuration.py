@@ -21,6 +21,9 @@ from requirement_gatherer.configuration import (
 from task_manager.configuration import (
     Configuration as TaskManagerConfiguration,
 )
+from tester.configuration import (
+    Configuration as TesterConfiguration,
+)
 
 
 @dataclass(kw_only=True)
@@ -60,6 +63,14 @@ class TaskManagerAgentConfig(SubAgentConfig):
 
 
 @dataclass(kw_only=True)
+class TesterAgentConfig(SubAgentConfig):
+    """Tester-agent configuration for orchestrator."""
+
+    use_stub: bool = True
+    config: TesterConfiguration = field(default_factory=TesterConfiguration)
+
+
+@dataclass(kw_only=True)
 class Configuration(AgentConfiguration):
     """Main configuration class for the memory graph system."""
 
@@ -79,7 +90,7 @@ class Configuration(AgentConfiguration):
             stub_messages=model_coder_change_request_messages
         )
     )
-    tester_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
+    tester_agent: TesterAgentConfig = field(default_factory=TesterAgentConfig)
     reviewer_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
 
 

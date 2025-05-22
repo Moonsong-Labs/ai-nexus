@@ -16,6 +16,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+import common
 from common.graph import AgentGraph
 from tester.configuration import Configuration
 from tester.prompts import get_stage_prompt
@@ -70,6 +71,7 @@ def _create_call_model(
             sys_prompt = agent_config.system_prompt.format(
                 workflow_stage=stage_prompt,
                 user_info=formatted,
+                project_path=state.project.path,
                 time=datetime.now().isoformat(),
             )
 
@@ -150,7 +152,13 @@ class TesterAgentGraph(AgentGraph):
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
         # Initialize the language model and the tools
-        all_tools = []
+        all_tools = [
+            common.tools.summarize,
+            common.tools.create_directory,
+            common.tools.create_file,
+            common.tools.list_files,
+            common.tools.read_file,
+        ]
 
         # Define node names explicitly to avoid confusion
         call_model_name = "call_model"

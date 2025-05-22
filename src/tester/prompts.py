@@ -27,6 +27,8 @@ WORKFLOW_STAGE_PROMPTS = {
 SYSTEM_PROMPT = f"""
 {system_prompt_content}
 
+Project Path: {{project_path}}
+
 {{workflow_stage}}
 
 {{user_info}}
@@ -36,6 +38,7 @@ System Time: {{time}}"""
 SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{{user_info}}", "{user_info}")
 SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{{time}}", "{time}")
 SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{{workflow_stage}}", "{workflow_stage}")
+SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{{project_path}}", "{project_path}")
 
 
 def get_stage_prompt(stage_name):

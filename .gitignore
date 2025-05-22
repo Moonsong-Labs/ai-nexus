@@ -167,3 +167,5 @@ cython_debug/
 # Custom
 dump.json
 projects/*
+
+*.pem
