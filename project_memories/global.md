@@ -27,7 +27,8 @@
     *   Code Reviewer: Can use GitHub tools like `get_pull_request_diff` and `create_pull_request_review`.
     *   Architect (NEW, REVISED): Uses `create_memorize_tool`, `create_recall_tool`, `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`, and a new `summarize` tool (now provided by `common.tools.summarize`) for outputting its final architecture summary. Its `use_human_ai` configuration field has been removed. Its previous `upsert_memory` tool has been removed.
     *   Task Manager (REVISED): Uses `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`. Now also uses the `summarize` tool (from `common.tools.summarize`).
-    *   General: Tools like `file_dump` can be used by agents. A common `summarize` tool is now available in `src/common/tools/summarize.py` for reuse across agents. New common file system tools (`common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`) are available for reuse. Agent outputs are now enhanced with formatted, actor-labeled messages for improved clarity.
+    *   Coder (REVISED): **UPDATED**: Now includes the `get_latest_pr_workflow_run` tool. The `create_issue_comment` tool is *not* provided to the Coder agent.
+    *   General: Tools like `file_dump` can be used by agents. A common `summarize` tool is now available in `src/common/tools/summarize.py` for reuse across agents. New common file system tools (`common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`) are available for reuse. **UPDATED**: New common GitHub tools `common.components.github_tools.create_issue_comment` (for commenting on issues/PRs) and `common.components.github_tools.get_latest_pr_workflow_run` (for fetching workflow run logs) are now available. Agent outputs are now enhanced with formatted, actor-labeled messages for improved clarity.
 5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes.
     *   Orchestrator (REVISED): Its system prompt, dynamically loaded from markdown files in `src/orchestrator/memory/`, has been updated to reflect its new toolset (direct agent calls like `requirements`, `architect`, `task_manager`, `coder_new_pr`, `coder_change_request`, `tester`, `code_reviewer`, plus `memorize` and `summarize`) and refined workflow logic (e.g., using the `summarize` tool when no tasks are pending). The static `ORCHESTRATOR_SYSTEM_PROMPT` string in `src/orchestrator/prompts.py` has been removed.
     *   Task Manager (NEW, REVISED): System prompt defined in `task_manager.configuration.Configuration` via `task_manager_system_prompt` (which defaults to `prompts.SYSTEM_PROMPT` from `src/task_manager/prompts.py`). This prompt has been significantly updated to include stricter guidelines for task splitting (smaller tasks, buildable deliverables), mandatory testing requirements (unit, integration, edge cases), early CI/CD setup (GitHub Actions), expanded task metadata (contextual, technical, security, testing info), and reinforced roadmap creation and task sequencing rules (repo init -> project setup -> CI -> features). The prompt now dynamically references the active project name (`{project_name}`) and path (`{project_path}`). **UPDATED**: The prompt's list of required files has been updated: `techContext.md` is now `techPatterns.md`, `featuresContext.md` is now `codingContext.md`, and `securityContext.md` has been removed from the list. The prompt's internal descriptions and extraction guidelines for these files have been updated accordingly, including the removal of specific security context extraction instructions and the renaming of `relatedFeatureContext` to `relatedCodingContext` in the task metadata schema. The count of "Additional Context Files" has been adjusted from 4-8 to 4-7. **UPDATED**: The prompt now explicitly states that it will receive input documents in `{project_path}` and the project name is `{project_name}`. It also includes a new mandatory instruction to write a `summary` of the created tasks and call the `summarize` tool. The prompt now states that it will verify "all seven required files" (previously "eight").
@@ -61,10 +62,11 @@ The original "Memory Bank" concept described a system of structured Markdown fil
     *   Orchestrator (REVISED): Uses direct tools `requirements`, `architect`, `task_manager` (NEW), `coder_new_pr`, `coder_change_request`, `tester`, `code_reviewer` (which invoke sub-graphs/stubs), `memorize` (for memory persistence), and `summarize` (now from `common.tools.summarize`). The `requirements`, `architect`, and `task_manager` tools now update the Orchestrator's state with the `project` object returned by the sub-agent. The `coder_new_pr` and `coder_change_request` tools now return the content of the last message from the sub-agent's result, rather than a summary. **UPDATED**: The `tester` tool now passes the Orchestrator's `project` state to the Tester agent's state.
     *   Agents based on `AgentGraph` (like `AgentTemplateGraph`): Can get memory tools from `AgentGraph`.
     *   Requirement Gatherer: Uses `create_memorize_tool` and `human_feedback` tool. Its `summarize` tool is now from `common.tools.summarize`. A new `set_project` tool is available.
-    *   Tester: Custom `upsert_memory` tool removed. **UPDATED**: Now includes `common.tools.summarize`, `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file` in its toolset. Its state now includes a `project` field.
+    *   Tester: Custom `upsert_memory` tool removed. **UPDATED**: Now includes `common.tools.summarize`, `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file` in its toolset.
     *   Code Reviewer: Uses GitHub tools.
     *   Architect (NEW, REVISED): Uses `create_memorize_tool`, `create_recall_tool`, `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`, and a new `summarize` tool (now from `common.tools.summarize`). `use_human_ai` removed from its config.
     *   Task Manager (REVISED): Uses `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`. Now also uses the `summarize` tool (from `common.tools.summarize`).
+    *   Coder (REVISED): **UPDATED**: Now includes the `get_latest_pr_workflow_run` tool.
 *   **Static Memories:** JSON files in `.langgraph/static_memories/` can be loaded.
 *   **Shift:** Externalized memory via `langmem`, integrated via `AgentGraph` and configured through `AgentConfiguration` and `MemoryConfiguration`.
 
@@ -158,7 +160,7 @@ AI Nexus employs a few architectural patterns for its agents:
 *   **State (`src/coder/state.py` - REVISED):**
     *   Changed from `TypedDict` to `@dataclass(kw_only=True)`.
     *   Added `summary: str = ""` field.
-*   **Graph (`src/coder/graph.py` - MINOR UPDATE):** Accesses state messages via `state.messages` instead of `state["messages"]` due to state being a dataclass.
+*   **Graph (`src/coder/graph.py` - UPDATED):** Accesses state messages via `state.messages` instead of `state["messages"]` due to state being a dataclass. **UPDATED**: The `coder_new_pr_config` and `coder_change_request_config` now include the `get_latest_pr_workflow_run` tool in their `allowed_tools` list.
 *   **Prompts (`src/coder/prompts.py` - UPDATED):** The `NEW_PR_SYSTEM_PROMPT` has been updated to refer to the "base branch" instead of "main" for repository interactions.
 
 #### 5.4. Code Reviewer (`src/code_reviewer/`) (REVISED)
@@ -340,7 +342,7 @@ ai-nexus/
 │   │   └── system_prompt.md
 │   ├── coder/
 │   │   ├── __init__.py
-│   │   ├── graph.py              # UPDATED: Minor state access change (state.messages)
+│   │   ├── graph.py              # UPDATED: Minor state access change (state.messages). UPDATED: `coder_new_pr_config` and `coder_change_request_config` now include `get_latest_pr_workflow_run` tool.
 │   │   ├── lg_server.py
 │   │   ├── mocks.py
 │   │   ├── prompts.py            # UPDATED: NEW_PR_SYSTEM_PROMPT updated to use "base branch".
@@ -349,8 +351,8 @@ ai-nexus/
 │   │   └── README.md
 │   ├── common/
 │   │   ├── components/
-│   │   │   ├── github_mocks.py
-│   │   │   ├── github_tools.py
+│   │   │   ├── github_mocks.py   # UPDATED: Added mocks for `create_issue_comment` and `get_latest_pr_workflow_run`. Updated existing mocks to return empty string instead of raising NotImplementedError.
+│   │   │   ├── github_tools.py   # UPDATED: Added `create_issue_comment` and `get_latest_pr_workflow_run` tools. Modified `_run` methods of `CreatePullRequestReviewComment`, `GetPullRequestDiff`, `GetPullRequestHeadBranch` to call their `_arun` counterparts.
 │   │   │   └── memory.py
 │   │   ├── configuration.py
 │   │   ├── graph.py
