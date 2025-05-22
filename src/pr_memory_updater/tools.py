@@ -7,6 +7,20 @@ import re
 
 from typing import Optional
 
+def _invoke(cmd: str, *, cwd: Optional[str] = None, err_ctx: Optional[str] = None) -> str:
+    result = subprocess.run(cmd, cwd=cwd, capture_output=True)
+
+    if not err_ctx:
+        err_ctx = f"Failed to run '{cmd}':"
+
+    if result.returncode != 0:
+        error_msg = result.stderr.decode('utf-8').strip()
+        raise RuntimeError(f"{err_ctx}: {error_msg}")
+
+    return result.stdout.decode('utf-8').strip()
+
+
+
 def invoke_project_memory_from_pr(repo: str, pr: str, *, quiet: Optional[bool] = False) -> str:
     """
     Invoke the `update_project_memory_from_pr` script
@@ -31,26 +45,25 @@ def invoke_project_memory_from_pr(repo: str, pr: str, *, quiet: Optional[bool] =
 
     # retrieve last commit of the PR to create checkout from
     # choosing this instead of `main` to avoid out-of-sync PRs
-    result = subprocess.run(f"gh pr view {pr} -R {repo} --json commits | jq '.commits | last | .oid'", shell=True,  capture_output=True)
+    rev = _invoke(f"gh pr view {pr} -R {repo} --json commits | jq '.commits | last | .oid'", err_ctx="Failed to retrieve PR commit")
 
-    # drop trailing newline
-    rev = result.stdout.decode('utf-8').strip()
+    if not rev or rev == "null":
+        raise ValueError(f"Could not find valid commit for PR {pr} in repository {repo}")
 
     memory_changes = None
 
     # script excepts to be run in a checkout
     # so set it up for given PR at tmpdir to not pollute environment
     with tempfile.TemporaryDirectory() as dir:
-        subprocess.run(f"git clone https://github.com/{repo} --depth=1 --revision={rev} .", shell=True, cwd=dir, capture_output=quiet)
+        _invoke(f"git clone https://github.com/{repo} --depth=1 --revision={rev} .", cwd=dir, err_ctx="Failed to clone repository")
 
         # mark scripts as runnable
-        subprocess.run("chmod +x ./scripts/update_project_memory_from_pr.sh ./scripts/fetch_pr_details.sh", shell=True, cwd=dir, capture_output=quiet)
+        _invoke("chmod +x ./scripts/update_project_memory_from_pr.sh ./scripts/fetch_pr_details.sh", cwd=dir, err_ctx="Failed to set execute permission on scripts")
 
         # invoke scripts/update_project_memory_from_pr.sh
-        subprocess.run(f"./scripts/update_project_memory_from_pr.sh -r {repo} -p {pr}", shell=True, cwd=dir, capture_output=quiet)
+        _invoke(f"./scripts/update_project_memory_from_pr.sh -r {repo} -p {pr}", cwd=dir, err_ctx="Failed to run memory updater script")
 
         # retrieve the updates that were made from the script
-        diff = subprocess.run("git diff", shell=True, cwd=dir, capture_output=True)
-        memory_changes = diff.stdout.decode('utf-8').strip()
+        memory_changes = _invoke("git diff", cwd=dir, err_ctx="Failed to retrieve memory updates")
 
     return memory_changes
