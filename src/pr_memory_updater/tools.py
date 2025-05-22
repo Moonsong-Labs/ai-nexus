@@ -21,9 +21,7 @@ def _invoke(
     return result.stdout.decode("utf-8").strip()
 
 
-def invoke_project_memory_from_pr(
-    repo: str, pr: str, *, quiet: Optional[bool] = False
-) -> str:
+def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
     """Invoke the `update_project_memory_from_pr` script.
 
     Will take care of checking out the PR in a temporary directory and doing the necessary setup for the script to run
@@ -31,7 +29,6 @@ def invoke_project_memory_from_pr(
     Args:
       repo: the repository org/name to use the tool with
       pr: the PR number to generate the project memory for
-      quiet: if set to True, will silence intermediate commands outputs
 
     Will return a diff of the applied changes from the agent.
     """
