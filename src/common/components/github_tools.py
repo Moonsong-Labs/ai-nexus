@@ -90,10 +90,12 @@ class CreateIssueComment(BaseTool):
     def _run(self, pr_number: int, body: str):
         pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
         pull_request.create_issue_comment(body)
+        return "comment created successfully"
 
     async def _arun(self, pr_number: int, body: str):
         pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
         pull_request.create_issue_comment(body)
+        return "comment created successfully"
 
 
 class PRReviewComment(BaseModel):
