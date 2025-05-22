@@ -3,6 +3,8 @@
 import subprocess
 import tempfile
 
+import re
+
 from typing import Optional
 
 def invoke_project_memory_from_pr(repo: str, pr: str, *, quiet: Optional[bool] = False) -> str:
@@ -21,6 +23,11 @@ def invoke_project_memory_from_pr(repo: str, pr: str, *, quiet: Optional[bool] =
     #TODO: ensure GEMINI_API_KEY is set?
     #TODO: ensure git, gh, jq, curl are available?
     #TODO: ensure gh is authenticated?
+
+    if not re.match(r'^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$', repo):
+        raise ValueError(f"Invalid repository format: {repo}. Expected <org>/<name>.")
+    if not re.match(r'^\d+$', pr):
+        raise ValueError(f"Invalid PR number: {pr}. Expected 1 or more digits.")
 
     # retrieve last commit of the PR to create checkout from
     # choosing this instead of `main` to avoid out-of-sync PRs
