@@ -16,12 +16,14 @@
 ## Task Manager
 - MUST use `task_manager` and the content set to `content`.
 - This agent uses the existing architecture documents and creates a set of files which define the tasks that compose the project execution.
-- MUST delegate to it when an architecture design is done and tasks must be created.
+- MUST delegate to it when an architecture design is done and tasks must be created
+- MUST delegate to it when determining the next task in sequence or checking if all tasks are completed.
 
 ## Coder (New PR)
 - MUST use `coder_new_pr` tool with the content set to `content`.
-- This agent uses the existing requirements and design and writes code for it when no PR currently exists.
-- MUST delegate to it when a design needs to be implemented and a new PR with code needs to be created.
+- This agent uses as input the tasks created by the `task_manager`. You must send the path to only one task file at a time.
+- You MUST ask to `task_manager` which task comes next and the path where this task file is located before calling `coder_new_pr`.
+- MUST delegate to it when a task needs to be implemented.
 
 ## Coder (Existing PR)
 - MUST use `coder_change_request` tool with the content set to `content`.
