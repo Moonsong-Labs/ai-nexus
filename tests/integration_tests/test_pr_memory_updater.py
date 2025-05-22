@@ -1,12 +1,12 @@
 
 import pytest
-from datasets.pr_summarizer_dataset import PR_SUMMARIZER_DATASET_NAME as DATASET_NAME
+from datasets.pr_memory_updater_dataset import PR_MEMORY_UPDATER_DATASET_NAME as DATASET_NAME
 from langsmith import Client
 from testing import get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
-from pr_summarizer.tools import invoke_project_memory_from_pr
+from pr_memory_updater.tools import invoke_project_memory_from_pr
 
 # from requirement_gatherer.graph import RequirementsGraph
 
@@ -17,11 +17,11 @@ logger = get_logger(__name__)
 llm_judge = LLMJudge()
 
 @pytest.mark.asyncio
-async def test_pr_summarizer(pytestconfig):
+async def test_pr_memory_updater(pytestconfig):
     """
-    Asynchronously tests the PR Summarizer agent using LangSmith's evaluation framework.
+    Asynchronously tests the PR Memory Updater agent using LangSmith's evaluation framework.
 
-    This test verifies that the specified LangSmith dataset exists, evaluates the PR Summarizer agent over the dataset using an LLM-based correctness evaluator, and asserts that evaluation results are produced.
+    This test verifies that the specified LangSmith dataset exists, evaluates the PR Memory Updater agent over the dataset using an LLM-based correctness evaluator, and asserts that evaluation results are produced.
     """
     client = Client()
 
@@ -61,7 +61,8 @@ async def test_pr_summarizer(pytestconfig):
         evaluators=[
             llm_judge.create_correctness_evaluator()
         ],
-        experiment_prefix="pr-summarizer-gemini-2.5-correctness-eval-plain",
+        # Using `script` until we migrate to graph-based agent
+        experiment_prefix="pr-memory-updater-script-gemini-2.5-correctness-eval",
         num_repetitions=4,
         max_concurrency=4,
     )

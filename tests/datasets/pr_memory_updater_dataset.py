@@ -4,22 +4,24 @@ from typing import Optional
 
 import os, json, fnmatch
 
-PR_SUMMARIZER_DATASET_NAME = "Pr-summarizer-samples-dataset"
+PR_MEMORY_UPDATER_DATASET_NAME = "Pr-memory-updater-samples-dataset"
 
 def create_dataset(*, force: Optional[bool] = False):
     client = Client()
 
-    if force and client.has_dataset(dataset_name=PR_SUMMARIZER_DATASET_NAME):
-        client.delete_dataset(dataset_name=PR_SUMMARIZER_DATASET_NAME)
+    if force and client.has_dataset(dataset_name=PR_MEMORY_UPDATER_DATASET_NAME):
+        client.delete_dataset(dataset_name=PR_MEMORY_UPDATER_DATASET_NAME)
 
     dataset = client.create_dataset(
-        dataset_name=PR_SUMMARIZER_DATASET_NAME,
-        description="A sample dataset for PR Summarizer in LangSmith.",
+        dataset_name=PR_MEMORY_UPDATER_DATASET_NAME,
+        description="A sample dataset for PR Memory Updater in LangSmith.",
     )
 
     examples = []
 
-    dataset_path = os.path.join(os.curdir, 'tests', 'datasets', 'summarizer')
+    rel_dataset_path = ['tests', 'datasets', 'pr_memory_updater']
+    dataset_path = os.path.join(os.curdir, *rel_dataset_path)
+
     for filename in os.listdir(dataset_path):
         if fnmatch.fnmatch(filename, '*.json'):
             file = os.path.join(dataset_path, filename)

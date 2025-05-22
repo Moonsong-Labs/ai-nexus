@@ -1,4 +1,4 @@
-"""Define tools for the PR summarizer"""
+"""Define tools for the PR Memory Updater agent"""
 
 import subprocess
 import tempfile
@@ -40,10 +40,10 @@ def invoke_project_memory_from_pr(repo: str, pr: str, *, quiet: Optional[bool] =
         subprocess.run("chmod +x ./scripts/update_project_memory_from_pr.sh ./scripts/fetch_pr_details.sh", shell=True, cwd=dir, capture_output=quiet)
 
         # invoke scripts/update_project_memory_from_pr.sh
-        # we capture output since we mostly want to throw the processing away
         subprocess.run(f"./scripts/update_project_memory_from_pr.sh -r {repo} -p {pr}", shell=True, cwd=dir, capture_output=quiet)
 
         # retrieve the updates that were made from the script
-        memory_changes = subprocess.run("git diff", shell=True, cwd=dir, capture_output=True).stdout.decode('utf-8').strip()
+        diff = subprocess.run("git diff", shell=True, cwd=dir, capture_output=True)
+        memory_changes = diff.stdout.decode('utf-8').strip()
 
     return memory_changes
