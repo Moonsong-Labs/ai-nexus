@@ -7,11 +7,22 @@ from architect.configuration import (
 )
 from common.configuration import AgentConfiguration
 from orchestrator import prompts
+from orchestrator.stubs import (
+    MessageWheel,
+    model_architect_messages,
+    model_coder_change_request_messages,
+    model_coder_new_pr_messages,
+    model_requirements_messages,
+    model_task_manager_messages,
+)
 from requirement_gatherer.configuration import (
     Configuration as RequirementsConfiguration,
 )
 from task_manager.configuration import (
     Configuration as TaskManagerConfiguration,
+)
+from tester.configuration import (
+    Configuration as TesterConfiguration,
 )
 
 
@@ -20,6 +31,7 @@ class SubAgentConfig:
     """Sub-agent configuration for orchestrator."""
 
     use_stub: bool = True
+    stub_messages: MessageWheel = MessageWheel(["I finished the task."])
     config: AgentConfiguration = field(default_factory=AgentConfiguration)
 
 
@@ -28,6 +40,7 @@ class RequirementsAgentConfig(SubAgentConfig):
     """Requirement-agent configuration for orchestrator."""
 
     use_stub: bool = True
+    stub_messages: MessageWheel = model_requirements_messages
     config: RequirementsConfiguration = field(default_factory=RequirementsConfiguration)
 
 
@@ -36,6 +49,7 @@ class ArchitectAgentConfig(SubAgentConfig):
     """Architect-agent configuration for orchestrator."""
 
     use_stub: bool = True
+    stub_messages: MessageWheel = model_architect_messages
     config: ArchitectConfiguration = field(default_factory=ArchitectConfiguration)
 
 
@@ -44,7 +58,16 @@ class TaskManagerAgentConfig(SubAgentConfig):
     """Task-manager-agent configuration for orchestrator."""
 
     use_stub: bool = True
+    stub_messages: MessageWheel = model_task_manager_messages
     config: TaskManagerConfiguration = field(default_factory=TaskManagerConfiguration)
+
+
+@dataclass(kw_only=True)
+class TesterAgentConfig(SubAgentConfig):
+    """Tester-agent configuration for orchestrator."""
+
+    use_stub: bool = True
+    config: TesterConfiguration = field(default_factory=TesterConfiguration)
 
 
 @dataclass(kw_only=True)
@@ -59,9 +82,15 @@ class Configuration(AgentConfiguration):
     task_manager_agent: TaskManagerAgentConfig = field(
         default_factory=TaskManagerAgentConfig
     )
-    coder_new_pr_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
-    coder_change_request_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
-    tester_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
+    coder_new_pr_agent: SubAgentConfig = field(
+        default_factory=SubAgentConfig(stub_messages=model_coder_new_pr_messages)
+    )
+    coder_change_request_agent: SubAgentConfig = field(
+        default_factory=SubAgentConfig(
+            stub_messages=model_coder_change_request_messages
+        )
+    )
+    tester_agent: TesterAgentConfig = field(default_factory=TesterAgentConfig)
     reviewer_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
 
 
