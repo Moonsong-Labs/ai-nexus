@@ -125,6 +125,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                stub_messages=self._agent_config.requirements_agent.stub_messages,
             )
             if self._agent_config.requirements_agent.use_stub
             else RequirementsGraph(
@@ -138,6 +139,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                stub_messages=self._agent_config.architect_agent.stub_messages,
             )
             if self._agent_config.architect_agent.use_stub
             else ArchitectGraph(
@@ -151,6 +153,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                stub_messages=self._agent_config.task_manager_agent.stub_messages,
             )
             if self._agent_config.task_manager_agent.use_stub
             else TaskManagerGraph(
@@ -165,6 +168,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                stub_messages=self._agent_config.coder_new_pr_agent.stub_messages,
             )
             if self._agent_config.coder_new_pr_agent.use_stub
             else CoderNewPRGraph(
@@ -179,6 +183,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                stub_messages=self._agent_config.coder_change_request_agent.stub_messages,
             )
             if self._agent_config.coder_change_request_agent.use_stub
             else CoderChangeRequestGraph(
@@ -193,6 +198,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                stub_messages=self._agent_config.tester_agent.stub_messages,
             )
             if self._agent_config.tester_agent.use_stub
             else TesterAgentGraph(
@@ -205,6 +211,7 @@ class OrchestratorGraph(AgentGraph):
             agent_config=self._agent_config,
             checkpointer=self._checkpointer,
             store=self._store,
+            stub_messages=self._agent_config.reviewer_agent.stub_messages,
         )
 
         all_tools = [
