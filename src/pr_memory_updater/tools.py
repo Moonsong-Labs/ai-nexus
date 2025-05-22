@@ -9,7 +9,7 @@ from typing import Optional
 def _invoke(
     cmd: str, *, cwd: Optional[str] = None, err_ctx: Optional[str] = None
 ) -> str:
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True)
+    result = subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True)
 
     if not err_ctx:
         err_ctx = f"Failed to run '{cmd}':"
