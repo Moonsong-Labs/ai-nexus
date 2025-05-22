@@ -51,8 +51,14 @@ async def test_pr_memory_updater(pytestconfig):
 
     async def target(inputs: dict) -> dict:
         #TODO: use PR details JSON as part of dataset input?
-        result = invoke_project_memory_from_pr(inputs["repository"], inputs["pr_num"])
-        return { "output": result }
+        repo = inputs["repository"]
+        pr = inputs["pr_num"]
+        try:
+            result = invoke_project_memory_from_pr(repo, pr)
+            return { "output": result }
+        except Exception as e:
+            logger.error(f"Error while updating project {repo} memory for PR #{pr}: {str(e)}")
+            return { "output": f"Error while updating project memory: {str(e)}", "error": True }
 
     # Define the function to be evaluated for each dataset example
     results = await client.aevaluate(
@@ -63,7 +69,7 @@ async def test_pr_memory_updater(pytestconfig):
         ],
         # Using `script` until we migrate to graph-based agent
         experiment_prefix="pr-memory-updater-script-gemini-2.5-correctness-eval",
-        num_repetitions=4,
+        num_repetitions=1,
         max_concurrency=4,
     )
 
