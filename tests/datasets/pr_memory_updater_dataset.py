@@ -1,10 +1,12 @@
-from langsmith import Client
-
+import fnmatch
+import json
+import os
 from typing import Optional
 
-import os, json, fnmatch
+from langsmith import Client
 
 PR_MEMORY_UPDATER_DATASET_NAME = "Pr-memory-updater-samples-dataset"
+
 
 def create_dataset(*, force: Optional[bool] = False):
     client = Client()
@@ -19,11 +21,11 @@ def create_dataset(*, force: Optional[bool] = False):
 
     examples = []
 
-    rel_dataset_path = ['tests', 'datasets', 'pr_memory_updater']
+    rel_dataset_path = ["tests", "datasets", "pr_memory_updater"]
     dataset_path = os.path.join(os.curdir, *rel_dataset_path)
 
     for filename in os.listdir(dataset_path):
-        if fnmatch.fnmatch(filename, '*.json'):
+        if fnmatch.fnmatch(filename, "*.json"):
             file = os.path.join(dataset_path, filename)
             with open(file, "r") as f:
                 examples.append(json.load(f))
