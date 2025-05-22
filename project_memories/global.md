@@ -7,7 +7,7 @@
 **Core Mission:** To develop a system for managing and orchestrating a team of AI agents capable of designing, developing, and maintaining technical projects. An initial focus is on an agent named "Cursor" which operates with a memory that resets between sessions, necessitating a robust external "Memory Bank" system for continuity. A specific rule (`.cursor/rules/read-project-memories.mdc`) now configures Cursor to always read all files within the `project_memories/` directory for every interaction, ensuring this core project context is consistently available to it. AI Nexus aims to be a platform for developing and managing such AI agents. The system now includes robust project management capabilities, allowing the tracking and utilization of project names and paths across various agent workflows.
 
 **Key Concepts:**
-1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager (NEW)) working collaboratively. The Orchestrator agent's delegation mechanism to other agents (Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Task Manager) has been refactored. It now uses direct tool calls for each agent task instead of a generic `Delegate` tool. The Code Reviewer is consistently referred to as "Code Reviewer" (e.g., Orchestrator tool name `code_reviewer`). A `Project` object is now passed and updated across agent states to maintain consistent project context.
+1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager (NEW)) working collaboratively. The Orchestrator agent's delegation mechanism to other agents (Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Task Manager) has been refactored. It now uses direct tool calls for each agent task instead of a generic `Delegate` tool. The Code Reviewer is consistently referred to as "Code Reviewer" (e.g., Orchestrator tool name `code_reviewer`). A `Project` object is now passed and updated across agent states to maintain consistent project context. Agent stubs now support dynamic, cycling messages for more flexible scenario testing.
 2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is `langmem`, providing semantic search capabilities over stored memories. `AgentGraph` can now automatically initialize and provide `SemanticMemory` and its tools to subclasses based on its configuration. The Tester agent, for instance, now includes logic to read from a `BaseStore` for contextual memories.
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
 4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory.
@@ -33,6 +33,7 @@
     *   Task Manager (NEW, REVISED): System prompt defined in `task_manager.configuration.Configuration` via `task_manager_system_prompt` (which defaults to `prompts.SYSTEM_PROMPT` from `src/task_manager/prompts.py`). This prompt has been significantly updated to include stricter guidelines for task splitting (smaller tasks, buildable deliverables), mandatory testing requirements (unit, integration, edge cases), early CI/CD setup (GitHub Actions), expanded task metadata (contextual, technical, security, testing info), and reinforced roadmap creation and task sequencing rules (repo init -> project setup -> CI -> features). The prompt now dynamically references the active project name (`{project_name}`) and path (`{project_path}`). **UPDATED**: The prompt's list of required files has been updated: `techContext.md` is now `techPatterns.md`, `featuresContext.md` is now `codingContext.md`, and `securityContext.md` has been removed from the list. The prompt's internal descriptions and extraction guidelines for these files have been updated accordingly, including the removal of specific security context extraction instructions and the renaming of `relatedFeatureContext` to `relatedCodingContext` in the task metadata schema. The count of "Additional Context Files" has been adjusted from 4-8 to 4-7. **UPDATED**: The prompt now explicitly states that it will receive input documents in `{project_path}` and the project name is `{project_name}`. It also includes a new mandatory instruction to write a `summary` of the created tasks and call the `summarize` tool. The prompt now states that it will verify "all seven required files" (previously "eight").
     *   Architect (REVISED): Its system prompt (`architect_system_prompt`) now dynamically references the active project directory (`{project_dir}`). **UPDATED**: The prompt's description of the core project files and their interdependencies (including the Mermaid flowchart and numbered list) has been updated. `projectRequirements.md` is now explicitly listed as a core file and is positioned as an intermediary document between `projectbrief.md` and `systemPatterns.md`/`techPatterns.md`. The description of `projectbrief.md` is now more focused on its foundational role. The numbering of core files in the prompt has been adjusted (e.g., `systemPatterns.md` is now 3, `techPatterns.md` is 4, `progress.md` is 5). **UPDATED**: The prompt now includes an instruction to ensure the `{project_dir}` exists and create it if necessary before writing new files, specifically mentioning the `create_directory` tool. It also clarifies that `list_files` should be used on the `{project_dir}` directory and that `create_file` should write files under `{project_dir}`.
     *   Requirement Gatherer (REVISED): Its system prompt now includes an explicit instruction to use the `set_project` tool if no project name is provided.
+    *   Coder (REVISED): The `NEW_PR_SYSTEM_PROMPT` now refers to the "base branch" instead of a specific branch name like "main".
     *   Other agents: System prompts are accessed by the agent's graph logic (e.g., in custom `call_model` implementations). The Tester agent features enhanced prompt management (e.g., its graph logic in `src/tester/graph.py` now directly uses `agent_config.system_prompt` for formatting its system message). The Code Reviewer agent has `PR_REVIEW_PROMPT`. The Architect agent has `architect_system_prompt` (REVISED to include a dedicated "Summarize" step using its new `summarize` tool before finalization).
 6.  **Configuration Management (REVISED):** Agents have configurable parameters, including LLM models, system prompts, and memory settings.
     *   `MemoryConfiguration` (`common.components.memory.MemoryConfiguration`).
@@ -41,6 +42,7 @@
     *   Architect: `src/architect/configuration.py`'s `Configuration` class no longer defines `use_human_ai`.
     *   Code Reviewer: `CodeReviewerInstanceConfig` dataclass.
     *   Task Manager (`src/task_manager/configuration.py` - REVISED): `Configuration` class includes `use_stub: bool`, `use_human_ai: bool`, and `task_manager_system_prompt: str`.
+    *   Orchestrator (`src/orchestrator/configuration.py` - REVISED): `SubAgentConfig` and its subclasses (`RequirementsAgentConfig`, `ArchitectAgentConfig`, `TaskManagerAgentConfig`) now include a `stub_messages: MessageWheel` field, allowing dynamic cycling messages for stubbed agent responses. The `coder_new_pr_agent` and `coder_change_request_agent` in `OrchestratorConfiguration` now default to specific `MessageWheel` instances for their stub messages.
 
 ## 2. The Memory Bank System (Shift from Conceptual to `langmem`)
 
@@ -56,7 +58,7 @@ The original "Memory Bank" concept described a system of structured Markdown fil
 *   **Storage:** Memories are stored in a `BaseStore`.
 *   **Namespace:** Memories are namespaced.
 *   **Tools:**
-    *   Orchestrator (REVISED): Uses direct tools `requirements`, `architect`, `task_manager` (NEW), `coder_new_pr`, `coder_change_request`, `tester`, `code_reviewer` (which invoke sub-graphs/stubs), `memorize` (for memory persistence), and `summarize` (now from `common.tools.summarize`). The `requirements`, `architect`, and `task_manager` tools now update the Orchestrator's state with the `project` object returned by the sub-agent.
+    *   Orchestrator (REVISED): Uses direct tools `requirements`, `architect`, `task_manager` (NEW), `coder_new_pr`, `coder_change_request`, `tester`, `code_reviewer` (which invoke sub-graphs/stubs), `memorize` (for memory persistence), and `summarize` (now from `common.tools.summarize`). The `requirements`, `architect`, and `task_manager` tools now update the Orchestrator's state with the `project` object returned by the sub-agent. The `coder_new_pr` and `coder_change_request` tools now return the content of the last message from the sub-agent's result, rather than a summary.
     *   Agents based on `AgentGraph` (like `AgentTemplateGraph`): Can get memory tools from `AgentGraph`.
     *   Requirement Gatherer: Uses `create_memorize_tool` and `human_feedback` tool. Its `summarize` tool is now from `common.tools.summarize`. A new `set_project` tool is available.
     *   Tester: Custom `upsert_memory` tool removed.
@@ -98,6 +100,7 @@ AI Nexus employs a few architectural patterns for its agents:
         *   `tester_agent` (type `SubAgentConfig`)
         *   `code_reviewer_agent` (type `SubAgentConfig`)
     *   These sub-agent configurations (e.g., `SubAgentConfig`, `ArchitectAgentConfig`, `RequirementsAgentConfig`, `TaskManagerAgentConfig` (NEW), also defined/imported in this module) typically allow specifying whether to use a full agent or a stub, and can contain agent-specific nested configurations.
+    *   **UPDATED**: `SubAgentConfig` now includes `stub_messages: MessageWheel = MessageWheel(["I finished the task."])`. Its subclasses (`RequirementsAgentConfig`, `ArchitectAgentConfig`, `TaskManagerAgentConfig`) now default `stub_messages` to specific `model_*_messages` instances. The `coder_new_pr_agent` and `coder_change_request_agent` in `OrchestratorConfiguration` are now initialized with `SubAgentConfig` instances that explicitly set their `stub_messages` to `model_coder_new_pr_messages` and `model_coder_change_request_messages` respectively.
     *   As an example of nested configuration, the `ArchitectAgentConfig` contains a nested `config: architect.configuration.Configuration` field, and this nested Architect configuration is what reflects changes like the removal of `use_human_ai` from the Architect's own configuration file. The new `TaskManagerAgentConfig` similarly contains a nested `config: task_manager.configuration.Configuration`.
 *   **State (`src/orchestrator/state.py` - REVISED):** Added `summary: str = ""` field to its `State` dataclass. A new `project: Optional[Project] = None` field has been added to store the active project information.
 *   **Graph (`src/orchestrator/graph.py` - REVISED):**
@@ -105,14 +108,19 @@ AI Nexus employs a few architectural patterns for its agents:
     *   The `_create_orchestrate` node is renamed to `_create_orchestrator`.
     *   The previous delegation logic (`_create_delegate_to` and individual agent node creators like `_create_requirements_node`, `_create_architect_node`, etc.) has been removed.
     *   The LLM is now bound with a new set of tools (see Orchestrator Tools under Key Concepts or Tools section below). This now includes a `task_manager` tool. The `summarize` tool is now imported from `common.tools`.
+    *   **UPDATED**: All sub-agent stub initializations (e.g., `RequirementsGathererStub`, `ArchitectStub`, `TaskManagerStub`, `CoderNewPRStub`, `CoderChangeRequestStub`, `TesterStub`, `CodeReviewerStub`) now pass the `stub_messages` from their respective agent configurations (`self._agent_config.<agent_name>_agent.stub_messages`) to the stub constructors.
     *   Conditional logic (`_create_orchestrate_condition`) routes from the main `orchestrator` (model call) node to the `ToolNode` if tool calls are present, or to `END` if a `summary` is available in the state, otherwise back to the `orchestrator` node.
     *   Sub-agent graphs (or their stubs, including for Task Manager) are passed to tool factory functions which create the tools bound to the Orchestrator's LLM.
 *   **Stubs (`src/orchestrator/stubs/__init__.py` - REVISED):**
+    *   **UPDATED**: The `MessageWheel` class (for cycling through predefined messages) is now defined at the top level of this module.
+    *   **UPDATED**: The `StubGraph` base class now has a `_stub_messages` attribute, initialized via its constructor, and its `run_fn` now uses `self._stub_messages.next()` to retrieve the next message. This ensures each stub instance maintains its own message sequence.
+    *   **UPDATED**: Predefined `MessageWheel` instances (`model_requirements_messages`, `model_architect_messages`, `model_task_manager_messages`, `model_coder_new_pr_messages`, `model_coder_change_request_messages`, `model_tester_messages`, `model_code_reviewer_messages`) are now defined globally in this module.
     *   The `StubGraph` base class's `run_fn` is now expected to return a dictionary that includes a `summary` field. The graph built by `StubGraph` now adds an edge from its "run" node to `END`.
     *   `RequirementsGathererStub`, `ArchitectStub`, `CoderNewPRStub`, `CoderChangeRequestStub` are updated to align with this, providing a `summary` in their output. `RequirementsGathererStub` now also returns a `project_name`.
     *   `TesterStub` (NEW class, subclasses `StubGraph`): Replaces the previous simple `stubs.tester` function.
     *   `CodeReviewerStub` (NEW class, subclasses `StubGraph`): Replaces the previous simple `stubs.reviewer` function.
     *   `TaskManagerStub` (NEW class, subclasses `StubGraph`): Provides a stub for the Task Manager agent.
+    *   **UPDATED**: All specific `*Stub` classes (`RequirementsGathererStub`, `ArchitectStub`, `TaskManagerStub`, `CoderNewPRStub`, `CoderChangeRequestStub`, `TesterStub`, `CodeReviewerStub`) now accept a `stub_messages` argument in their `__init__` and pass it to the `super().__init__` call, allowing their responses to be dynamically controlled by the Orchestrator's configuration.
     *   The old simple stub functions (`stubs.tester`, `stubs.reviewer`, `stubs.memorizer`) have been removed.
 *   **Tools (`src/orchestrator/tools.py` - REVISED):**
     *   The `Delegate` tool has been removed.
@@ -126,6 +134,7 @@ AI Nexus employs a few architectural patterns for its agents:
         *   `create_tester_tool(agent_config, tester_graph)`: Creates the `tester` tool.
         *   `create_code_reviewer_tool(agent_config, code_reviewer_graph)`: Creates the `code_reviewer` tool.
     *   These tools take `content` (and other injected args like `tool_call_id`, `state`, `config`), invoke the respective sub-graph (or stub), and return the `summary` from the sub-graph's result as the tool's output.
+    *   **UPDATED**: The `coder_new_pr` and `coder_change_request` tools now return `result["messages"][-1].content` (the content of the last message) instead of `result["summary"]`.
     *   The `summarize` tool implementation has been removed from this file, as it is now centralized in `src/common/tools/summarize.py`.
 *   **Prompts (`src/orchestrator/prompts.py` and `src/orchestrator/memory/` - REVISED):**
     *   `src/orchestrator/prompts.py`: The static `ORCHESTRATOR_SYSTEM_PROMPT` string definition has been removed. The `get_prompt()` function continues to load prompt content from markdown files.
@@ -149,6 +158,7 @@ AI Nexus employs a few architectural patterns for its agents:
     *   Changed from `TypedDict` to `@dataclass(kw_only=True)`.
     *   Added `summary: str = ""` field.
 *   **Graph (`src/coder/graph.py` - MINOR UPDATE):** Accesses state messages via `state.messages` instead of `state["messages"]` due to state being a dataclass.
+*   **Prompts (`src/coder/prompts.py` - UPDATED):** The `NEW_PR_SYSTEM_PROMPT` has been updated to refer to the "base branch" instead of "main" for repository interactions.
 
 #### 5.4. Code Reviewer (`src/code_reviewer/`) (REVISED)
 *   **State (`src/code_reviewer/state.py` - REVISED):** Added `summary: str = ""` field.
@@ -227,6 +237,7 @@ AI Nexus employs a few architectural patterns for its agents:
             6.  Asserts that the graph execution pauses for a human interrupt by verifying the presence of an 'Interrupt' label and subsequently either a 'Continue' or 'Resume' button in the UI.
         *   **Artifacts**: Produces `langgraph-test-result.png` (a screenshot of the UI state) which is uploaded by the CI workflow.
         *   **Configuration**: Requires `GOOGLE_API_KEY` (via `.env` file at project root) for the `langgraph dev` server.
+*   **`tests/scenarios/fibonacci.py` (NEW):** A new test scenario demonstrating the orchestration of multiple agents (using stubbed responses for most, and a real Coder agent) to create a Rust Fibonacci iterator library. This scenario showcases the dynamic stub message feature.
 *   **`tests/testing/__init__.py` (UPDATED):**
     *   A new helper function `create_async_graph_caller_for_gatherer` has been added. This function is specifically designed for the requirement gatherer evaluation, expecting the final output to be a `ToolMessage` with the name "summarize" and returning its content.
 *   (Other test files as previously described, or minor updates not impacting core logic)
@@ -323,7 +334,7 @@ ai-nexus/
 │   │   ├── graph.py              # UPDATED: Minor state access change (state.messages)
 │   │   ├── lg_server.py
 │   │   ├── mocks.py
-│   │   ├── prompts.py
+│   │   ├── prompts.py            # UPDATED: NEW_PR_SYSTEM_PROMPT updated to use "base branch".
 │   │   ├── state.py              # UPDATED: Now a dataclass, summary field added
 │   │   ├── tools.py
 │   │   └── README.md
@@ -349,8 +360,8 @@ ai-nexus/
 │   ├── grumpy/
 │   ├── orchestrator/
 │   │   ├── __init__.py
-│   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration. Defines OrchestratorConfiguration including fields for sub-agent configs (e.g., ArchitectAgentConfig, TaskManagerAgentConfig (NEW), SubAgentConfig for coders, tester, reviewer).
-│   │   ├── graph.py              # UPDATED: Major refactor to use ToolNode, direct agent tool calls (requirements, architect, task_manager (NEW), coder_new_pr, coder_change_request, tester, code_reviewer), memorize, and common.tools.summarize. Removed Delegate pattern.
+│   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration. Defines OrchestratorConfiguration including fields for sub-agent configs (e.g., ArchitectAgentConfig, TaskManagerAgentConfig (NEW), SubAgentConfig for coders, tester, reviewer). SubAgentConfig and its subclasses now include `stub_messages`. Coder agent configs now default to specific `MessageWheel` instances.
+│   │   ├── graph.py              # UPDATED: Major refactor to use ToolNode, direct agent tool calls (requirements, architect, task_manager (NEW), coder_new_pr, coder_change_request, tester, code_reviewer), memorize, and common.tools.summarize. Removed Delegate pattern. Sub-agent stubs now initialized with `stub_messages`.
 │   │   ├── memory/
 │   │   │   ├── absolute.md       # UPDATED: Reflects new tools and workflow
 │   │   │   ├── process.md        # UPDATED: Reflects new tools and workflow
@@ -359,8 +370,8 @@ ai-nexus/
 │   │   ├── prompts.py            # UPDATED: Static ORCHESTRATOR_SYSTEM_PROMPT string removed, get_prompt() loads from memory files.
 │   │   ├── state.py              # UPDATED: summary field added; project field added.
 │   │   ├── stubs/
-│   │   │   └── __init__.py       # UPDATED: StubGraph base class modified (returns summary, END edge). RequirementsGathererStub, ArchitectStub, CoderNewPRStub, CoderChangeRequestStub updated. New TesterStub, CodeReviewerStub, TaskManagerStub (NEW) classes. Old simple stub functions removed. Imports TaskManagerState. RequirementsGathererStub now returns project_name.
-│   │   ├── tools.py              # UPDATED: Delegate tool removed. store_memory effectively replaced by memorize. New tool factories (create_requirements_tool, etc.) for direct agent invocation, including create_task_manager_tool (NEW). Removed 'summarize' tool (now in common). Imports TaskManagerGraph, TaskManagerState. Requirements, Architect, and Task Manager tools now update the project state.
+│   │   │   └── __init__.py       # UPDATED: StubGraph base class modified (returns summary, END edge, uses `_stub_messages`). MessageWheel class moved to top-level. All specific *Stub classes now accept and pass `stub_messages` to super(). Predefined `model_*_messages` instances added. RequirementsGathererStub, ArchitectStub, CoderNewPRStub, CoderChangeRequestStub updated. New TesterStub, CodeReviewerStub, TaskManagerStub (NEW) classes. Old simple stub functions removed. Imports TaskManagerState. RequirementsGathererStub now returns project_name.
+│   │   ├── tools.py              # UPDATED: Delegate tool removed. store_memory effectively replaced by memorize. New tool factories (create_requirements_tool, etc.) for direct agent invocation, including create_task_manager_tool (NEW). `coder_new_pr` and `coder_change_request` tools now return `result["messages"][-1].content`. Removed 'summarize' tool (now in common). Imports TaskManagerGraph, TaskManagerState. Requirements, Architect, and Task Manager tools now update the project state.
 │   │   └── utils.py              # ADDED: Contains utility functions like split_model_and_provider.
 │   ├── requirement_gatherer/
 │   │   ├── __init__.py
@@ -410,6 +421,8 @@ ai-nexus/
     │           ├── systemPatterns.md
     │           ├── techContext.md
     │           └── testingContext.md
+    ├── scenarios/                  # NEW
+    │   └── fibonacci.py            # NEW: Adds a new test scenario for a Rust Fibonacci iterator.
     ├── smoke/                      # ADDED
     │   └── langgraph_dev/          # ADDED
     │       ├── .gitignore          # ADDED

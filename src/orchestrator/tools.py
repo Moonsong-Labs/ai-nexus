@@ -172,7 +172,7 @@ def create_coder_new_pr_tool(
             config,
         )
 
-        return result["summary"]
+        return result["messages"][-1].content
 
     return coder_new_pr
 
@@ -202,7 +202,7 @@ def create_coder_change_request_tool(
             config,
         )
 
-        return result["summary"]
+        return result["messages"][-1].content
 
     return coder_change_request
 
