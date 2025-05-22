@@ -110,7 +110,7 @@ async function runTest(): Promise<void> {
 
     await page.screenshot({ path: SCREENSHOT_FILE });
     try {
-      // Look for the Humnan Interrrupt label
+      // Look for the Humnan Interrupt label
       await page.waitForSelector(
         "span ::-p-text('Interrupt')"
       );
