@@ -1,8 +1,8 @@
 """Test the orchestrator locally."""
 
 import asyncio
+import getpass
 import json
-import os
 import sys
 import uuid
 from dataclasses import asdict
@@ -114,14 +114,14 @@ if __name__ == "__main__":
                     use_stub=False,
                 ),
                 task_manager_agent=TaskManagerAgentConfig(
-                    use_stub=True,
+                    use_stub=False,
                     config=TaskManagerConfiguration(),
                 ),
                 coder_new_pr_agent=SubAgentConfig(
-                    use_stub=False,
+                    use_stub=True,
                 ),
                 coder_change_request_agent=SubAgentConfig(
-                    use_stub=False,
+                    use_stub=True,
                 ),
             ),
             checkpointer=InMemorySaver(),
@@ -129,7 +129,7 @@ if __name__ == "__main__":
         )
 
         run_id = str(uuid.uuid4())
-        user = os.getlogin()
+        user = getpass.getuser()
 
         @traceable(
             run_type="chain",

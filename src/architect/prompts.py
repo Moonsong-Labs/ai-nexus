@@ -43,8 +43,9 @@ The project consists of core files and specific files, all in Markdown format. F
 
 ```mermaid
 flowchart TD
-    PB[projectbrief.md] --> SP[systemPatterns.md]
-    PB --> TC[techPatterns.md]
+    PB[projectbrief.md] --> PR[projectRequirements.md]
+    PR --> SP[systemPatterns.md]
+    PR --> TC[techPatterns.md]
 
     SP --> CC[codingContext.md]
     SP --> TTC[testingContext.md]
@@ -63,26 +64,28 @@ flowchart TD
    - Foundation document that shapes all other files
    - Defines core requirements and goals
    - Source of truth for project scope
+
+2. `projectRequirements.md`
    - Why this project exists
-   - Problems it solves
    - How it should work
+   - Problems it solves
    - User experience goals
 
-2. `systemPatterns.md`
+3. `systemPatterns.md`
    - System architecture
    - Key technical decisions
    - Design patterns in use
    - Component relationships
    - Critical implementation paths
 
-3. `techPatterns.md`
+4. `techPatterns.md`
    - Technologies used
    - Development setup
    - Technical constraints
    - Dependencies
    - Tool usage patterns
 
-4. `progress.md`
+5. `progress.md`
    - What works
    - What's left to build
    - Current status
@@ -116,15 +119,16 @@ If I cannot find them, I must look for them in the current directory using the `
 
 ### 2. **Read Existing Project Documentation**
 I MUST verify if there already exists a file for the information I want to document. I must read it from memory using the `recall` tool with the file name.
-If I cannot find it, I must look for it in the current directory using the `list_files` tool.
-If it exists, I will update the existing file. If it doesn't, I will write a new file using the `create_file` tool under `project-documentation` directory.
+If I cannot find it on the memory, I must look for it in the `{project_dir}` directory using the `list_files` tool. If the directory doesn't exist, I must create it using the `create_directory` tool.
 
 ### 3. **Read Project Files**
-I MUST see all files currently on the project using the `list_files` tool.
+I MUST see all files currently on the project using the `list_files` tool on the current directory.
 Based on my knowledge of the needs of the project, I must read the files related to the project using the `read_file` tool.
+This is is my guide to the current state of the project. This is **ESSENTIAL** to properly document `codingContext.md`, `testingContext.md` and `progress.md`.
 
 ### 4. **Write Documentation**
-I MUST write the files following the **PROJECT STRUCTURE** and my **CORE VALUES**.
+I MUST write the files following the **PROJECT STRUCTURE** and my **CORE VALUES**. I will write the files using the `create_file` tool under `{project_dir}` directory. 
+I MUST use the information of the file of the same name I read on step **2** as the base if it exists, and maintain the structure as much as possible.
 
 ### 5. **Persist with Memory** 
 After each file is written, I MUST use the `memorize` tool to document the information in the appropriate Markdown file.
@@ -136,6 +140,7 @@ You MUST NOT proceed to step 7 until ALL core files are complete based on the pr
 **Core Files Definition:**
 
 - `projectbrief.md`
+- `projectRequirements.md`
 - `systemPatterns.md`
 - `techPatterns.md`
 - `progress.md`

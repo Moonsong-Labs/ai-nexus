@@ -16,6 +16,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+import common.tools
 from architect.configuration import (
     Configuration as ArchitectConfiguration,
 )
@@ -124,6 +125,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                stub_messages=self._agent_config.requirements_agent.stub_messages,
             )
             if self._agent_config.requirements_agent.use_stub
             else RequirementsGraph(
@@ -137,6 +139,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                stub_messages=self._agent_config.architect_agent.stub_messages,
             )
             if self._agent_config.architect_agent.use_stub
             else ArchitectGraph(
@@ -150,6 +153,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                stub_messages=self._agent_config.task_manager_agent.stub_messages,
             )
             if self._agent_config.task_manager_agent.use_stub
             else TaskManagerGraph(
@@ -164,6 +168,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                stub_messages=self._agent_config.coder_new_pr_agent.stub_messages,
             )
             if self._agent_config.coder_new_pr_agent.use_stub
             else CoderNewPRGraph(
@@ -178,6 +183,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                stub_messages=self._agent_config.coder_change_request_agent.stub_messages,
             )
             if self._agent_config.coder_change_request_agent.use_stub
             else CoderChangeRequestGraph(
@@ -192,6 +198,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                stub_messages=self._agent_config.tester_agent.stub_messages,
             )
             if self._agent_config.tester_agent.use_stub
             else TesterAgentGraph(
@@ -204,6 +211,7 @@ class OrchestratorGraph(AgentGraph):
             agent_config=self._agent_config,
             checkpointer=self._checkpointer,
             store=self._store,
+            stub_messages=self._agent_config.reviewer_agent.stub_messages,
         )
 
         all_tools = [
@@ -217,7 +225,7 @@ class OrchestratorGraph(AgentGraph):
             tools.create_tester_tool(self._agent_config, tester_graph),
             tools.create_code_reviewer_tool(self._agent_config, code_reviewer_graph),
             tools.memorize,
-            tools.summarize,
+            common.tools.summarize,
         ]
         tool_node = ToolNode(all_tools, name="tools")
         llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)

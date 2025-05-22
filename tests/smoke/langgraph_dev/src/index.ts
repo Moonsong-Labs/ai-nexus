@@ -78,7 +78,7 @@ async function runTest(): Promise<void> {
       "https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:8080",
       {
         waitUntil: "networkidle2",
-        timeout: 30000,
+        timeout: 30_000,
       }
     );
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -89,6 +89,9 @@ async function runTest(): Promise<void> {
 
     let testPassed = false;
 
+    await page.waitForSelector("div ::-p-text('agent_template')", {
+      timeout: 10_000,
+    });
     await page.screenshot({ path: SCREENSHOT_FILE });
     await page.click("text=agent_template");
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -107,12 +110,21 @@ async function runTest(): Promise<void> {
 
     await page.screenshot({ path: SCREENSHOT_FILE });
     try {
-      const elementHumanInterrupt = await page.waitForSelector(
+      // Look for the Humnan Interrupt label
+      await page.waitForSelector(
         "span ::-p-text('Interrupt')"
       );
-      const elementContinue = await page.waitForSelector(
-        "button ::-p-text('Continue')"
-      );
+
+      // Look for the Continue or Resume button
+      try {
+        await page.waitForSelector("button ::-p-text('Continue')", {
+          timeout: 10_000,
+        });
+      } catch (e) {
+        await page.waitForSelector("button ::-p-text('Resume')", {
+          timeout: 10_000,
+        });
+      }
       testPassed = true;
     } catch (e) {
       testPassed = false;

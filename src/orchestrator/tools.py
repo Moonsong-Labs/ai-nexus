@@ -60,7 +60,17 @@ def create_requirements_tool(
             config_with_recursion,
         )
 
-        return result["summary"]
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["summary"],
+                        tool_call_id=tool_call_id,
+                    )
+                ],
+                "project": result["project"],
+            }
+        )
 
     return requirements
 
@@ -90,7 +100,9 @@ def create_architect_tool(
         config_with_recursion["recursion_limit"] = recursion_limit
 
         result = await architect_graph.compiled_graph.ainvoke(
-            ArchitectState(messages=[HumanMessage(content=content)]),
+            ArchitectState(
+                messages=[HumanMessage(content=content)], project=state.project
+            ),
             config_with_recursion,
         )
 
@@ -124,7 +136,9 @@ def create_task_manager_tool(
         config_with_recursion["recursion_limit"] = recursion_limit
 
         result = await task_manager_graph.compiled_graph.ainvoke(
-            TaskManagerState(messages=[HumanMessage(content=content)]),
+            TaskManagerState(
+                messages=[HumanMessage(content=content)], project=state.project
+            ),
             config_with_recursion,
         )
 
@@ -158,7 +172,7 @@ def create_coder_new_pr_tool(
             config,
         )
 
-        return result["summary"]
+        return result["messages"][-1].content
 
     return coder_new_pr
 
@@ -188,7 +202,7 @@ def create_coder_change_request_tool(
             config,
         )
 
-        return result["summary"]
+        return result["messages"][-1].content
 
     return coder_change_request
 
@@ -285,31 +299,3 @@ def memorize(
     """
     # print(f"[MEMORIZE] for {origin}: {content}")  # noqa: T201
     return f"Memorized '{content}' for '{origin}'"
-
-
-# ruff: noqa: T201
-@tool("summarize", parse_docstring=True)
-async def summarize(
-    summary: str,
-    tool_call_id: Annotated[str, InjectedToolCallId],
-) -> str:
-    """Summarize the agent output.
-
-    Args:
-        summary: The entire summary.
-    """
-    print("=== Summary ===")
-    print(f"{summary}")
-    print("=================")
-
-    return Command(
-        update={
-            "messages": [
-                ToolMessage(
-                    content=summary,
-                    tool_call_id=tool_call_id,
-                )
-            ],
-            "summary": summary,
-        }
-    )
