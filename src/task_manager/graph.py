@@ -19,6 +19,7 @@ from langgraph.types import Checkpointer
 import common.tools
 from common import utils
 from common.graph import AgentGraph
+from common.state import Project
 from task_manager.configuration import TASK_MANAGER_MODEL, Configuration
 from task_manager.state import State
 
@@ -69,12 +70,25 @@ def _create_call_model(
     {formatted}
     </memories>"""
 
+        project_name = "unnamed_project"
+        project_path = "projects/"
+        
+        if state.project:
+            if isinstance(state.project, dict):
+                # If it's a dictionary, extract name and path directly
+                project_name = state.project.get("name", "unnamed_project")
+                project_path = state.project.get("path", "projects/")
+            else:
+                # Otherwise assume it's a Project object
+                project_name = state.project.name
+                project_path = state.project.path
+
         # This helps the model understand the context and temporal relevance
         sys_prompt = agent_config.task_manager_system_prompt.format(
             user_info=formatted,
             time=datetime.now().isoformat(),
-            project_name=state.project.name,
-            project_path=state.project.path,
+            project_name=project_name,
+            project_path=project_path,
             project_context="",
         )
 
