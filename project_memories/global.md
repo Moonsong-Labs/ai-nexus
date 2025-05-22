@@ -25,13 +25,13 @@
     *   Requirement Gatherer: Uses a custom `memorize` tool (created by `create_memorize_tool`) and `human_feedback` tool. Its `summarize` tool is now provided by `common.tools.summarize`. A new `set_project` tool is available to set the active project name and path.
     *   Tester: Its custom `upsert_memory` tool has been removed.
     *   Code Reviewer: Can use GitHub tools like `get_pull_request_diff` and `create_pull_request_review`.
-    *   Architect (NEW, REVISED): Uses `create_memorize_tool` and `create_recall_tool` for memory, file system tools (`read_file`, `create_file`, `list_files`), and a new `summarize` tool (now provided by `common.tools.summarize`) for outputting its final architecture summary. Its `use_human_ai` configuration field has been removed. Its previous `upsert_memory` tool has been removed.
-    *   Task Manager (REVISED): Uses file system tools. Integrated into Orchestrator.
-    *   General: Tools like `file_dump` can be used by agents. A common `summarize` tool is now available in `src/common/tools/summarize.py` for reuse across agents. Agent outputs are now enhanced with formatted, actor-labeled messages for improved clarity.
+    *   Architect (NEW, REVISED): Uses `create_memorize_tool`, `create_recall_tool`, `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`, and a new `summarize` tool (now provided by `common.tools.summarize`) for outputting its final architecture summary. Its `use_human_ai` configuration field has been removed. Its previous `upsert_memory` tool has been removed.
+    *   Task Manager (REVISED): Uses `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`. Now also uses the `summarize` tool (from `common.tools.summarize`).
+    *   General: Tools like `file_dump` can be used by agents. A common `summarize` tool is now available in `src/common/tools/summarize.py` for reuse across agents. New common file system tools (`common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`) are available for reuse. Agent outputs are now enhanced with formatted, actor-labeled messages for improved clarity.
 5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes.
     *   Orchestrator (REVISED): Its system prompt, dynamically loaded from markdown files in `src/orchestrator/memory/`, has been updated to reflect its new toolset (direct agent calls like `requirements`, `architect`, `task_manager`, `coder_new_pr`, `coder_change_request`, `tester`, `code_reviewer`, plus `memorize` and `summarize`) and refined workflow logic (e.g., using the `summarize` tool when no tasks are pending). The static `ORCHESTRATOR_SYSTEM_PROMPT` string in `src/orchestrator/prompts.py` has been removed.
-    *   Task Manager (NEW, REVISED): System prompt defined in `task_manager.configuration.Configuration` via `task_manager_system_prompt` (which defaults to `prompts.SYSTEM_PROMPT` from `src/task_manager/prompts.py`). This prompt has been significantly updated to include stricter guidelines for task splitting (smaller tasks, buildable deliverables), mandatory testing requirements (unit, integration, edge cases), early CI/CD setup (GitHub Actions), expanded task metadata (contextual, technical, security, testing info), and reinforced roadmap creation and task sequencing rules (repo init -> project setup -> CI -> features). The prompt now dynamically references the active project name (`{project_name}`) and path (`{project_path}`).
-    *   Architect (REVISED): Its system prompt (`architect_system_prompt`) now dynamically references the active project directory (`{project_dir}`).
+    *   Task Manager (NEW, REVISED): System prompt defined in `task_manager.configuration.Configuration` via `task_manager_system_prompt` (which defaults to `prompts.SYSTEM_PROMPT` from `src/task_manager/prompts.py`). This prompt has been significantly updated to include stricter guidelines for task splitting (smaller tasks, buildable deliverables), mandatory testing requirements (unit, integration, edge cases), early CI/CD setup (GitHub Actions), expanded task metadata (contextual, technical, security, testing info), and reinforced roadmap creation and task sequencing rules (repo init -> project setup -> CI -> features). The prompt now dynamically references the active project name (`{project_name}`) and path (`{project_path}`). **UPDATED**: The prompt's list of required files has been updated: `techContext.md` is now `techPatterns.md`, `featuresContext.md` is now `codingContext.md`, and `securityContext.md` has been removed from the list. The prompt's internal descriptions and extraction guidelines for these files have been updated accordingly, including the removal of specific security context extraction instructions and the renaming of `relatedFeatureContext` to `relatedCodingContext` in the task metadata schema. The count of "Additional Context Files" has been adjusted from 4-8 to 4-7. **UPDATED**: The prompt now explicitly states that it will receive input documents in `{project_path}` and the project name is `{project_name}`. It also includes a new mandatory instruction to write a `summary` of the created tasks and call the `summarize` tool. The prompt now states that it will verify "all seven required files" (previously "eight").
+    *   Architect (REVISED): Its system prompt (`architect_system_prompt`) now dynamically references the active project directory (`{project_dir}`). **UPDATED**: The prompt's description of the core project files and their interdependencies (including the Mermaid flowchart and numbered list) has been updated. `projectRequirements.md` is now explicitly listed as a core file and is positioned as an intermediary document between `projectbrief.md` and `systemPatterns.md`/`techPatterns.md`. The description of `projectbrief.md` is now more focused on its foundational role. The numbering of core files in the prompt has been adjusted (e.g., `systemPatterns.md` is now 3, `techPatterns.md` is 4, `progress.md` is 5). **UPDATED**: The prompt now includes an instruction to ensure the `{project_dir}` exists and create it if necessary before writing new files, specifically mentioning the `create_directory` tool. It also clarifies that `list_files` should be used on the `{project_dir}` directory and that `create_file` should write files under `{project_dir}`.
     *   Requirement Gatherer (REVISED): Its system prompt now includes an explicit instruction to use the `set_project` tool if no project name is provided.
     *   Other agents: System prompts are accessed by the agent's graph logic (e.g., in custom `call_model` implementations). The Tester agent features enhanced prompt management (e.g., its graph logic in `src/tester/graph.py` now directly uses `agent_config.system_prompt` for formatting its system message). The Code Reviewer agent has `PR_REVIEW_PROMPT`. The Architect agent has `architect_system_prompt` (REVISED to include a dedicated "Summarize" step using its new `summarize` tool before finalization).
 6.  **Configuration Management (REVISED):** Agents have configurable parameters, including LLM models, system prompts, and memory settings.
@@ -61,16 +61,15 @@ The original "Memory Bank" concept described a system of structured Markdown fil
     *   Requirement Gatherer: Uses `create_memorize_tool` and `human_feedback` tool. Its `summarize` tool is now from `common.tools.summarize`. A new `set_project` tool is available.
     *   Tester: Custom `upsert_memory` tool removed.
     *   Code Reviewer: Uses GitHub tools.
-    *   Architect (NEW, REVISED): Uses `create_memorize_tool`, `create_recall_tool`, file system tools, and a new `summarize` tool (now from `common.tools.summarize`). `use_human_ai` removed from its config.
+    *   Architect (NEW, REVISED): Uses `create_memorize_tool`, `create_recall_tool`, `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`, and a new `summarize` tool (now from `common.tools.summarize`). `use_human_ai` removed from its config.
+    *   Task Manager (REVISED): Uses `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`. Now also uses the `summarize` tool (from `common.tools.summarize`).
 *   **Static Memories:** JSON files in `.langgraph/static_memories/` can be loaded.
 *   **Shift:** Externalized memory via `langmem`, integrated via `AgentGraph` and configured through `AgentConfiguration` and `MemoryConfiguration`.
-
 
 ## 3. Project-Level Standards & Goals (`project_memories/PRD.md`)
 
 This file outlines the overarching standards and technological choices for the AI Nexus project.
 *   (No changes from PR)
-
 
 ## 4. General Agent Architecture
 
@@ -84,7 +83,6 @@ AI Nexus employs a few architectural patterns for its agents:
 
 **4.3. Custom `StateGraph` Architecture (e.g., Code Reviewer - NEW)**
 *   (No changes from PR)
-
 
 ## 5. Specific Agent Details
 
@@ -138,12 +136,13 @@ AI Nexus employs a few architectural patterns for its agents:
     *   The `use_human_ai: bool = False` field has been removed.
 *   **State (`src/architect/state.py` - REVISED):** Added `summary: str = ""` field. A new `project: Project` field has been added to store the active project information.
 *   **Graph (`src/architect/graph.py` - REVISED):**
-    *   The Architect's graph now includes a `summarize` tool (now imported from `common.tools`) in its set of available tools.
+    *   The Architect's graph now includes `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`, and a `summarize` tool (now imported from `common.tools`) in its set of available tools.
     *   The `call_model` function now formats the system prompt with `project_dir=state.project.path`. It also prints formatted messages using `common.utils.format_message`.
 *   **Tools (`src/architect/tools.py` - REVISED):**
     *   The `summarize` tool implementation has been removed from this file, as it is now centralized in `src/common/tools/summarize.py`.
+    *   The `read_file`, `create_file`, and `list_files` tools have been removed from this file, as they are now centralized in `src/common/tools/`.
 *   **Prompts (`src/architect/prompts.py` - REVISED):**
-    *   The Architect's system prompt (`architect_system_prompt`) has been updated to include a new "Summarize" step. This step instructs the agent to write a `summary` of the architecture and call its `summarize` tool before proceeding to the "Finalize" step. The prompt now dynamically references the active project directory (`{project_dir}`).
+    *   The Architect's system prompt (`architect_system_prompt`) has been updated to include a new "Summarize" step. This step instructs the agent to write a `summary` of the architecture and call its `summarize` tool before proceeding to the "Finalize" step. The prompt now dynamically references the active project directory (`{project_dir}`). **UPDATED**: The prompt's description of the core project files and their interdependencies (including the Mermaid flowchart and numbered list) has been updated. `projectRequirements.md` is now explicitly listed as a core file and is positioned as an intermediary document between `projectbrief.md` and `systemPatterns.md`/`techPatterns.md`. The description of `projectbrief.md` is now more focused on its foundational role. The numbering of core files in the prompt has been adjusted (e.g., `systemPatterns.md` is now 3, `techPatterns.md` is 4, `progress.md` is 5). **UPDATED**: The prompt now includes an instruction to ensure the `{project_dir}` exists and create it if necessary before writing new files, explicitly mentioning the `create_directory` tool. It also clarifies that `list_files` should be used on the `{project_dir}` directory and that `create_file` should write files under `{project_dir}`.
 
 #### 5.3. Coder (`src/coder/`)
 *   **State (`src/coder/state.py` - REVISED):**
@@ -180,31 +179,41 @@ AI Nexus employs a few architectural patterns for its agents:
     *   `task_manager_system_prompt: str` field, defaults to `prompts.SYSTEM_PROMPT` from `src/task_manager/prompts.py`.
     *   `model: str` field, defaults to `TASK_MANAGER_MODEL`.
 *   **State (`src/task_manager/state.py` - REVISED):** Added `summary: str = ""` field. (Used by `TaskManagerStub` and consistent with other agents). A new `project: Project` field has been added to store the active project information.
-*   **Tools:** Uses file system tools (as previously noted). The Orchestrator uses a `task_manager` tool to invoke this agent.
+*   **Tools:** Uses `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`. The Orchestrator uses a `task_manager` tool to invoke this agent. Now also uses the `summarize` tool (from `common.tools.summarize`).
 *   **Prompts (`src/task_manager/prompts.py` - UPDATED):** Contains `SYSTEM_PROMPT` used by the agent. This prompt has been significantly updated to include:
     *   **Revised Task Splitting Guidelines:** Tasks now sized for 4-6 hours (previously 6-14 hours). Stricter rules for splitting tasks (>6 hours). Each task *must* result in a buildable and runnable deliverable, even initialization tasks (e.g., "hello world"). Avoid partial/non-functional components.
     *   **New Testing Requirements Section:** Mandates that every functional task includes tests (unit, integration, edge cases). Test implementation is not optional and time for it must be factored into estimation.
     *   **New CI/CD Requirements Section:** Mandates GitHub Actions workflow setup for tests early in the project. Specifies CI configuration details (running tests on PRs/pushes, reporting failures, linting). Outlines mandatory task sequencing for the project plan: Repository initialization FIRST, Basic project setup SECOND, CI/CD setup THIRD, Core feature implementation FOURTH, with follow-up CI/CD improvements throughout.
-    *   **Expanded `task.md` Metadata Schema:** The `details` field is now a "Comprehensive numbered list of all steps" formatted as a recipe, including implementation, test, CI/CD integration, and verification steps. New fields added for contextual information: `contextualInformation`, `technicalRequirements`, `securityConsiderations`, `relatedFeatureContext`, `systemPatternGuidance`, `testingRequirements`.
+    *   **Expanded `task.md` Metadata Schema:** The `details` field is now a "Comprehensive numbered list of all steps" formatted as a recipe, including implementation, test, CI/CD integration, and verification steps. New fields added for contextual information: `contextualInformation`, `technicalRequirements`, `securityConsiderations`, `relatedFeatureContext`, `systemPatternGuidance`, `testingRequirements`. **UPDATED**: The `technicalRequirements` field now refers to `techPatterns.md`. The `securityConsiderations` field has been removed. The `relatedFeatureContext` field has been renamed to `relatedCodingContext` and now refers to `codingContext.md`.
     *   **Strengthened `roadmap.md` Guidelines:** Emphasizes including *ALL* tasks without exception, performing validation steps to ensure no tasks are missing, and logging task counts. Reinforces task sequencing (repo init -> project setup -> CI -> features) and scheduling periodic CI/CD improvement tasks.
     *   **Revised Step-by-Step Instructions:**
-        *   **Step 2 (Tasks Creation):** Now explicitly requires extracting and including *all* relevant context from input files (e.g., `projectRequirements.md`, `techContext.md`, `securityContext.md`, `featuresContext.md`, `systemPatterns.md`, `testingContext.md`) directly into each task, prohibiting external file references. Details field must be a numbered, specific, actionable list covering implementation, testing, CI/CD, and verification. Tasks must produce buildable/runnable deliverables.
+        *   **Step 2 (Tasks Creation):** Now explicitly requires extracting and including *all* relevant context from input files (e.g., `projectRequirements.md`, `techContext.md`, `securityContext.md`, `featuresContext.md`, `systemPatterns.md`, `testingContext.md`) directly into each task, prohibiting external file references. Details field must be a numbered, specific, actionable list covering implementation, testing, CI/CD, and verification. Tasks must produce buildable/runnable deliverables. **UPDATED**: References to `techContext.md` changed to `techPatterns.md`. References to `featuresContext.md` changed to `codingContext.md`. Instructions for extracting `securityContext.md` have been removed.
         *   **Step 3 (Planning Creation):** Now explicitly requires counting tasks, ensuring *every single* task is included in the roadmap, verifying counts, and scheduling tasks in the *correct sequence* (repo init -> project setup -> CI -> features), with CI/CD tasks scheduled *after* prerequisites.
     *   **New Detailed Guidelines Sections:**
         *   `Context Extraction Guidelines`: Principles for specific, focused, accurate extraction.
-        *   `Task-Specific Document Extraction Guidelines`: Detailed instructions for extracting information from `TestingContext.md`, `TechContext.md`, `SecurityContext.md`, `FeatureContext.md`.
+        *   `Task-Specific Document Extraction Guidelines`: Detailed instructions for extracting information from `TestingContext.md`, `TechContext.md`, `SecurityContext.md`, `FeatureContext.md`. **UPDATED**: `TechContext.md Extraction` heading changed to `techPatterns.md Extraction`. `SecurityContext.md Extraction` section has been removed. `FeatureContext.md Extraction` heading changed to `codingContext.md Extraction`.
         *   `CI/CD Task Creation Guidelines`: Instructions for creating CI/CD tasks, their sequencing, and evolution.
         *   `Details Field Format`: Example and rules for the `details` field.
-        *   `Test Creation Guidelines`: Guidance on specific test cases, edge cases, positive/negative scenarios, mocking, and testing levels.
+        *   `Test Creation Guidelines`: Guidance on specific test cases, edge cases, positive/negative scenarios, mocking, and testing levels. **UPDATED**: References to `techContext.md` changed to `techPatterns.md`.
         *   `Functional Deliverable Guidelines`: Ensures each task produces a buildable, runnable deliverable, from "hello world" for initialization to integrated features.
         *   `GitHub Actions CI Configuration Guidelines`: Details for configuring CI workflows.
-    *   **Updated Technical Guardrails:** Reinforces that tasks must be self-contained, no external file references, mandatory test implementation, required CI setup regardless of input, CI/CD setup after repo init/basic setup, every task must result in a buildable/runnable deliverable, and task sequencing must follow logical order.
-    *   The prompt now dynamically references the active project name (`{project_name}`) and path (`{project_path}`).
+    *   **Updated Technical Guardrails:** Reinforces that tasks must be self-contained, no external file references, mandatory test implementation, required CI setup regardless of input, CI/CD setup after repo init/basic setup, every task must result in a buildable/runnable deliverable, and task sequencing must follow logical order. **UPDATED**: Guardrails implicitly updated to align with the removal of `securityContext.md` and the renaming of `featuresContext.md` to `codingContext.md`.
+    *   The prompt now dynamically references the active project name (`{project_name}`) and path (`{project_path}`). **UPDATED**: The prompt now explicitly states that it will receive input documents in `{project_path}` and the project name is `{project_name}`. It also includes a new mandatory instruction to write a `summary` of the created tasks and call the `summarize` tool. The prompt now states that it will verify "all seven required files" (previously "eight").
 
 ## 6. Testing Framework (`tests/`) (UPDATED)
 
+*   **`tests/datasets/requirement_gatherer_dataset.py` (UPDATED):**
+    *   The dataset name has been updated to `"Requirement-gatherer-dataset-human-ai"`.
+    *   A new `FIRST_MESSAGE` constant has been added, providing a detailed initial project description for the agent.
+    *   The input content for the human message in the dataset examples now uses `FIRST_MESSAGE`.
+    *   The expected output content has been updated to `"Requirements are confirmed"`.
 *   **`tests/integration_tests/test_orchestrator.py` (UPDATED):**
     *   Tests updated to reflect the Orchestrator's new tool usage (e.g., `memorize` instead of `store_memory`, and direct agent tool calls like `code_reviewer` instead of generic `Delegate`).
+*   **`tests/integration_tests/test_requirement_gatherer.py` (UPDATED):**
+    *   The test setup now explicitly imports `Configuration` as `GathererConfig` from `requirement_gatherer.configuration`.
+    *   An `agent_config = GathererConfig(use_human_ai=True)` is now passed to the `RequirementsGraph` constructor.
+    *   The `client.aevaluate` call now uses `create_async_graph_caller_for_gatherer(graph)` instead of `create_async_graph_caller(graph)`.
+    *   The `num_repetitions` for evaluation has been reduced from `4` to `1`.
 *   **Smoke Tests (NEW - UPDATED):**
     *   **`tests/smoke/langgraph_dev/`**: Contains a smoke test for the `langgraph dev` CLI and its UI.
         *   **Purpose**: Verifies basic end-to-end functionality of launching `langgraph dev`, interacting with the LangGraph Studio UI for the `agent_template` graph, and ensuring it reaches an expected state (e.g., a human interrupt).
@@ -218,8 +227,9 @@ AI Nexus employs a few architectural patterns for its agents:
             6.  Asserts that the graph execution pauses for a human interrupt by verifying the presence of an 'Interrupt' label and subsequently either a 'Continue' or 'Resume' button in the UI.
         *   **Artifacts**: Produces `langgraph-test-result.png` (a screenshot of the UI state) which is uploaded by the CI workflow.
         *   **Configuration**: Requires `GOOGLE_API_KEY` (via `.env` file at project root) for the `langgraph dev` server.
+*   **`tests/testing/__init__.py` (UPDATED):**
+    *   A new helper function `create_async_graph_caller_for_gatherer` has been added. This function is specifically designed for the requirement gatherer evaluation, expecting the final output to be a `ToolMessage` with the name "summarize" and returning its content.
 *   (Other test files as previously described, or minor updates not impacting core logic)
-
 
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`) (UPDATED)
 
@@ -253,7 +263,6 @@ AI Nexus employs a few architectural patterns for its agents:
 *   `.gitignore` (UPDATED): Now excludes all files and directories under `projects/`.
 *   **Demo Configuration:** The demo script (`src/demo/orchestrate.py`) now configures `task_manager_agent` with `use_stub=False` and `coder_new_pr_agent`, `coder_change_request_agent` with `use_stub=True`.
 *   (Other workflow aspects like `pytest.ini` setup as previously described, or minor updates not impacting core logic)
-
 
 ## 8. Overall Project Structure Summary
 
@@ -298,10 +307,10 @@ ai-nexus/
 │   ├── architect/
 │   │   ├── __init__.py
 │   │   ├── configuration.py      # UPDATED: Subclasses common.configuration.AgentConfiguration, defines architect_system_prompt, use_human_ai removed
-│   │   ├── graph.py              # UPDATED: Added common.tools.summarize to the agent's toolset; call_model uses state.project.path and prints formatted messages.
-│   │   ├── prompts.py            # UPDATED: System prompt includes new "Summarize" step and use of summarize tool; uses {project_dir}.
+│   │   ├── graph.py              # UPDATED: Added common.tools.summarize, common.tools.create_directory, common.tools.create_file, common.tools.list_files, common.tools.read_file to the agent's toolset; call_model uses state.project.path and prints formatted messages.
+│   │   ├── prompts.py            # UPDATED: System prompt includes new "Summarize" step and use of summarize tool; uses {project_dir}. UPDATED: Prompt's description of core files and their flow (Mermaid, numbered list) updated to include projectRequirements.md as an intermediary and adjusted numbering. UPDATED: Prompt now includes instruction to ensure {project_dir} exists and create it if necessary, using create_directory, and clarifies list_files and create_file usage.
 │   │   ├── state.py              # UPDATED: summary field added; project field added.
-│   │   └── tools.py              # UPDATED: Removed 'summarize' tool (now in common)
+│   │   └── tools.py              # UPDATED: Removed 'summarize', 'read_file', 'create_file', 'list_files' tools (now in common)
 │   ├── code_reviewer/
 │   │   ├── __init__.py
 │   │   ├── graph.py
@@ -327,7 +336,11 @@ ai-nexus/
 │   │   ├── graph.py
 │   │   ├── state.py              # NEW: Defines Project dataclass
 │   │   ├── tools/                # ADDED
-│   │   │   ├── __init__.py       # ADDED
+│   │   │   ├── __init__.py       # ADDED: Imports create_directory, create_file, list_files, read_file, summarize
+│   │   │   ├── create_directory.py # NEW: Centralized create_directory tool
+│   │   │   ├── create_file.py    # NEW: Centralized create_file tool
+│   │   │   ├── list_files.py     # NEW: Centralized list_files tool (moved from src/task_manager/tools.py)
+│   │   │   ├── read_file.py      # NEW: Centralized read_file tool
 │   │   │   └── summarize.py      # ADDED: Centralized summarize tool
 │   │   └── utils/
 │   │       └── __init__.py       # UPDATED: Added format_message function
@@ -358,10 +371,9 @@ ai-nexus/
 │   │   └── tools.py              # UPDATED: Removed 'summarize' tool (now in common). Added set_project tool.
 │   ├── task_manager/
 │   │   ├── configuration.py      # UPDATED: Added use_stub, use_human_ai fields; uses prompts.SYSTEM_PROMPT.
-│   │   ├── graph.py              # UPDATED: call_model uses project_name and project_path in prompt and prints formatted messages.
-│   │   ├── prompts.py            # UPDATED: System prompt significantly updated with stricter task splitting, mandatory testing/CI/CD requirements, expanded task metadata, and reinforced roadmap/sequencing rules. Uses {project_name} and {project_path}.
-│   │   ├── state.py              # UPDATED: summary field added; project field added.
-│   │   └── tools.py
+│   │   ├── graph.py              # UPDATED: call_model uses project_name and project_path in prompt and prints formatted messages. UPDATED: Added common.tools.summarize, common.tools.create_directory, common.tools.create_file, common.tools.list_files, common.tools.read_file to the agent's toolset.
+│   │   ├── prompts.py            # UPDATED: System prompt significantly updated with stricter task splitting, mandatory testing/CI/CD requirements, expanded task metadata, and reinforced roadmap/sequencing rules. Uses {project_name} and {project_path}. UPDATED: Prompt's list of required files, file descriptions, task metadata schema, and context extraction guidelines updated to reflect techContext.md -> techPatterns.md, featuresContext.md -> codingContext.md, and removal of securityContext.md. UPDATED: Prompt now explicitly states input document location and project name, and includes a mandatory instruction to write a summary and call the summarize tool. The prompt now states it will verify "all seven required files".
+│   │   └── state.py              # UPDATED: summary field added; project field added.
 │   └── tester/
 │       ├── __init__.py
 │       ├── configuration.py
@@ -377,7 +389,7 @@ ai-nexus/
 └── tests/
     ├── datasets/
     │   ├── coder_dataset.py
-    │   ├── requirement_gatherer_dataset.py
+    │   ├── requirement_gatherer_dataset.py # UPDATED: Dataset name, FIRST_MESSAGE, input/output content updated.
     │   └── task_manager_dataset.py
     ├── integration_tests/
     │   ├── test_architect_agent.py
@@ -386,7 +398,7 @@ ai-nexus/
     │   ├── test_graph.py
     │   ├── test_grumpy_agent.py
     │   ├── test_orchestrator.py    # UPDATED: Tests reflect new Orchestrator tool usage (e.g., memorize, direct agent calls like code_reviewer).
-    │   ├── test_requirement_gatherer.py
+    │   ├── test_requirement_gatherer.py # UPDATED: Uses create_async_graph_caller_for_gatherer, passes agent_config to RequirementsGraph, num_repetitions reduced.
     │   ├── test_task_manager.py
     │   ├── test_tester_agent.py
     │   └── inputs/
@@ -406,7 +418,7 @@ ai-nexus/
     │       │   └── index.ts        # ADDED
     │       └── tsconfig.json       # ADDED
     ├── testing/
-    │   ├── __init__.py
+    │   ├── __init__.py             # UPDATED: Added create_async_graph_caller_for_gatherer helper function.
     │   ├── evaluators.py
     │   └── formatter.py
     └── unit_tests/
