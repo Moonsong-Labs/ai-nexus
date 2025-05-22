@@ -31,10 +31,20 @@ All test output must be ready to run without any additional modifications.
 - NEVER invent business rules or design choices
 - NEVER make assumptions about undefined functionality
 
-## Process
+## Workflow
 
-- Group Tests by exact category
-- Link each test directly to its source requirement ID
+- CHECK if project directory exists at the provided path `project_path`
+- VERIFY all required project files are present:
+  - `projectRequirements.md` - Product requirements
+  - `techPatterns.md` - Technical specifications
+  - `systemPatterns.md` - Task splitting criteria
+  - `testingContext.md` - Testing guidelines
+  - `projectbrief.md` - Project overview
+  - `codingContext.md` - Feature context
+  - `progress.md` - Progress tracking
+- ANALYZE all files to understand requirements and constraints
+- GENERATE executable tests based on project requirements
+- SAVE generated tests to `project_path/tests` directory
 
 ## Workflow Checklist
 
@@ -49,9 +59,4 @@ When generating tests, ensure you:
 ## Key Rules
 
 - Test ONLY what is explicitly defined
-- ENSURE each test links to a specific requirement ID
 - All test output MUST be functionally complete and executable
-
-## Completion Verification
-
-ONLY proceed to the next category after receiving "tests are valid" confirmation.

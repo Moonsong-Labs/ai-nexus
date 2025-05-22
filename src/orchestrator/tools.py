@@ -228,7 +228,10 @@ def create_tester_tool(
             A Command that updates the agent's state with tester's response.
         """
         result = await tester_graph.compiled_graph.ainvoke(
-            TesterState(messages=[HumanMessage(content=content)]),
+            TesterState(
+                messages=[HumanMessage(content=content)],
+                project=state.project,
+            ),
             config,
         )
 
