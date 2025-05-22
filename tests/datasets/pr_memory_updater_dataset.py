@@ -1,6 +1,5 @@
-import fnmatch
 import json
-import os
+from pathlib import Path
 from typing import Optional
 
 from langsmith import Client
@@ -21,14 +20,13 @@ def create_dataset(*, force: Optional[bool] = False):
 
     examples = []
 
-    rel_dataset_path = ["tests", "datasets", "pr_memory_updater"]
-    dataset_path = os.path.join(os.curdir, *rel_dataset_path)
-
-    for filename in os.listdir(dataset_path):
-        if fnmatch.fnmatch(filename, "*.json"):
-            file = os.path.join(dataset_path, filename)
+    dataset_path = Path("tests/datasets/pr_memory_updater")
+    for file in dataset_path.glob("*.json"):
+        try:
             with open(file, "r") as f:
                 examples.append(json.load(f))
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            raise RuntimeError(f"Error processing {file}: {e}")
 
     # Add examples to the dataset
     client.create_examples(dataset_id=dataset.id, examples=examples)
