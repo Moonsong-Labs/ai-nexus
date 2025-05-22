@@ -18,35 +18,6 @@ from requirement_gatherer.state import State as RequirementsState
 from task_manager.state import State as TaskManagerState
 from tester.state import State as TesterState
 
-T = TypeVar("T")
-
-
-class StubGraph(AgentGraph, Generic[T]):
-    """Base class for stub graphs that follow a simple run pattern."""
-
-    def __init__(
-        self,
-        *,
-        name: str,
-        state_type: type[T],
-        run_fn: Callable[[T, Optional[RunnableConfig]], Awaitable[Dict[str, Any]]],
-        agent_config: Optional[AgentConfiguration] = None,
-        checkpointer: Optional[Checkpointer] = None,
-        store: Optional[BaseStore] = None,
-    ):
-        super().__init__(
-            name=name, agent_config=agent_config, checkpointer=checkpointer, store=store
-        )
-        self._state_type = state_type
-        self._run_fn = run_fn
-
-    def create_builder(self) -> StateGraph:
-        builder = StateGraph(self._state_type)
-        builder.add_node("run", self._run_fn)
-        builder.add_edge(START, "run")
-        builder.add_edge("run", END)
-        return builder
-
 
 class MessageWheel:
     def __init__(self, messages: List[str]):
@@ -60,6 +31,40 @@ class MessageWheel:
         msg = self.messages[self.idx]
         self.idx = (self.idx + 1) % len(self.messages)
         return msg
+
+
+T = TypeVar("T")
+
+
+class StubGraph(AgentGraph, Generic[T]):
+    """Base class for stub graphs that follow a simple run pattern."""
+
+    _stub_messages: MessageWheel
+
+    def __init__(
+        self,
+        *,
+        name: str,
+        stub_messages: MessageWheel = MessageWheel(["I have finished the task."]),
+        state_type: type[T],
+        run_fn: Callable[[T, Optional[RunnableConfig]], Awaitable[Dict[str, Any]]],
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        super().__init__(
+            name=name, agent_config=agent_config, checkpointer=checkpointer, store=store
+        )
+        self._stub_messages = stub_messages
+        self._state_type = state_type
+        self._run_fn = run_fn
+
+    def create_builder(self) -> StateGraph:
+        builder = StateGraph(self._state_type)
+        builder.add_node("run", self._run_fn)
+        builder.add_edge(START, "run")
+        builder.add_edge("run", END)
+        return builder
 
 
 model_requirements_messages = MessageWheel(
@@ -79,16 +84,19 @@ model_requirements_messages = MessageWheel(
         """,
     ]
 )
+
 model_architect_messages = MessageWheel(
     [
         """I have created the architecture for the project.""",
     ]
 )
+
 model_task_manager_messages = MessageWheel(
     [
         """I have finished creating all the tasks and planning for the project.""",
     ]
 )
+
 model_coder_new_pr_messages = MessageWheel(
     [
         """I have finished coding the new PR is #69 and the branch is code-agent-new-pr.""",
@@ -128,13 +136,15 @@ class RequirementsGathererStub(StubGraph[RequirementsState]):
         agent_config: Optional[AgentConfiguration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
+        stub_messages: MessageWheel = model_requirements_messages,
     ):
         super().__init__(
             name="Requirements Gatherer Stub",
+            stub_messages=stub_messages,
             state_type=RequirementsState,
             run_fn=lambda state, config: {
                 "messages": state.messages,
-                "summary": model_requirements_messages.next(),
+                "summary": self._stub_messages.next(),
                 "project_name": "My Stub Project",
             },
             agent_config=agent_config,
@@ -150,13 +160,15 @@ class ArchitectStub(StubGraph[ArchitectState]):
         agent_config: Optional[AgentConfiguration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
+        stub_messages: MessageWheel = model_architect_messages,
     ):
         super().__init__(
             name="Architect Stub",
+            stub_messages=stub_messages,
             state_type=ArchitectState,
             run_fn=lambda state, config: {
                 "messages": state.messages,
-                "summary": model_architect_messages.next(),
+                "summary": self._stub_messages.next(),
             },
             agent_config=agent_config,
             checkpointer=checkpointer,
@@ -171,13 +183,15 @@ class TaskManagerStub(StubGraph[TaskManagerState]):
         agent_config: Optional[AgentConfiguration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
+        stub_messages: MessageWheel = model_task_manager_messages,
     ):
         super().__init__(
             name="Task Manager Stub",
+            stub_messages=stub_messages,
             state_type=TaskManagerState,
             run_fn=lambda state, config: {
                 "messages": state.messages,
-                "summary": model_task_manager_messages.next(),
+                "summary": self._stub_messages.next(),
             },
             agent_config=agent_config,
             checkpointer=checkpointer,
@@ -192,13 +206,15 @@ class CoderNewPRStub(StubGraph[CoderState]):
         agent_config: Optional[AgentConfiguration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
+        stub_messages: MessageWheel = model_coder_new_pr_messages,
     ):
         super().__init__(
             name="Coder New PR Stub",
+            stub_messages=stub_messages,
             state_type=CoderState,
             run_fn=lambda state, config: {
                 "messages": state.messages,
-                "summary": model_coder_new_pr_messages.next(),
+                "summary": self._stub_messages.next(),
             },
             agent_config=agent_config,
             checkpointer=checkpointer,
@@ -213,13 +229,15 @@ class CoderChangeRequestStub(StubGraph[CoderState]):
         agent_config: Optional[AgentConfiguration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
+        stub_messages: MessageWheel = model_coder_change_request_messages,
     ):
         super().__init__(
             name="Coder Change Request Stub",
+            stub_messages=stub_messages,
             state_type=CoderState,
             run_fn=lambda state, config: {
                 "messages": state.messages,
-                "summary": model_coder_change_request_messages.next(),
+                "summary": self._stub_messages.next(),
             },
             agent_config=agent_config,
             checkpointer=checkpointer,
@@ -234,13 +252,15 @@ class TesterStub(StubGraph[TesterState]):
         agent_config: Optional[AgentConfiguration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
+        stub_messages: MessageWheel = model_tester_messages,
     ):
         super().__init__(
             name="Tester Stub",
+            stub_messages=stub_messages,
             state_type=TesterState,
             run_fn=lambda state, config: {
                 "messages": state.messages,
-                "summary": model_tester_messages.next(),
+                "summary": self._stub_messages.next(),
             },
             agent_config=agent_config,
             checkpointer=checkpointer,
@@ -255,13 +275,15 @@ class CodeReviewerStub(StubGraph[CodeReviewerState]):
         agent_config: Optional[AgentConfiguration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
+        stub_messages: MessageWheel = model_code_reviewer_messages,
     ):
         super().__init__(
             name="CodeReviewer Stub",
+            stub_messages=stub_messages,
             state_type=CodeReviewerState,
             run_fn=lambda state, config: {
                 "messages": state.messages,
-                "summary": model_code_reviewer_messages.next(),
+                "summary": self._stub_messages.next(),
             },
             agent_config=agent_config,
             checkpointer=checkpointer,

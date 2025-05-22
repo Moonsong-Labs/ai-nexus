@@ -12,25 +12,66 @@ from orchestrator.configuration import (
     ArchitectAgentConfig,
     RequirementsAgentConfig,
     SubAgentConfig,
+    TaskManagerAgentConfig,
+    TaskManagerConfiguration,
 )
 from orchestrator.configuration import Configuration as OrchestratorConfiguration
 from orchestrator.graph import OrchestratorGraph
 from orchestrator.state import State
+from orchestrator.stubs import MessageWheel
 
 if __name__ == "__main__":
     orchestrator = OrchestratorGraph(
         agent_config=OrchestratorConfiguration(
             requirements_agent=RequirementsAgentConfig(
-                use_stub=False,
+                use_stub=True,
+                stub_messages=MessageWheel(
+                    [
+                        "I have gathered the requirements for the project. This should be a simple cargo package the implements a Fibonacci iterator.",
+                    ]
+                ),
             ),
             architect_agent=ArchitectAgentConfig(
-                use_stub=False,
+                use_stub=True,
+                stub_messages=MessageWheel(
+                    [
+                        "Architecture should follow cargo structure for a lib. lib should export a Fibonacci iterator.",
+                    ]
+                ),
+            ),
+            task_manager_agent=TaskManagerAgentConfig(
+                use_stub=True,
+                config=TaskManagerConfiguration(),
+                stub_messages=MessageWheel(
+                    [
+                        """
+                    There's only one task for the coder:
+                     1) Implement the Fibonacci iterator in Rust.
+                """
+                    ]
+                ),
             ),
             coder_new_pr_agent=SubAgentConfig(
                 use_stub=False,
             ),
             coder_change_request_agent=SubAgentConfig(
                 use_stub=False,
+            ),
+            reviewer_agent=SubAgentConfig(
+                use_stub=True,
+                stub_messages=MessageWheel(
+                    [
+                        "Everything looks correct.",
+                    ]
+                ),
+            ),
+            tester_agent=SubAgentConfig(
+                use_stub=True,
+                stub_messages=MessageWheel(
+                    [
+                        "I have tested the code and found no issues.",
+                    ]
+                ),
             ),
         ),
         checkpointer=InMemorySaver(),
