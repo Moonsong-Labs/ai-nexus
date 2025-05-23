@@ -252,7 +252,9 @@ class MockGithubApi:
         return ""
 
 
-def maybe_mock_github() -> Union[GitHubAPIWrapper, MockGithubApi]:
+def maybe_mock_github(
+    base_branch: str = "main",
+) -> Union[GitHubAPIWrapper, MockGithubApi]:
     """Get either a real GitHub API wrapper or a mock based on environment variables.
 
     Required environment variables for real GitHub API:
@@ -268,6 +270,7 @@ def maybe_mock_github() -> Union[GitHubAPIWrapper, MockGithubApi]:
             github_app_id=os.getenv("GITHUB_APP_ID"),
             github_app_private_key=os.getenv("GITHUB_APP_PRIVATE_KEY"),
             github_repository=os.getenv("GITHUB_REPOSITORY"),
+            github_base_branch=base_branch,
         )
 
     if any(os.getenv(var) for var in required_vars):
