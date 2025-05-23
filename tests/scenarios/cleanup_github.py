@@ -3,15 +3,15 @@ import sys
 from typing import List
 
 import dotenv
-from github import Auth, GithubIntegration, Repository
+from github import Auth, GithubException, GithubIntegration, Repository
 
+from common.logging import get_logger
 from scenarios import BASE_BRANCHES
 
 dotenv.load_dotenv()
 
-from common.logger import logger
 
-logger = logger(__name__)
+logger = get_logger(__name__)
 
 
 def cleanup_branches(repo: Repository, base_branches: List[str]) -> None:
@@ -31,7 +31,7 @@ def cleanup_branches(repo: Repository, base_branches: List[str]) -> None:
                 git_ref = repo.get_git_ref(ref)
                 git_ref.delete()
                 logger.info(f"Deleted branch: {branch}")
-            except Exception as e:
+            except GithubException as e:
                 logger.error(f"Failed to delete branch '{branch}': {str(e)}")
 
 
@@ -46,14 +46,24 @@ def main():
     github_app_id = os.getenv("GITHUB_APP_ID")
     github_app_private_key = os.getenv("GITHUB_APP_PRIVATE_KEY")
 
+    if not github_app_id or not github_app_private_key:
+        print(
+            "Error: GITHUB_APP_ID and GITHUB_APP_PRIVATE_KEY environment variables must be set",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     try:
         # interpret the key as a file path
         # fallback to interpreting as the key itself
         with open(github_app_private_key, "r") as f:
             github_app_private_key = f.read()
-
-    except Exception:
+    except FileNotFoundError:
+        # Treat as direct key content
         pass
+    except Exception as e:
+        print(f"Error reading private key file: {str(e)}", file=sys.stderr)
+        sys.exit(1)
 
     auth = Auth.AppAuth(
         github_app_id,

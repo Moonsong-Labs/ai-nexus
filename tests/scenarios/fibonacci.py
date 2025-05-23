@@ -9,7 +9,7 @@ from langgraph.store.memory import InMemoryStore
 from langgraph.types import Command
 from termcolor import colored
 
-from common.logging import logger
+from common.logging import get_logger
 from orchestrator.configuration import (
     ArchitectAgentConfig,
     RequirementsAgentConfig,
@@ -23,7 +23,7 @@ from orchestrator.state import State
 from orchestrator.stubs import MessageWheel
 
 dotenv.load_dotenv()
-logger = logger(__name__)
+logger = get_logger(__name__)
 
 BASE_BRANCH = "fibonacci-base"
 

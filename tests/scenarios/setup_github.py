@@ -5,13 +5,13 @@ from typing import List
 import dotenv
 from github import Auth, GithubIntegration, Repository
 
-from common.logger import logger
+from common.logging import get_logger
 from scenarios import BASE_BRANCHES
 
 dotenv.load_dotenv()
 
 
-logger = logger(__name__)
+logger = get_logger(__name__)
 
 
 def create_base_branches(repo: Repository, base_branches: List[str]) -> None:
@@ -72,7 +72,7 @@ def main():
         )
     try:
         installation = installation[0]
-    except ValueError as e:
+    except IndexError as e:
         raise ValueError(
             f"Please make sure to give correct github parameters Error message: {e}"
         )

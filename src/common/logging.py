@@ -4,7 +4,7 @@ import logging
 import os
 
 
-def logger(name: str):
+def get_logger(name: str):
     """Initialize the logger."""
     log = logging.getLogger(name)
 
