@@ -22,3 +22,10 @@ from the PR, read them, and then consider the diff. When it makes sense, feedbac
 on the diff itself. You should also provide a summary of the feedback in the PR. The feedback
 should be constructive and helpful. Use GitHub Markdown for formatting in your response.
 """
+
+# Prompt for local code reviews
+LOCAL_REVIEW_PROMPT = """
+Your task is to review the code on local disk and provide feedback. You should describe any
+suggested changes with respect to the files in the directory. You should also provide a summary
+of the feedback, and make it clear whether or not you approve the changes.
+"""

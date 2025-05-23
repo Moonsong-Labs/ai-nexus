@@ -13,7 +13,8 @@ from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 from pydantic import BaseModel, Field
 
-from code_reviewer.prompts import PR_REVIEW_PROMPT, SYSTEM_PROMPT
+import common.tools
+from code_reviewer.prompts import LOCAL_REVIEW_PROMPT, PR_REVIEW_PROMPT, SYSTEM_PROMPT
 from code_reviewer.state import State
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
@@ -29,15 +30,17 @@ class CodeReviewerInstanceConfig:
 
     name: str
     system_prompt: str
-    github_tools: List[str]
+    github_tools_filter: List[str]
+    other_tools: List[str]
 
     def graph_builder(self, github_toolset: list[Tool]):
-        builder = _graph_builder(self.filter_tools(github_toolset), self.system_prompt)
+        tools = self.other_tools + self.filter_github_tools(github_toolset)
+        builder = _graph_builder(tools, self.system_prompt)
         builder.name = self.name
         return builder
 
-    def filter_tools(self, tools: List[Tool]) -> List[Tool]:
-        """Filter tools to only include those specified in github_tools.
+    def filter_github_tools(self, tools: List[Tool]) -> List[Tool]:
+        """Filter the github tools to only include those specified in github_tools_filter.
 
         Args:
             tools: List of all available tools
@@ -46,18 +49,31 @@ class CodeReviewerInstanceConfig:
         Raises:
             AssertionError: If the number of filtered tools doesn't match github_tools
         """
-        filtered_tools = [tool for tool in tools if tool.name in self.github_tools]
-        if len(filtered_tools) != len(self.github_tools):
+        filtered_tools = [tool for tool in tools if tool.name in self.github_tools_filter]
+        if len(filtered_tools) != len(self.github_tools_filter):
             raise ValueError(
-                f"Tool mismatch. Expected {len(self.github_tools)} tools, got {len(filtered_tools)}. "
-                f"Expected tools: {self.github_tools}, Got tools: {[t.name for t in filtered_tools]}"
+                f"Tool mismatch. Expected {len(self.github_tools_filter)} tools, got {len(filtered_tools)}. "
+                f"Expected tools: {self.github_tools_filter}, Got tools: {[t.name for t in filtered_tools]}"
             )
         return filtered_tools
+
+def local_code_reviewer_config():
+    """Instance config for code reviewer with tools to use the local environment for code."""
+    return CodeReviewerInstanceConfig(
+        name="LocalCodeReviewer",
+        system_prompt=LOCAL_REVIEW_PROMPT,
+        github_tools_filter=[],
+        other_tools=[
+            common.tools.summarize,
+            common.tools.list_files,
+            common.tools.read_file,
+        ],
+    )
 
 def non_github_code_reviewer_config():
     """Instance config for code reviewer without GitHub tools."""
     return CodeReviewerInstanceConfig(
-        name="NonGithubCodeReviewer", system_prompt=SYSTEM_PROMPT, github_tools=[]
+        name="NonGithubCodeReviewer", system_prompt=SYSTEM_PROMPT, github_tools_filter=[], other_tools=[],
     )
 
 def github_code_reviewer_config():
@@ -65,22 +81,24 @@ def github_code_reviewer_config():
     return CodeReviewerInstanceConfig(
         name="GithubCodeReviewer",
         system_prompt=PR_REVIEW_PROMPT,
-        github_tools=[
+        github_tools_filter=[
             "get_files_from_a_directory",
             "read_file",
             "get_pull_request",
             "get_pull_request_diff",
             "create_pull_request_review",
         ],
+        other_tools=[],
     )
 
-class CodeReviewerGithubGraph(AgentGraph):
+class CodeReviewerGraph(AgentGraph):
     """CodeReviewer non-Github graph."""
 
     def __init__(
         self,
         *,
         github_tools: List[Tool],
+        config: CodeReviewerInstanceConfig,
         agent_config: Optional[AgentConfiguration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
@@ -100,9 +118,10 @@ class CodeReviewerGithubGraph(AgentGraph):
             store=store,
         )
         self._github_tools = github_tools
+        self._config = config
 
     def create_builder(self) -> StateGraph:
-        return github_code_reviewer_config().graph_builder(self._github_tools)
+        return self._config.graph_builder(self._github_tools)
 
 class CallModel:
     def __init__(self, github_tools: list[Tool], system_prompt: str):
