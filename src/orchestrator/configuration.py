@@ -12,6 +12,7 @@ from orchestrator.stubs import (
     model_architect_messages,
     model_coder_change_request_messages,
     model_coder_new_pr_messages,
+    model_code_reviewer_messages,
     model_requirements_messages,
     model_task_manager_messages,
 )
@@ -69,6 +70,14 @@ class TesterAgentConfig(SubAgentConfig):
     use_stub: bool = True
     config: TesterConfiguration = field(default_factory=TesterConfiguration)
 
+@dataclass(kw_only=True)
+class CodeReviewerAgentConfig(SubAgentConfig):
+    """Code reviewer configuration for orchestrator."""
+
+    use_stub: bool = True
+    stub_messages: MessageWheel = model_code_reviewer_messages
+    config: AgentConfiguration = field(default_factory=AgentConfiguration)
+
 
 @dataclass(kw_only=True)
 class Configuration(AgentConfiguration):
@@ -91,7 +100,9 @@ class Configuration(AgentConfiguration):
         )
     )
     tester_agent: TesterAgentConfig = field(default_factory=TesterAgentConfig)
-    reviewer_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
+    reviewer_agent: CodeReviewerAgentConfig = field(
+        default_factory=SubAgentConfig(stub_messages=model_code_reviewer_messages)
+    )
 
 
 __all__ = ["Configuration", "RequirementsAgentConfig", "SubAgentConfig"]

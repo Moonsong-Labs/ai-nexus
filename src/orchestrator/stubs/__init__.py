@@ -121,10 +121,7 @@ model_tester_messages = MessageWheel(
 )
 model_code_reviewer_messages = MessageWheel(
     [
-        """I found issues with code. Here are the details:
-    Add a new line in the end.
-    """,
-        """Everything looks good.""",
+        """The code looks good, I approve.""",
     ]
 )
 

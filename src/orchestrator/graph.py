@@ -29,6 +29,7 @@ from common.graph import AgentGraph
 from orchestrator import stubs, tools
 from orchestrator.configuration import (
     ArchitectAgentConfig,
+    CodeReviewerAgentConfig,
     Configuration,
     RequirementsAgentConfig,
     SubAgentConfig,
@@ -207,11 +208,19 @@ class OrchestratorGraph(AgentGraph):
                 store=self._store,
             )
         )
-        code_reviewer_graph = stubs.CodeReviewerStub(
-            agent_config=self._agent_config,
-            checkpointer=self._checkpointer,
-            store=self._store,
-            stub_messages=self._agent_config.reviewer_agent.stub_messages,
+        code_reviewer_graph = (
+            stubs.CodeReviewerStub(
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+                stub_messages=self._agent_config.reviewer_agent.stub_messages,
+            )
+            if self._agent_config.reviewer_agent.use_stub
+            else TesterAgentGraph(
+                agent_config=self._agent_config.reviewer_agent.config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+            )
         )
 
         all_tools = [
@@ -263,6 +272,9 @@ graph = OrchestratorGraph(
         ),
         coder_new_pr_agent=SubAgentConfig(use_stub=False, config=AgentConfiguration()),
         coder_change_request_agent=SubAgentConfig(
+            use_stub=False, config=AgentConfiguration()
+        ),
+        reviewer_agent=CodeReviewerAgentConfig(
             use_stub=False, config=AgentConfiguration()
         ),
     )
