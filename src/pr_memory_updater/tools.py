@@ -1,9 +1,12 @@
 """Define tools for the PR Memory Updater agent."""
 
+import os
 import re
 import subprocess
 import tempfile
-from typing import Optional
+from typing import Annotated, Optional
+
+from langchain_core.tools import tool
 
 
 def _invoke(
@@ -84,3 +87,27 @@ def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
         )
 
     return memory_changes
+
+
+@tool(
+   "fetch_pr_details",
+    description="""Fetch the relevant details for a given repo, pr combination.
+
+The data returned by the tool will be in loosely-formatted text, and should be processed into a more meaningful output.
+"""
+)
+def invoke_pr_details(
+    repo: Annotated[str, "the repository '<org>/<name>' which the PR belongs to"],
+    pr: Annotated[str, "the PR number to retrieve the details for"],
+) -> str:
+    """Invoke the `fetch_pr_details` script."""
+    if not re.match(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", repo):
+        raise ValueError(f"Invalid repository format: {repo}. Expected <org>/<name>.")
+    if not re.match(r"^\d+$", pr):
+        raise ValueError(f"Invalid PR number: {pr}. Expected 1 or more digits.")
+
+    return _invoke(
+        f"./scripts/fetch_pr_details.sh -r {repo} -p {pr}",
+        cwd=os.curdir,
+        err_ctx="Failed to run fetch pr details script",
+    )

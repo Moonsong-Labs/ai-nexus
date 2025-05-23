@@ -12,11 +12,12 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+import pr_memory_updater.tools as AgentTools
+from common.components.memory import MemoryConfiguration
+from common.graph import AgentGraph
 from pr_memory_updater.configuration import Configuration
 from pr_memory_updater.prompts import SYSTEM_PROMPT
 from pr_memory_updater.state import State
-from common.components.memory import MemoryConfiguration
-from common.graph import AgentGraph
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ class PRMemoryUpdaterGraph(AgentGraph):
         """
         # Create config with any custom fields needed
         agent_config = agent_config or Configuration(
-            memory=MemoryConfiguration(use_memory=True), system_prompt=SYSTEM_PROMPT
+            memory=MemoryConfiguration(use_memory=False), system_prompt=SYSTEM_PROMPT
         )
 
         super().__init__(
@@ -99,6 +100,8 @@ class PRMemoryUpdaterGraph(AgentGraph):
         all_tools = []
         if self._memory:
             all_tools += self._memory.get_tools()
+
+        all_tools.append(AgentTools.invoke_pr_details)
 
         # Init model
         llm = init_chat_model(self._agent_config.model)
