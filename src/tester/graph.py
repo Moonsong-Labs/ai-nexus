@@ -26,6 +26,47 @@ from tester.state import State, WorkflowStage
 logger = logging.getLogger(__name__)
 
 
+def get_tester_github_tools():
+    """Get the list of GitHub tools needed for the test agent."""
+    return [
+        "set_active_branch",
+        "create_a_new_branch",
+        "get_files_from_a_directory",
+        "create_pull_request",
+        "create_file",
+        "update_file",
+        "read_file",
+        "delete_file",
+        "get_latest_pr_workflow_run",
+    ]
+
+
+def filter_github_tools(
+    all_tools: List[Tool], required_tool_names: List[str]
+) -> List[Tool]:
+    """Filter GitHub tools to only include those needed for testing.
+
+    Args:
+        all_tools: List of all available GitHub tools
+        required_tool_names: List of tool names needed for testing
+
+    Returns:
+        List of filtered GitHub tools
+
+    Raises:
+        AssertionError: If not all required tools are found
+    """
+    filtered_tools = [tool for tool in all_tools if tool.name in required_tool_names]
+    found_tool_names = [tool.name for tool in filtered_tools]
+
+    missing_tools = set(required_tool_names) - set(found_tool_names)
+    if missing_tools:
+        logger.warning(f"Missing required GitHub tools: {missing_tools}")
+        logger.info(f"Available tools: {[tool.name for tool in all_tools]}")
+
+    return filtered_tools
+
+
 def _create_call_model(
     agent_config: Configuration,
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
@@ -140,7 +181,7 @@ class TesterAgentGraph(AgentGraph):
         """Initialize TesterAgentGraph.
 
         Args:
-            use_human_ai: Whether to use human-AI interaction.
+            github_tools: GitHub tools for repository operations.
             agent_config: Optional Configuration instance.
             checkpointer: Optional Checkpointer instance.
             store: Optional BaseStore instance.
@@ -155,14 +196,16 @@ class TesterAgentGraph(AgentGraph):
 
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
+        # Filter GitHub tools to get only what we need for testing
+        required_github_tools = get_tester_github_tools()
+        filtered_github_tools = filter_github_tools(
+            self._github_tools, required_github_tools
+        )
+
         # Initialize the language model and the tools
         all_tools = [
-            *self._github_tools,
+            *filtered_github_tools,
             common.tools.summarize,
-            common.tools.create_directory,
-            common.tools.create_file,
-            common.tools.list_files,
-            common.tools.read_file,
         ]
 
         # Define node names explicitly to avoid confusion

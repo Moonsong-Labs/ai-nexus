@@ -116,7 +116,7 @@ if __name__ == "__main__":
                     use_stub=False,
                 ),
                 task_manager_agent=TaskManagerAgentConfig(
-                    use_stub=False,
+                    use_stub=True,
                     config=TaskManagerConfiguration(),
                 ),
                 tester_agent=TesterAgentConfig(
@@ -124,7 +124,7 @@ if __name__ == "__main__":
                     config=TesterConfiguration(),
                 ),
                 coder_new_pr_agent=SubAgentConfig(
-                    use_stub=True,
+                    use_stub=False,
                 ),
                 coder_change_request_agent=SubAgentConfig(
                     use_stub=True,
@@ -157,7 +157,11 @@ if __name__ == "__main__":
                 )
             )
             result = await orchestrator.compiled_graph.ainvoke(
-                State(messages=HumanMessage(content="I want to build a website")),
+                State(
+                    messages=HumanMessage(
+                        content="I want a python CLI to sum two numbers"
+                    )
+                ),
                 config=config,
             )
 
