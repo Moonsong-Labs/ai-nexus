@@ -1,9 +1,7 @@
 import asyncio
-import os
 import uuid
 
 import dotenv
-from github import Github, Repository
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
@@ -27,43 +25,35 @@ from orchestrator.stubs import MessageWheel
 dotenv.load_dotenv()
 logger = logger(__name__)
 
+BASE_BRANCH = "fibonacci-base"
 
-def setup(github_repo: Repository, github_base_branch: str):
-    logger.info("Running setup")
-    # Create base branch if it doesn't exist
-    try:
-        github_repo.get_branch(base_branch)
-        logger.debug(f"Base branch '{base_branch}' already exists")
-    except Exception:
-        # Get the default branch
-        default_branch = github_repo.default_branch
-        source = github_repo.get_branch(default_branch)
-        # Create new branch from default branch
-        github_repo.create_git_ref(f"refs/heads/{base_branch}", source.commit.sha)
-        logger.debug(f"Created base branch '{base_branch}' from '{default_branch}'")
 
-    logger.info("Setup complete")
+# def setup(github_repo: Repository, github_base_branch: str):
+#     logger.info("Running setup")
+#     # Create base branch if it doesn't exist
+#     try:
+#         github_repo.get_branch(base_branch)
+#         logger.debug(f"Base branch '{base_branch}' already exists")
+#     except Exception:
+#         # Get the default branch
+#         default_branch = github_repo.default_branch
+#         source = github_repo.get_branch(default_branch)
+#         # Create new branch from default branch
+#         github_repo.create_git_ref(f"refs/heads/{base_branch}", source.commit.sha)
+#         logger.debug(f"Created base branch '{base_branch}' from '{default_branch}'")
+
+#     logger.info("Setup complete")
 
 
 if __name__ == "__main__":
-    base_branch = "fibonacci-base"
-
-    github_repo_name = os.getenv("GITHUB_REPOSITORY")
-    if not github_repo_name:
-        raise ValueError("GITHUB_REPOSITORY environment variable must be set")
-    github_client = Github()
-    github_repo = github_client.get_repo(github_repo_name)
-
-    setup(github_repo, base_branch)
-
     orchestrator = OrchestratorGraph(
         agent_config=OrchestratorConfiguration(
-            github_base_branch=base_branch,
+            github_base_branch=BASE_BRANCH,
             requirements_agent=RequirementsAgentConfig(
                 use_stub=True,
                 stub_messages=MessageWheel(
                     [
-                        "I have gathered the requirements for the project. This should be a simple cargo package the implements a Fibonacci iterator.",
+                        "I have gathered the requirements for the project. This should be a simple cargo package the implements a Fibonacci iterator and exports it.",
                     ]
                 ),
             ),
