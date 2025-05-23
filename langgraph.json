@@ -11,7 +11,8 @@
     "code_reviewer_non_github": "./src/code_reviewer/lg_server.py:graph_no_github_tools",
     "requirement_gatherer": "./src/requirement_gatherer/graph.py:graph",
     "task_manager": "./src/task_manager/graph.py:graph",
-    "architect": "./src/architect/graph.py:graph"
+    "architect": "./src/architect/graph.py:graph",
+    "pr_memory_updater": "./src/pr_memory_updater/graph.py:graph"
   },
   "env": ".env",
   "python_version": "3.12",
