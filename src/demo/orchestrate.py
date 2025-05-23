@@ -30,6 +30,8 @@ from orchestrator.configuration import (
     SubAgentConfig,
     TaskManagerAgentConfig,
     TaskManagerConfiguration,
+    TesterAgentConfig,
+    TesterConfiguration,
 )
 from orchestrator.configuration import (
     Configuration as OrchestratorConfiguration,
@@ -116,6 +118,10 @@ if __name__ == "__main__":
                 task_manager_agent=TaskManagerAgentConfig(
                     use_stub=False,
                     config=TaskManagerConfiguration(),
+                ),
+                tester_agent=TesterAgentConfig(
+                    use_stub=False,
+                    config=TesterConfiguration(),
                 ),
                 coder_new_pr_agent=SubAgentConfig(
                     use_stub=True,

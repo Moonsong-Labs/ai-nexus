@@ -7,6 +7,8 @@ from langchain_core.messages import AnyMessage
 from langgraph.graph import add_messages
 from typing_extensions import Annotated
 
+from common.state import Project
+
 
 class WorkflowStage(str, Enum):
     """Enum to track the current stage of the Test Agent workflow."""
@@ -25,6 +27,9 @@ class State:
 
     workflow_stage: WorkflowStage = WorkflowStage.TESTING
     """The current stage of the workflow."""
+
+    project: Project
+    """The active project."""
 
     summary: str = ""
     """The testing summary."""

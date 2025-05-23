@@ -23,6 +23,7 @@ from orchestrator.stubs import MessageWheel
 if __name__ == "__main__":
     orchestrator = OrchestratorGraph(
         agent_config=OrchestratorConfiguration(
+            github_base_branch="fibonacci-base",
             requirements_agent=RequirementsAgentConfig(
                 use_stub=True,
                 stub_messages=MessageWheel(

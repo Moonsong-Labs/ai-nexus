@@ -1,5 +1,10 @@
 """Tools for the code agent."""
 
+import asyncio
+import logging
+import tempfile
+import zipfile
+from os import listdir
 from typing import List, Type, Union
 
 import requests
@@ -34,6 +39,8 @@ from pydantic import BaseModel, Field
 
 from common.components.github_mocks import MockGithubApi
 
+logger = logging.getLogger(__name__)
+
 GITHUB_TOOLS = [
     "set_active_branch",
     "create_a_new_branch",
@@ -50,10 +57,45 @@ GITHUB_TOOLS = [
     # "overview_of_files_in_current_working_branch",
     # "search_code",
     # custom tools
+    "get_latest_pr_workflow_run",
     "get_pull_request_head_branch",
     "get_pull_request_diff",
     "create_pull_request_review",
+    "create_issue_comment",
 ]
+
+CREATE_ISSUE_COMMENT_PROMPT = """
+This tool is a wrapper for the GitHub API, useful when you want to comment on a pull request or issue. **VERY IMPORTANT**: Your input to this tool MUST strictly follow these rules:
+
+- First you must specify the PR number. **VERY IMPORTANT**: You must specify the PR number as an integer, not a float."
+- Then you must specify your comment.
+"""
+
+
+class IssueComment(BaseModel):
+    """Schema for creating an issue comment."""
+
+    pr_number: int = Field(0, description="The PR number as an integer, e.g. `12`")
+    body: str = Field(1, description="Text of the review comment.")
+
+
+class CreateIssueComment(BaseTool):
+    """Create an Issue or Pull Request Comment."""
+
+    name: str = "create_issue_comment"
+    description: str = CREATE_ISSUE_COMMENT_PROMPT
+    args_schema: Type[BaseModel] = IssueComment
+    github_api_wrapper: GitHubAPIWrapper
+
+    def _run(self, pr_number: int, body: str):
+        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
+        pull_request.create_issue_comment(body)
+        return "comment created successfully"
+
+    async def _arun(self, pr_number: int, body: str):
+        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
+        pull_request.create_issue_comment(body)
+        return "comment created successfully"
 
 
 class PRReviewComment(BaseModel):
@@ -120,14 +162,7 @@ class CreatePullRequestReviewComment(BaseTool):
     def _run(
         self, pr_number: int, body: str, event: str, comments: List[PRReviewComment]
     ):
-        comments_mapped = list(map(lambda x: x.to_gh_review(), comments))
-
-        # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
-        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
-        commit = pull_request.head.sha
-        commit_obj = self.github_api_wrapper.github_repo_instance.get_commit(commit)
-
-        pull_request.create_review(commit_obj, body, event, comments_mapped)
+        return asyncio.run(self._arun(pr_number, body, event, comments))
 
     async def _arun(
         self, pr_number: int, body: str, event: str, comments: List[PRReviewComment]
@@ -154,16 +189,7 @@ class GetPullRequestDiff(BaseTool):
     github_api_wrapper: GitHubAPIWrapper
 
     def _run(self, pr_number: int) -> str:
-        # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
-        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
-        diff_url = pull_request.diff_url
-        response = requests.get(
-            diff_url, headers={"Accept": "application/vnd.github.v3.diff"}
-        )
-        response.raise_for_status()
-
-        diff_content = response.text
-        return diff_content
+        return asyncio.run(self._arun(pr_number))
 
     async def _arun(self, pr_number: int) -> str:
         # TODO: this is a pretty heavy request, and this more or less forces it to be duplicated
@@ -190,12 +216,70 @@ class GetPullRequestHeadBranch(BaseTool):
     github_api_wrapper: GitHubAPIWrapper
 
     def _run(self, pr_number: int) -> str:
-        pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
-        return pull_request.head.ref
+        return asyncio.run(self._arun(pr_number))
 
     async def _arun(self, pr_number: int) -> str:
         pull_request = self.github_api_wrapper.github_repo_instance.get_pull(pr_number)
         return pull_request.head.ref
+
+
+GET_LATEST_PR_WORKFLOW_RUN_PROMPT = "This tool will get the most recent workflow run for a given PR. **VERY IMPORTANT**: You must specify the PR number as an integer."
+
+
+class GetLatestPRWorkflowRun(BaseTool):
+    """Get the most recent workflow run for a PR."""
+
+    name: str = "get_latest_pr_workflow_run"
+    description: str = GET_LATEST_PR_WORKFLOW_RUN_PROMPT
+    args_schema: Type[BaseModel] = GetPR
+    github_api_wrapper: GitHubAPIWrapper
+
+    def _run(self, pr_number: int) -> str:
+        return asyncio.run(self._arun(pr_number))
+
+    async def _arun(self, pr_number: int) -> str:
+        repo = self.github_api_wrapper.github_repo_instance
+        pull_request = repo.get_pull(pr_number)
+        pr_commit = pull_request.head.sha
+        workflow_runs = repo.get_workflow_runs(head_sha=pr_commit, event="pull_request")
+        logger.info(f"num workflow runs: {workflow_runs.totalCount}")
+        if workflow_runs.totalCount > 0:
+            page = workflow_runs.get_page(0)
+            logs_url = page[0].logs_url
+
+            auth_token = repo.requester.auth.token
+
+            response = requests.get(
+                logs_url,
+                headers={
+                    "Accept": "application/vnd.github+text",
+                    "Authorization": "Bearer " + auth_token,
+                },
+            )
+            response.raise_for_status()
+
+            # generate a random temp dir for extracting the logs (which is a zip file)
+            dir = tempfile.TemporaryDirectory()
+            dirname = f"{dir.name}/workflow_run_logs.zip"
+
+            file = open(dirname, "wb")
+            file.write(response.content)
+            file.close()
+
+            zip = zipfile.ZipFile(dirname, "r")
+            zip.extractall(dir.name)
+
+            content = ""
+            log_files = [f for f in listdir(dir.name) if f.endswith(".txt")]
+            for file in log_files:
+                with open(f"{dir.name}/{file}") as f:
+                    content += f.read()
+                    content += "\n\n"
+
+            dir.cleanup()
+            return content
+
+        return ""
 
 
 def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
@@ -209,7 +293,9 @@ def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
     all_github_tools = [
         make_gemini_compatible(tool) for tool in github_toolkit.get_tools()
     ] + [
+        GetLatestPRWorkflowRun(github_api_wrapper=github_api_wrapper),
         CreatePullRequestReviewComment(github_api_wrapper=github_api_wrapper),
+        CreateIssueComment(github_api_wrapper=github_api_wrapper),
         GetPullRequestHeadBranch(github_api_wrapper=github_api_wrapper),
         GetPullRequestDiff(github_api_wrapper=github_api_wrapper),
     ]
@@ -327,6 +413,20 @@ def mock_github_tools(mock_api: MockGithubApi):
             name="create_pull_request_review",
             description=CREATE_PULL_REQUEST_REVIEW_PROMPT,
             args_schema=CreatePRReview,
+        ),
+        RunnableLambda(
+            _convert_args_schema_to_string(mock_api.create_issue_comment, IssueComment)
+        ).as_tool(
+            name="create_issue_comment",
+            description=CREATE_ISSUE_COMMENT_PROMPT,
+            args_schema=IssueComment,
+        ),
+        RunnableLambda(
+            _convert_args_schema_to_string(mock_api.get_latest_pr_workflow_run, GetPR)
+        ).as_tool(
+            name="get_latest_pr_workflow_run",
+            description=GET_LATEST_PR_WORKFLOW_RUN_PROMPT,
+            args_schema=GetPR,
         ),
     ]
 
