@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import os
 import sys
 from typing import List
@@ -11,11 +9,15 @@ from scenarios import BASE_BRANCHES
 
 dotenv.load_dotenv()
 
+from common.logger import logger
+
+logger = logger(__name__)
+
 
 def cleanup_branches(repo: Repository, base_branches: List[str]) -> None:
     """Delete branches that are not in base_branches."""
-    print(f"Repository: {repo.full_name}")
-    print(f"Default branch: {repo.default_branch}")
+    logger.info(f"Repository: {repo.full_name}")
+    logger.info(f"Default branch: {repo.default_branch}")
 
     # Get all branches
     all_branches = [branch.name for branch in repo.get_branches()]
@@ -26,13 +28,11 @@ def cleanup_branches(repo: Repository, base_branches: List[str]) -> None:
         if branch not in base_branches and branch != repo.default_branch:
             try:
                 ref = f"heads/{branch}"
-                print(f"Deleting branch: {branch}")
                 git_ref = repo.get_git_ref(ref)
-                print("got ref")
-                print(f"Git ref: {git_ref}")
                 git_ref.delete()
+                logger.info(f"Deleted branch: {branch}")
             except Exception as e:
-                print(f"Failed to delete branch '{branch}': {str(e)}", file=sys.stderr)
+                logger.error(f"Failed to delete branch '{branch}': {str(e)}")
 
 
 def main():
@@ -82,7 +82,7 @@ def main():
     try:
         repo = github_client.get_repo(github_repo_name)
     except Exception as e:
-        print(f"Error accessing repository: {str(e)}", file=sys.stderr)
+        logger.error(f"Error accessing repository: {str(e)}")
         sys.exit(1)
 
     cleanup_branches(repo, BASE_BRANCHES)

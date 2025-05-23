@@ -5,33 +5,33 @@ from typing import List
 import dotenv
 from github import Auth, GithubIntegration, Repository
 
+from common.logger import logger
 from scenarios import BASE_BRANCHES
 
 dotenv.load_dotenv()
 
 
+logger = logger(__name__)
+
+
 def create_base_branches(repo: Repository, base_branches: List[str]) -> None:
     """Create base branches if they don't exist."""
-    print(f"Repository: {repo.full_name}")
-    print(f"Default branch: {repo.default_branch}")
+    logger.info(f"Repository: {repo.full_name}")
+    logger.info(f"Default branch: {repo.default_branch}")
 
     for branch in base_branches:
         try:
             repo.get_branch(branch)
-            print(f"Branch '{branch}' already exists")
+            logger.info(f"Branch '{branch}' already exists")
         except Exception:
             try:
                 default_branch = repo.default_branch
                 source = repo.get_branch(default_branch)
-                print(f"Source branch: {source.name}, SHA: {source.commit.sha}")
                 ref = f"refs/heads/{branch}"
-                print(f"Creating ref: {ref}")
                 repo.create_git_ref(ref, source.commit.sha)
-                print(f"Created branch '{branch}' from '{default_branch}'")
+                logger.info(f"Created branch '{branch}' from '{default_branch}'")
             except Exception as e:
-                print(f"Failed to create branch '{branch}': {str(e)}", file=sys.stderr)
-                print(f"Repository URL: {repo.url}")
-                print(f"Repository permissions: {repo.permissions}")
+                logger.error(f"Failed to create branch '{branch}': {str(e)}")
                 sys.exit(1)
 
 
@@ -82,7 +82,7 @@ def main():
     try:
         repo = github_client.get_repo(github_repo_name)
     except Exception as e:
-        print(f"Error accessing repository: {str(e)}", file=sys.stderr)
+        logger.error(f"Error accessing repository: {str(e)}")
         sys.exit(1)
 
     create_base_branches(repo, BASE_BRANCHES)
