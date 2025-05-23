@@ -17,8 +17,7 @@ def read_task_planning(project_name: str) -> str:
         The content of the task planning file as a string, or an error message.
     """
     try:
-        # Construct the pattern to search for
-        pattern = os.path.join(project_name, "planning", "task-01*")
+        pattern = os.path.join("projects", project_name, "planning", "task-01*")
         
         # Find files matching the pattern
         matching_files = glob.glob(pattern)
