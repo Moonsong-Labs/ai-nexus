@@ -1,11 +1,13 @@
 import pytest
-from datasets.requirement_gatherer_dataset import REQUIREMENT_GATHERER_DATASET_NAME
+from datasets.requirement_gatherer_dataset import REQUIREMENT_GATHERER_DATASET_NAME, FIRST_MESSAGE
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.memory import InMemoryStore
 from langsmith import Client
 from testing import create_async_graph_caller_for_gatherer, get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
+import uuid
+from langchain_core.messages import ToolMessage
 
 from requirement_gatherer.configuration import Configuration as GathererConfig
 from requirement_gatherer.graph import RequirementsGraph
@@ -116,3 +118,41 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
 
     # Assert that results were produced.
     assert results is not None, "evaluation did not return results"
+
+
+@pytest.mark.asyncio
+async def test_requirement_gatherer_ends_with_summarize_tool_call():
+    """
+    Tests that the RequirementsGraph produces a ToolMessage with name 'summarize'
+    as the second to last message.
+    """
+    logger.info("Testing if requirement gatherer ends with summarize tool call.")
+    memory_saver = MemorySaver()
+    memory_store = InMemoryStore()
+    agent_config = GathererConfig(use_human_ai=True) 
+
+    graph = RequirementsGraph(
+        checkpointer=memory_saver, store=memory_store, agent_config=agent_config
+    ).compiled_graph
+
+    test_input = {"messages": [{"role": "user", "content": FIRST_MESSAGE}]}
+    config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+
+    result = await graph.ainvoke(test_input, config=config)
+
+    assert result is not None, "Graph did not return a result."
+    assert "messages" in result, "Result dictionary does not contain 'messages'."
+    assert len(result["messages"]) >= 2, "Graph did not produce at least two messages."
+
+    second_last_message = result["messages"][-2]
+
+    assert isinstance(
+        second_last_message, ToolMessage
+    ), f"Expected second to last message to be a ToolMessage, got {type(second_last_message).__name__}"
+    assert (
+        second_last_message.name == "summarize"
+    ), f"Expected ToolMessage name to be 'summarize', got '{second_last_message.name}'"
+
+    logger.info("Test for summarize tool call passed successfully.")
+
+
