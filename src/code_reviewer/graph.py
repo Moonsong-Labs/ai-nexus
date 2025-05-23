@@ -2,23 +2,26 @@
 
 import logging
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import SystemMessage
 from langchain_core.tools import Tool
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.store.base import BaseStore
+from langgraph.types import Checkpointer
 from pydantic import BaseModel, Field
 
 from code_reviewer.prompts import PR_REVIEW_PROMPT, SYSTEM_PROMPT
 from code_reviewer.state import State
+from common.configuration import AgentConfiguration
+from common.graph import AgentGraph
 
 logger = logging.getLogger(__name__)
 
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model("google_genai:gemini-2.0-flash")
-
 
 @dataclass
 class CodeReviewerInstanceConfig:
@@ -29,7 +32,7 @@ class CodeReviewerInstanceConfig:
     github_tools: List[str]
 
     def graph_builder(self, github_toolset: list[Tool]):
-        builder = graph_builder(self.filter_tools(github_toolset), self.system_prompt)
+        builder = _graph_builder(self.filter_tools(github_toolset), self.system_prompt)
         builder.name = self.name
         return builder
 
@@ -51,13 +54,11 @@ class CodeReviewerInstanceConfig:
             )
         return filtered_tools
 
-
 def non_github_code_reviewer_config():
     """Instance config for code reviewer without GitHub tools."""
     return CodeReviewerInstanceConfig(
         name="NonGithubCodeReviewer", system_prompt=SYSTEM_PROMPT, github_tools=[]
     )
-
 
 def github_code_reviewer_config():
     """Instance config for code reviewer with GitHub tools."""
@@ -73,6 +74,35 @@ def github_code_reviewer_config():
         ],
     )
 
+class CodeReviewerGithubGraph(AgentGraph):
+    """CodeReviewer non-Github graph."""
+
+    def __init__(
+        self,
+        *,
+        github_tools: List[Tool],
+        agent_config: Optional[AgentConfiguration] = None,
+        checkpointer: Optional[Checkpointer] = None,
+        store: Optional[BaseStore] = None,
+    ):
+        """Initialize the CodeReviewerGraph
+
+        Args:
+            github_tools: List of GitHub tools to be used in the graph.
+            agent_config: Optional configuration for the code reviewer agent. If not provided, a default configuration is used.
+            checkpointer: Optional checkpointer for managing workflow state persistence.
+            store: Optional storage backend for conversation or workflow data.
+        """
+        super().__init__(
+            name="CodeReviewer",
+            agent_config=agent_config or AgentConfiguration(),
+            checkpointer=checkpointer,
+            store=store,
+        )
+        self._github_tools = github_tools
+
+    def create_builder(self) -> StateGraph:
+        return github_code_reviewer_config().graph_builder(self._github_tools)
 
 class CallModel:
     def __init__(self, github_tools: list[Tool], system_prompt: str):
@@ -87,8 +117,7 @@ class CallModel:
         )
         return {"messages": messages_after_invoke}
 
-
-def graph_builder(github_toolset: list[Tool], system_prompt: str) -> StateGraph:
+def _graph_builder(github_toolset: list[Tool], system_prompt: str):
     """Return code_reviewer graph builder."""
     builder = StateGraph(State)
 
@@ -101,7 +130,6 @@ def graph_builder(github_toolset: list[Tool], system_prompt: str) -> StateGraph:
     builder.add_conditional_edges("call_model", tools_condition)
     builder.add_edge("tools", "call_model")
     return builder
-
 
 __all__ = [
     "non_github_code_reviewer_config",

@@ -16,6 +16,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+from code_reviewer.graph import CodeReviewerGithubGraph
 import common.tools
 from architect.configuration import (
     Configuration as ArchitectConfiguration,
@@ -216,10 +217,11 @@ class OrchestratorGraph(AgentGraph):
                 stub_messages=self._agent_config.reviewer_agent.stub_messages,
             )
             if self._agent_config.reviewer_agent.use_stub
-            else TesterAgentGraph(
+            else CodeReviewerGithubGraph(
                 agent_config=self._agent_config.reviewer_agent.config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                github_tools=github_tools,
             )
         )
 
