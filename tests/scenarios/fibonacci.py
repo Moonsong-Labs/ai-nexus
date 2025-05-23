@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 
+import dotenv
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
@@ -8,6 +9,7 @@ from langgraph.store.memory import InMemoryStore
 from langgraph.types import Command
 from termcolor import colored
 
+from common.logging import get_logger
 from orchestrator.configuration import (
     ArchitectAgentConfig,
     RequirementsAgentConfig,
@@ -20,15 +22,20 @@ from orchestrator.graph import OrchestratorGraph
 from orchestrator.state import State
 from orchestrator.stubs import MessageWheel
 
+dotenv.load_dotenv()
+logger = get_logger(__name__)
+
+BASE_BRANCH = "fibonacci-base"
+
 if __name__ == "__main__":
     orchestrator = OrchestratorGraph(
         agent_config=OrchestratorConfiguration(
-            github_base_branch="fibonacci-base",
+            github_base_branch=BASE_BRANCH,
             requirements_agent=RequirementsAgentConfig(
                 use_stub=True,
                 stub_messages=MessageWheel(
                     [
-                        "I have gathered the requirements for the project. This should be a simple cargo package the implements a Fibonacci iterator.",
+                        "I have gathered the requirements for the project. This should be a simple cargo package the implements a Fibonacci iterator and exports it.",
                     ]
                 ),
             ),
@@ -47,8 +54,8 @@ if __name__ == "__main__":
                     [
                         """
                     There's only one task for the coder:
-                     1) Implement the Fibonacci iterator in Rust.
-                """
+                     1) Create skeleton for a cargo package that exports a Fibonacci Iterator in Rust.
+                    """
                     ]
                 ),
             ),
@@ -80,6 +87,7 @@ if __name__ == "__main__":
     )
 
     async def _exec():
+        logger.info("Starting execution")
         config = orchestrator.create_runnable_config(
             RunnableConfig(
                 recursion_limit=250,
@@ -111,6 +119,7 @@ if __name__ == "__main__":
             else:
                 break
 
+        logger.info("Execution complete")
         return result
 
     result = asyncio.run(_exec())
