@@ -250,7 +250,8 @@ AI Nexus employs a few architectural patterns for its agents:
             6.  Asserts that the graph execution pauses for a human interrupt by verifying the presence of an 'Interrupt' label and subsequently either a 'Continue' or 'Resume' button in the UI.
         *   **Artifacts**: Produces `langgraph-test-result.png` (a screenshot of the UI state) which is uploaded by the CI workflow.
         *   **Configuration**: Requires `GOOGLE_API_KEY` (via `.env` file at project root) for the `langgraph dev` server.
-*   **`tests/scenarios/fibonacci.py` (NEW):** A new test scenario demonstrating the orchestration of multiple agents (using stubbed responses for most, and a real Coder agent) to create a Rust Fibonacci iterator library. This scenario showcases the dynamic stub message feature. **UPDATED**: The `OrchestratorConfiguration` in this scenario now explicitly sets `github_base_branch="fibonacci-base"`.
+*   **`tests/scenarios/fibonacci.py` (NEW):** A new test scenario demonstrating the orchestration of multiple agents (using stubbed responses for most, and a real Coder agent) to create a Rust Fibonacci iterator library. This scenario showcases the dynamic stub message feature. **UPDATED**: The `OrchestratorConfiguration` in this scenario now explicitly sets `github_base_branch="fibonacci-base"`. **UPDATED**: Now defines a `BASE_BRANCH` constant and updates stub messages for `requirements_agent` and `task_manager_agent` to reflect the scenario's specific requirements. Includes logging for execution flow.
+*   **`tests/scenarios/__init__.py` (NEW):** Defines `BASE_BRANCHES` list for centralized management of base branch names used in testing scenarios.
 *   **`tests/testing/__init__.py` (UPDATED):**
     *   A new helper function `create_async_graph_caller_for_gatherer` has been added. This function is specifically designed for the requirement gatherer evaluation, expecting the final output to be a `ToolMessage` with the name "summarize" and returning its content.
 *   (Other test files as previously described, or minor updates not impacting core logic)
@@ -277,15 +278,21 @@ AI Nexus employs a few architectural patterns for its agents:
     *   The `generate_project_memory.sh`, `update_project_memory_from_pr.sh`, and `update_project_readmes.sh` scripts now use the `gemini-2.5-flash-preview-05-20` model for their API calls.
 *   **Dependency Management (`pyproject.toml` - UPDATED):**
     *   Dependency version specifiers have been changed from `>=` (greater than or equal to) to `~=` (compatible release, e.g., `~=1.2.3` implies `>=1.2.3` and `<1.3.0`). This change restricts updates to patch versions for the specified minor versions of main and development dependencies, aiming to enhance build stability.
-    *   The `[tool.setuptools]` `packages` list within `pyproject.toml` has also been reformatted for improved readability.
+    *   The `[tool.setuptools]` `packages` list within `pyproject.toml` has also been reformatted for improved readability. **UPDATED**: The `packages` list now includes `scenarios`.
 *   **LangSmith Tracing (NEW aspect for demo):**
     *   The demo script (`src/demo/orchestrate.py`) now integrates LangSmith tracing, providing a trace URL for each run. This includes user identification and run metadata.
 *   **New/Updated Utility Files:**
     *   `src/common/state.py` (NEW): Defines the `Project` dataclass for managing project ID, name, and path.
     *   `src/common/utils/__init__.py` (UPDATED): Includes a new `format_message` utility function for printing actor-labeled messages.
+    *   **UPDATED**: `src/common/logging.py` (NEW): Provides a centralized `get_logger` utility for consistent log formatting and dynamic log level control via the `LOG_LEVEL` environment variable.
 *   **Project Directory:** A new `projects/` directory has been added to store project-specific files.
 *   `.gitignore` (UPDATED): Now excludes all files and directories under `projects/`. **UPDATED**: Also excludes files with the `.pem` extension.
 *   **Demo Configuration:** The demo script (`src/demo/orchestrate.py`) now configures `task_manager_agent` with `use_stub=False` and `coder_new_pr_agent`, `coder_change_request_agent` with `use_stub=True`. **UPDATED**: The demo script now configures the `tester_agent` with `use_stub=False` and passes `TesterConfiguration()`.
+*   **GitHub Branch Management Scripts (NEW):**
+    *   `tests/scenarios/setup_github.py`: A utility script to create specified base branches in a GitHub repository if they do not already exist, using GitHub App authentication.
+    *   `tests/scenarios/cleanup_github.py`: A utility script to delete branches in a GitHub repository that are not part of a predefined list of base branches, using GitHub App authentication.
+*   **Environment Variables (UPDATED):**
+    *   `.env.example`: Now includes `LOG_LEVEL=INFO` to configure the default logging level.
 *   (Other workflow aspects like `pytest.ini` setup as previously described, or minor updates not impacting core logic)
 
 ## 8. Overall Project Structure Summary
@@ -295,7 +302,7 @@ ai-nexus/
 ├── .cursor/
 │   └── rules/
 │       └── read-project-memories.mdc
-├── .env.example
+├── .env.example                   # UPDATED: Added LOG_LEVEL
 ├── .gitignore                    # UPDATED: Added projects/*, *.pem
 ├── .vscode/
 │   └── launch.json
@@ -314,7 +321,7 @@ ai-nexus/
 ├── project_memories/
 │   ├── PRD.md
 │   └── global.md
-├── pyproject.toml                # UPDATED: Dependency constraints changed to `~=`; package list reformatted.
+├── pyproject.toml                # UPDATED: Dependency constraints changed to `~=`; package list reformatted; `scenarios` package added.
 ├── pytest.ini                    # UPDATED: Minor formatting
 ├── scripts/
 │   └── generate_project_memory.sh
@@ -358,6 +365,7 @@ ai-nexus/
 │   │   │   └── memory.py
 │   │   ├── configuration.py
 │   │   ├── graph.py
+│   │   ├── logging.py            # NEW: Logging utilities
 │   │   ├── state.py              # NEW: Defines Project dataclass
 │   │   ├── tools/                # ADDED
 │   │   │   ├── __init__.py       # ADDED: Imports create_directory, create_file, list_files, read_file, summarize
@@ -435,7 +443,10 @@ ai-nexus/
     │           ├── techContext.md
     │           └── testingContext.md
     ├── scenarios/                  # NEW
-    │   └── fibonacci.py            # NEW: Adds a new test scenario for a Rust Fibonacci iterator. UPDATED: OrchestratorConfiguration now explicitly sets `github_base_branch="fibonacci-base"`.
+    │   ├── __init__.py             # NEW: Defines BASE_BRANCHES for scenarios.
+    │   ├── cleanup_github.py       # NEW: Script to cleanup GitHub branches for scenarios.
+    │   ├── fibonacci.py            # NEW: Adds a new test scenario for a Rust Fibonacci iterator. UPDATED: OrchestratorConfiguration now explicitly sets `github_base_branch="fibonacci-base"`. UPDATED: Now defines a `BASE_BRANCH` constant and updates stub messages for `requirements_agent` and `task_manager_agent` to reflect the scenario's specific requirements. Includes logging for execution flow.
+    │   └── setup_github.py         # NEW: Script to setup GitHub branches for scenarios.
     ├── smoke/                      # ADDED
     │   └── langgraph_dev/          # ADDED
     │       ├── .gitignore          # ADDED
