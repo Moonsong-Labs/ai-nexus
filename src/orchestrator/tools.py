@@ -321,4 +321,4 @@ def get_next_task(
         The content of the task planning file as a string, or an error message
         if no task planning file is found.
     """
-    return read_task_planning(project_name)
+    return read_task_planning.invoke(project_name)
