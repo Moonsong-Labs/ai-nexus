@@ -157,11 +157,7 @@ if __name__ == "__main__":
                 )
             )
             result = await orchestrator.compiled_graph.ainvoke(
-                State(
-                    messages=HumanMessage(
-                        content="I want a python CLI to sum two numbers"
-                    )
-                ),
+                State(messages=HumanMessage(content="I want to build a website")),
                 config=config,
             )
 
