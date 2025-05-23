@@ -29,10 +29,20 @@ from tester.configuration import (
 
 @dataclass(kw_only=True)
 class SubAgentConfig:
-    """Sub-agent configuration for orchestrator."""
+    """Sub-agent configuration for orchestrator.
 
+    Attributes:
+        use_stub: Whether to use a stub for the sub-agent. A stub is a simplified
+            implementation of the agent that is used for testing purposes.
+        stub_messages: The messages to use for the stub.
+        config: The configuration for the sub-agent.
+    """
+
+    """Whether to use a stub for the sub-agent."""
     use_stub: bool = True
+    """The messages to use for the stub."""
     stub_messages: MessageWheel = MessageWheel(["I finished the task."])
+    """The configuration for the sub-agent."""
     config: AgentConfiguration = field(default_factory=AgentConfiguration)
 
 

@@ -14,32 +14,6 @@ from pydantic import BaseModel, Field
 from code_reviewer.prompts import PR_REVIEW_PROMPT, SYSTEM_PROMPT
 from code_reviewer.state import State
 
-
-class DiffHunkFeedback(BaseModel):
-    """Feedback specific to a code modification."""
-
-    change_required: bool = Field(
-        description="Whether or not the feedback necessitates a change"
-    )
-    file: str = Field(description="Filepath of the diff that this feedback relates to")
-    offset: int = Field(
-        description="Offset (line number) in the file that this feedback relates to"
-    )
-    comment: str = Field(description="Comments about the diff hunk")
-
-
-class DiffFeedback(BaseModel):
-    """Feedback for an overall diff."""
-
-    requests_changes: bool = Field(
-        description="Whether or not any changes are requested for the diff"
-    )
-    overall_comment: str = Field(description="Comments about the overall diff")
-    feedback: List[DiffHunkFeedback] = Field(
-        description="Individual feedback for subsections of this diff"
-    )
-
-
 logger = logging.getLogger(__name__)
 
 # Initialize the language model to be used for memory extraction
