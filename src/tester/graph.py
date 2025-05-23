@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import Any, Coroutine, Optional
+from typing import Any, Coroutine, List, Optional
 
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import LanguageModelInput
@@ -11,6 +11,7 @@ from langchain_core.messages import (
     SystemMessage,
 )
 from langchain_core.runnables import Runnable, RunnableConfig
+from langchain_core.tools import Tool
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
@@ -126,10 +127,12 @@ class TesterAgentGraph(AgentGraph):
     """Test agent graph."""
 
     _config: Configuration
+    _github_tools: List[Tool]
 
     def __init__(
         self,
         *,
+        github_tools: List[Tool],
         agent_config: Optional[Configuration] = None,
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
@@ -148,11 +151,13 @@ class TesterAgentGraph(AgentGraph):
             checkpointer=checkpointer,
             store=store,
         )
+        self._github_tools = github_tools
 
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
         # Initialize the language model and the tools
         all_tools = [
+            *self._github_tools,
             common.tools.summarize,
             common.tools.create_directory,
             common.tools.create_file,
@@ -186,7 +191,4 @@ class TesterAgentGraph(AgentGraph):
         return builder
 
 
-# For langsmith
-graph = TesterAgentGraph().compiled_graph
-
-__all__ = [TesterAgentGraph.__name__, "graph"]
+__all__ = [TesterAgentGraph.__name__]
