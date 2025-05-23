@@ -21,8 +21,8 @@
 
 ## Coder (New PR)
 - MUST use `coder_new_pr` tool with the content set to `content`.
-- This agent uses as input the tasks created by the `task_manager`. You must send the path to only one task file at a time.
-- You MUST ask to `task_manager` which task comes next and the path where this task file is located before calling `coder_new_pr`.
+- This agent uses as input the tasks created by the `task_manager`.
+- You MUST ask to `task_manager` which task comes next and send the full task content to `coder_new_pr`.
 - MUST delegate to it when a task needs to be implemented.
 
 ## Coder (Existing PR)
