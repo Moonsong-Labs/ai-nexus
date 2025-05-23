@@ -46,7 +46,7 @@ packages = [
     "tester",
     "requirement_gatherer",
     "task_manager",
-    "scenarios"
+    "scenarios",
     "pr_memory_updater"
 ]
 [tool.setuptools.package-dir]
