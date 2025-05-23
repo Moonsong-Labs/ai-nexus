@@ -27,24 +27,6 @@ logger = logger(__name__)
 
 BASE_BRANCH = "fibonacci-base"
 
-
-# def setup(github_repo: Repository, github_base_branch: str):
-#     logger.info("Running setup")
-#     # Create base branch if it doesn't exist
-#     try:
-#         github_repo.get_branch(base_branch)
-#         logger.debug(f"Base branch '{base_branch}' already exists")
-#     except Exception:
-#         # Get the default branch
-#         default_branch = github_repo.default_branch
-#         source = github_repo.get_branch(default_branch)
-#         # Create new branch from default branch
-#         github_repo.create_git_ref(f"refs/heads/{base_branch}", source.commit.sha)
-#         logger.debug(f"Created base branch '{base_branch}' from '{default_branch}'")
-
-#     logger.info("Setup complete")
-
-
 if __name__ == "__main__":
     orchestrator = OrchestratorGraph(
         agent_config=OrchestratorConfiguration(
