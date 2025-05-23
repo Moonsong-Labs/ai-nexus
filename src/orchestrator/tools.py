@@ -9,6 +9,7 @@ from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
 
 from architect.state import State as ArchitectState
+from code_reviewer.graph import CodeReviewerGraph
 from code_reviewer.state import State as CodeReviewerState
 from coder.state import State as CoderState
 from orchestrator.configuration import Configuration
@@ -243,7 +244,7 @@ def create_tester_tool(
 # ruff: noqa: D103
 def create_code_reviewer_tool(
     agent_config: Configuration,
-    code_reviewer_graph: RequirementsGraph,
+    code_reviewer_graph: CodeReviewerGraph,
 ):
     @tool("code_reviewer", parse_docstring=True)
     async def code_reviewer(
@@ -261,7 +262,9 @@ def create_code_reviewer_tool(
             A Command that updates the agent's state with code reviewer's response.
         """
         result = await code_reviewer_graph.compiled_graph.ainvoke(
-            CodeReviewerState(messages=[HumanMessage(content=content)]),
+            CodeReviewerState(
+                messages=[HumanMessage(content=content)], project=state.project
+            ),
             config,
         )
 

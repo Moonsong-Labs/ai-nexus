@@ -25,7 +25,15 @@ should be constructive and helpful. Use GitHub Markdown for formatting in your r
 
 # Prompt for local code reviews
 LOCAL_REVIEW_PROMPT = """
+
+Project Path: {{project_path}}
+
 Your task is to review the code on local disk and provide feedback. You should describe any
 suggested changes with respect to the files in the directory. You should also provide a summary
 of the feedback, and make it clear whether or not you approve the changes.
+
+You will be given the path of the project as `project_path`. Read all relevant files needed to
+understand the codebase, judging by their file extension.
 """
+
+SYSTEM_PROMPT = SYSTEM_PROMPT.replace("{{project_path}}", "{project_path}")
