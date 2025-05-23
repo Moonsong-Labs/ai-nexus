@@ -110,18 +110,18 @@ if __name__ == "__main__":
         orchestrator = OrchestratorGraph(
             agent_config=OrchestratorConfiguration(
                 requirements_agent=RequirementsAgentConfig(
-                    use_stub=True,
+                    use_stub=False,
                     config=RequirementsConfiguration(use_human_ai=use_human_ai),
                 ),
                 architect_agent=ArchitectAgentConfig(
-                    use_stub=True,
+                    use_stub=False,
                 ),
                 task_manager_agent=TaskManagerAgentConfig(
-                    use_stub=True,
+                    use_stub=False,
                     config=TaskManagerConfiguration(),
                 ),
                 tester_agent=TesterAgentConfig(
-                    use_stub=True,
+                    use_stub=False,
                     config=TesterConfiguration(),
                 ),
                 coder_new_pr_agent=SubAgentConfig(
