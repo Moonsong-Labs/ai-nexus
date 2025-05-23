@@ -15,13 +15,18 @@ A project usually involves the following stages:
 ```mermaid
 graph TD;
     START --> RQ[Gather Requirements];
-    RQ --> AR[Architect the Design];
-    AR --> TM[Create Tasks];
-    TM --> NT[Pick Next Task];
-    NT --> CI[Code and Implement Task];
-    CI --> TS[Test the Code];
-    TS --> RW[Review the Code];
-    RW --> STOP[Complete and Summarize];
+    RQ --> AR[Architecture Design];
+    AR --> TM[Tasks creation];
+    TM --> GT[Get task];
+    GT --> CI[Code Initial Design]
+    CI --> TS[Test Code];
+    TS --> TR[Test Results];
+    TR --> |SUCCESS| RW[Review Code];
+    TR --> |FAIL| CU[Code Update];
+    CU --> TS;
+    RW --> RR[Code Review Results];
+    RR --> |SUCCESS| STOP;
+    RR --> |FAIL| CU[Code Update];
 ```
 
 A step may request to update memory, if yes then update the memory via team member. MUST only update memory when explicitly asked to memorize, remember etc.
