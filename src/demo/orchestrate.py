@@ -116,7 +116,7 @@ if __name__ == "__main__":
                     use_stub=False,
                 ),
                 task_manager_agent=TaskManagerAgentConfig(
-                    use_stub=True,
+                    use_stub=False,
                     config=TaskManagerConfiguration(),
                 ),
                 tester_agent=TesterAgentConfig(
