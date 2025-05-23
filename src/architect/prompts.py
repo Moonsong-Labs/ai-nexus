@@ -64,6 +64,7 @@ flowchart TD
    - Foundation document that shapes all other files
    - Defines core requirements and goals
    - Source of truth for project scope
+   - If the project is hobby/personal it should add the following sentence 'This project is for hobby purposes'
 
 2. `projectRequirements.md`
    - Why this project exists
