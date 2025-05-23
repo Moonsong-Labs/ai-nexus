@@ -64,6 +64,7 @@ flowchart TD
    - Foundation document that shapes all other files
    - Defines core requirements and goals
    - Source of truth for project scope
+   - If the project is hobby/personal it should add the following sentence 'This project is for hobby purposes'
 
 2. `projectRequirements.md`
    - Why this project exists
@@ -148,7 +149,7 @@ You MUST NOT proceed to step 7 until ALL core files are complete based on the pr
 - `testingContext.md`
 
 ### 7. Summarize
-YOU MUST write a `summary` containing a brief information of the architecture and you MUST call `summarize`.
+YOU MUST write a `summary` containing a brief information of the architecture AND must clarify if this is a 'hobby' project, and you MUST call `summarize`.
 
 ### 8. Finalize - ** IMPORTANT **
 If **NO files are pending** AND the final detailed architecture summary report has been generated ONLY then you MUST END.
