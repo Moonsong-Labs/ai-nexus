@@ -18,31 +18,33 @@ def read_task_planning(project_name: str) -> str:
     """
     try:
         pattern = os.path.join("projects", project_name, "planning", "task-01*")
-        
+
         # Find files matching the pattern
         matching_files = glob.glob(pattern)
-        
+
         # Check if any files were found
         if not matching_files:
             return f"Error: No files matching pattern '{pattern}' found"
-        
+
         # If multiple files match, use the first one and warn
         if len(matching_files) > 1:
-            print(f"Warning: Multiple files match pattern '{pattern}'. Using the first one: {matching_files[0]}")
-        
+            print(
+                f"Warning: Multiple files match pattern '{pattern}'. Using the first one: {matching_files[0]}"
+            )
+
         file_path = matching_files[0]
-        
+
         # Check if the file exists (should always be true, but good practice)
         if not os.path.exists(file_path):
             return f"Error: File does not exist: {file_path}"
-        
+
         # Check if it's a file (not a directory)
         if not os.path.isfile(file_path):
             return f"Error: Not a file: {file_path}"
-        
+
         # Read the file
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, encoding="utf-8") as f:
             return f.read()
-            
+
     except Exception as e:
-        return f"Error reading task planning file: {e}" 
+        return f"Error reading task planning file: {e}"
