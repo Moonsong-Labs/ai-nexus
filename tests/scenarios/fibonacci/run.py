@@ -161,12 +161,23 @@ def run():
         if m.name == "coder_new_pr":
             coder_output += m.content
     logger.debug(f"Coder output: {coder_output}")
+
+    if not coder_output:
+        raise ValueError("No 'coder_new_pr' message found; cannot extract PR info")
+
     llm = init_chat_model(
         "google_genai:gemini-2.0-flash", temperature=0
     ).with_structured_output(CoderPR)
-    pr = llm.invoke(
-        f"From the following output, extract the PR number and branch name: {coder_output}"
-    )
+
+    try:
+        pr = llm.invoke(
+            f"From the following output, extract the PR number and branch name: {coder_output}"
+        )
+    except ValueError as e:
+        raise RuntimeError(
+            "Failed to parse PR number and branch from coder output"
+        ) from e
+
     logger.debug(f"PR: {pr}")
 
     run = ScenarioRun(
