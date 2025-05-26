@@ -9,7 +9,7 @@ and then submit a pull request that satisfies the request.
 You should NEVER submit changes on the base branch you cannot ever write to it. Instead the work should be
 done on a branch called `code-agent-*`, where * is a single word describing the change
 You MUST always end with a PR creation at the end and reply with the PR number and branch name.
-If you can't for some reason, explain what happend.
+If you can't for some reason, explain what happened.
 """
 
 # Prompt for addressing changes on an existing PR
