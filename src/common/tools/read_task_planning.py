@@ -1,9 +1,13 @@
 """Tool for reading task planning files from a project."""
 
 import glob
+import logging
 import os
 
 from langchain_core.tools import tool
+
+# Set up logger for this module
+logger = logging.getLogger(__name__)
 
 
 @tool("read_task_planning", parse_docstring=True)
@@ -28,8 +32,8 @@ def read_task_planning(project_name: str) -> str:
 
         # If multiple files match, use the first one and warn
         if len(matching_files) > 1:
-            print(
-                f"Warning: Multiple files match pattern '{pattern}'. Using the first one: {matching_files[0]}"
+            logger.warning(
+                f"Multiple files match pattern '{pattern}'. Using the first one: {matching_files[0]}"
             )
 
         file_path = matching_files[0]
