@@ -38,23 +38,23 @@ class TestReadFile:
         test_content = "This is test content for read_file"
         
         # Create a file using the create_file function
-        a = create_file(test_file, test_content)
+        create_file.invoke({"file_path": test_file, "content": test_content})
         
         # Read the file using read_file
-        result = read_file(test_file)
+        result = read_file.invoke(test_file)
         
         # Verify the content
         assert result == test_content
 
     def test_read_file_not_exists(self):
         """Test reading a file that doesn't exist."""
-        result = read_file("nonexistent_file.txt")
+        result = read_file.invoke("nonexistent_file.txt")
         assert "Error: File does not exist" in result
 
     def test_read_file_not_a_file(self, setup_test_directory):
         """Test reading a path that is not a file."""
         test_dir = setup_test_directory
-        result = read_file(test_dir)
+        result = read_file.invoke(test_dir)
         assert "Error: Not a file" in result
 
 
@@ -68,15 +68,15 @@ class TestListFiles:
         # Create subdirectories
         subdir1 = os.path.join(test_dir, "subdir1")
         subdir2 = os.path.join(test_dir, "subdir2")
-        create_directory(subdir1)
-        create_directory(subdir2)
+        create_directory.invoke(subdir1)
+        create_directory.invoke(subdir2)
         
         # Create files
-        create_file(os.path.join(test_dir, "file1.txt"), "Small file content")
-        create_file(os.path.join(test_dir, "file2.py"), "Larger file content" * 100)  # Make it bigger
-        
+        create_file.invoke({"file_path": os.path.join(test_dir, "file1.txt"), "content": "Small file content"})
+        create_file.invoke({"file_path": os.path.join(test_dir, "file2.py"), "content": "Larger file content" * 100})  # Make it bigger
+
         # List the directory
-        result = list_files(test_dir)
+        result = list_files.invoke(test_dir)
         
         # Verify the result
         assert "Contents of" in result
@@ -93,17 +93,17 @@ class TestListFiles:
         
         # Create an empty subdirectory
         empty_dir = os.path.join(test_dir, "empty_dir")
-        create_directory(empty_dir)
+        create_directory.invoke(empty_dir)
         
         # List the empty directory
-        result = list_files(empty_dir)
+        result = list_files.invoke(empty_dir)
         
         # Verify the result
         assert "Directory is empty" in result
 
     def test_list_files_directory_not_exists(self):
         """Test listing a directory that doesn't exist."""
-        result = list_files("nonexistent_dir")
+        result = list_files.invoke("nonexistent_dir")
         assert "Error: Directory 'nonexistent_dir' does not exist" in result
 
     def test_list_files_not_a_directory(self, setup_test_directory):
@@ -112,10 +112,10 @@ class TestListFiles:
         test_file = os.path.join(test_dir, "not_a_dir.txt")
         
         # Create a file
-        create_file(test_file, "This is a file, not a directory")
+        create_file.invoke({"file_path": test_file, "content": "This is a file, not a directory"})
         
         # Try to list it as a directory
-        result = list_files(test_file)
+        result = list_files.invoke(test_file)
         
         # Verify the result
         assert "is not a directory" in result
@@ -130,7 +130,7 @@ class TestCreateDirectory:
         new_dir = os.path.join(test_dir, "new_test_dir")
         
         # Create the directory
-        result = create_directory(new_dir)
+        result = create_directory.invoke(new_dir)
         
         # Verify the result and that the directory exists
         assert "Successfully created directory" in result
@@ -143,7 +143,7 @@ class TestCreateDirectory:
         nested_dir = os.path.join(test_dir, "parent", "child", "grandchild")
         
         # Create the nested directory
-        result = create_directory(nested_dir)
+        result = create_directory.invoke(nested_dir)
         
         # Verify the result and that the directory exists
         assert "Successfully created directory" in result
@@ -161,7 +161,7 @@ class TestCreateFile:
         test_content = "This is test content for create_file"
         
         # Create the file
-        result = create_file(test_file, test_content)
+        result = create_file.invoke({"file_path": test_file, "content": test_content})
         
         # Verify the result
         assert "Successfully created file" in result
@@ -182,7 +182,7 @@ class TestCreateFile:
         test_file = os.path.join(nonexistent_dir, "new_file.txt")
         
         # Try to create a file in a directory that doesn't exist
-        result = create_file(test_file, "This should fail")
+        result = create_file.invoke({"file_path": test_file, "content": "This should fail"})
         
         # Verify the result
         assert "Error: Directory" in result
@@ -194,11 +194,11 @@ class TestCreateFile:
         test_file = os.path.join(test_dir, "overwrite_file.txt")
         
         # Create the file first
-        create_file(test_file, "Original content")
+        create_file.invoke({"file_path": test_file, "content": "Original content"})
         
         # Overwrite the file
         new_content = "New overwritten content"
-        result = create_file(test_file, new_content)
+        result = create_file.invoke({"file_path": test_file, "content": new_content})
         
         # Verify the result
         assert "Successfully created file" in result
