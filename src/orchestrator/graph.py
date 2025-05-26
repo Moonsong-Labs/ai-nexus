@@ -207,6 +207,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config.tester_agent.config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                github_tools=github_tools,
             )
         )
         code_reviewer_graph = stubs.CodeReviewerStub(
