@@ -8,6 +8,10 @@ that instruction you will need to sync with the latest changes in the base branc
 and then submit a pull request that satisfies the request.
 You should NEVER submit changes on the base branch you cannot ever write to it. Instead the work should be
 done on a branch called `code-agent-*`, where * is a single word describing the change
+
+IMPORTANT: When you create a new branch, the actual branch you created is given by the tool `get_branch_name`'s result.
+It may be different from the branch name you requested. Please use the actual branch name in your response.
+
 You MUST always end with a PR creation at the end and reply with the PR number and branch name.
 If you can't for some reason, explain what happened.
 """
