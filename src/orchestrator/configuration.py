@@ -92,6 +92,7 @@ class Configuration(AgentConfiguration):
     )
     tester_agent: TesterAgentConfig = field(default_factory=TesterAgentConfig)
     reviewer_agent: SubAgentConfig = field(default_factory=SubAgentConfig)
+    github_base_branch: str = "main"
 
 
 __all__ = ["Configuration", "RequirementsAgentConfig", "SubAgentConfig"]

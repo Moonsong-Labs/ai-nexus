@@ -46,6 +46,8 @@ packages = [
     "tester",
     "requirement_gatherer",
     "task_manager",
+    "scenarios",
+    "pr_memory_updater"
 ]
 [tool.setuptools.package-dir]
 "common" = "src/common"
@@ -63,7 +65,9 @@ packages = [
 "coder" = "src/coder"
 "langgraph.templates.coder" = "src/coder"
 "task_manager" = "src/task_manager"
+"pr_memory_updater" = "src/pr_memory_updater"
 "langgraph.templates.task_manager" = "src/task_manager"
+"scenarios" = "tests/scenarios"
 
 
 [tool.ruff]

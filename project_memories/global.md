@@ -43,7 +43,7 @@
     *   Architect: `src/architect/configuration.py`'s `Configuration` class no longer defines `use_human_ai`.
     *   Code Reviewer: `CodeReviewerInstanceConfig` dataclass.
     *   Task Manager (`src/task_manager/configuration.py` - REVISED): `Configuration` class includes `use_stub: bool`, `use_human_ai: bool`, and `task_manager_system_prompt: str`.
-    *   Orchestrator (`src/orchestrator/configuration.py` - REVISED): `SubAgentConfig` and its subclasses (`RequirementsAgentConfig`, `ArchitectAgentConfig`, `TaskManagerAgentConfig`) now include a `stub_messages: MessageWheel` field, allowing dynamic cycling messages for stubbed agent responses. The `coder_new_pr_agent` and `coder_change_request_agent` in `OrchestratorConfiguration` now default to specific `MessageWheel` instances for their stub messages. **UPDATED**: A new `TesterAgentConfig` dataclass is introduced, subclassing `SubAgentConfig`, with `use_stub: bool = True` and `config: TesterConfiguration`. The `tester_agent` field in `OrchestratorConfiguration` now uses `TesterAgentConfig` as its type.
+    *   Orchestrator (`src/orchestrator/configuration.py` - REVISED): `SubAgentConfig` and its subclasses (`RequirementsAgentConfig`, `ArchitectAgentConfig`, `TaskManagerAgentConfig`) now include a `stub_messages: MessageWheel` field, allowing dynamic cycling messages for stubbed agent responses. The `coder_new_pr_agent` and `coder_change_request_agent` in `OrchestratorConfiguration` now default to specific `MessageWheel` instances for their stub messages. **UPDATED**: A new `TesterAgentConfig` dataclass is introduced, subclassing `SubAgentConfig`, with `use_stub: bool = True` and `config: TesterConfiguration`. The `tester_agent` field in `OrchestratorConfiguration` now uses `TesterAgentConfig` as its type. **UPDATED**: A new `github_base_branch: str = "main"` field has been added to `Configuration`.
 
 ## 2. The Memory Bank System (Shift from Conceptual to `langmem`)
 
@@ -101,7 +101,8 @@ AI Nexus employs a few architectural patterns for its agents:
         *   `coder_change_request_agent` (type `SubAgentConfig`)
         *   `tester_agent` (type `SubAgentConfig`) **UPDATED**: Now of type `TesterAgentConfig`.
         *   `code_reviewer_agent` (type `SubAgentConfig`)
-    *   These sub-agent configurations (e.g., `SubAgentConfig`, `ArchitectAgentConfig`, `RequirementsAgentConfig`, `TaskManagerAgentConfig` (NEW), also defined/imported in this module) typically allow specifying whether to use a full agent or a stub, and can contain agent-specific nested configurations.
+        *   **UPDATED**: A new `github_base_branch: str = "main"` field has been added.
+    *   These sub-agent configurations (e.g., `SubAgentConfig`, `ArchitectAgentConfig`, `TaskManagerAgentConfig` (NEW), also defined/imported in this module) typically allow specifying whether to use a full agent or a stub, and can contain agent-specific nested configurations.
     *   **UPDATED**: `SubAgentConfig` now includes `stub_messages: MessageWheel = MessageWheel(["I finished the task."])`. Its subclasses (`RequirementsAgentConfig`, `ArchitectAgentConfig`, `TaskManagerAgentConfig`) now default `stub_messages` to specific `model_*_messages` instances. The `coder_new_pr_agent` and `coder_change_request_agent` in `OrchestratorConfiguration` are now initialized with `SubAgentConfig` instances that explicitly set their `stub_messages` to `model_coder_new_pr_messages` and `model_coder_change_request_messages` respectively.
     *   **UPDATED**: A new `TesterAgentConfig` dataclass is introduced, subclassing `SubAgentConfig`, with `use_stub: bool = True` and `config: TesterConfiguration = field(default_factory=TesterConfiguration)`.
     *   As an example of nested configuration, the `ArchitectAgentConfig` contains a nested `config: architect.configuration.Configuration` field, and this nested Architect configuration is what reflects changes like the removal of `use_human_ai` from the Architect's own configuration file. The new `TaskManagerAgentConfig` similarly contains a nested `config: task_manager.configuration.Configuration`.
@@ -112,6 +113,7 @@ AI Nexus employs a few architectural patterns for its agents:
     *   The previous delegation logic (`_create_delegate_to` and individual agent node creators like `_create_requirements_node`, `_create_architect_node`, etc.) has been removed.
     *   The LLM is now bound with a new set of tools (see Orchestrator Tools under Key Concepts or Tools section below). This now includes a `task_manager` tool. The `summarize` tool is now imported from `common.tools`.
     *   **UPDATED**: All sub-agent stub initializations (e.g., `RequirementsGathererStub`, `ArchitectStub`, `TaskManagerStub`, `CoderNewPRStub`, `CoderChangeRequestStub`, `TesterStub`, `CodeReviewerStub`) now pass the `stub_messages` from their respective agent configurations (`self._agent_config.<agent_name>_agent.stub_messages`) to the stub constructors.
+    *   **UPDATED**: The `maybe_mock_github` function, used to get GitHub tools, now receives `base_branch=self._agent_config.github_base_branch`, allowing the Orchestrator to use a configurable base branch for GitHub interactions.
     *   Conditional logic (`_create_orchestrate_condition`) routes from the main `orchestrator` (model call) node to the `ToolNode` if tool calls are present, or to `END` if a `summary` is available in the state, otherwise back to the `orchestrator` node.
     *   Sub-agent graphs (or their stubs, including for Task Manager) are passed to tool factory functions which create the tools bound to the Orchestrator's LLM.
 *   **Stubs (`src/orchestrator/stubs/__init__.py` - REVISED):**
@@ -248,7 +250,8 @@ AI Nexus employs a few architectural patterns for its agents:
             6.  Asserts that the graph execution pauses for a human interrupt by verifying the presence of an 'Interrupt' label and subsequently either a 'Continue' or 'Resume' button in the UI.
         *   **Artifacts**: Produces `langgraph-test-result.png` (a screenshot of the UI state) which is uploaded by the CI workflow.
         *   **Configuration**: Requires `GOOGLE_API_KEY` (via `.env` file at project root) for the `langgraph dev` server.
-*   **`tests/scenarios/fibonacci.py` (NEW):** A new test scenario demonstrating the orchestration of multiple agents (using stubbed responses for most, and a real Coder agent) to create a Rust Fibonacci iterator library. This scenario showcases the dynamic stub message feature.
+*   **`tests/scenarios/fibonacci.py` (NEW):** A new test scenario demonstrating the orchestration of multiple agents (using stubbed responses for most, and a real Coder agent) to create a Rust Fibonacci iterator library. This scenario showcases the dynamic stub message feature. **UPDATED**: The `OrchestratorConfiguration` in this scenario now explicitly sets `github_base_branch="fibonacci-base"`. **UPDATED**: Now defines a `BASE_BRANCH` constant and updates stub messages for `requirements_agent` and `task_manager_agent` to reflect the scenario's specific requirements. Includes logging for execution flow.
+*   **`tests/scenarios/__init__.py` (NEW):** Defines `BASE_BRANCHES` list for centralized management of base branch names used in testing scenarios.
 *   **`tests/testing/__init__.py` (UPDATED):**
     *   A new helper function `create_async_graph_caller_for_gatherer` has been added. This function is specifically designed for the requirement gatherer evaluation, expecting the final output to be a `ToolMessage` with the name "summarize" and returning its content.
 *   (Other test files as previously described, or minor updates not impacting core logic)
@@ -275,15 +278,21 @@ AI Nexus employs a few architectural patterns for its agents:
     *   The `generate_project_memory.sh`, `update_project_memory_from_pr.sh`, and `update_project_readmes.sh` scripts now use the `gemini-2.5-flash-preview-05-20` model for their API calls.
 *   **Dependency Management (`pyproject.toml` - UPDATED):**
     *   Dependency version specifiers have been changed from `>=` (greater than or equal to) to `~=` (compatible release, e.g., `~=1.2.3` implies `>=1.2.3` and `<1.3.0`). This change restricts updates to patch versions for the specified minor versions of main and development dependencies, aiming to enhance build stability.
-    *   The `[tool.setuptools]` `packages` list within `pyproject.toml` has also been reformatted for improved readability.
+    *   The `[tool.setuptools]` `packages` list within `pyproject.toml` has also been reformatted for improved readability. **UPDATED**: The `packages` list now includes `scenarios`.
 *   **LangSmith Tracing (NEW aspect for demo):**
     *   The demo script (`src/demo/orchestrate.py`) now integrates LangSmith tracing, providing a trace URL for each run. This includes user identification and run metadata.
 *   **New/Updated Utility Files:**
     *   `src/common/state.py` (NEW): Defines the `Project` dataclass for managing project ID, name, and path.
     *   `src/common/utils/__init__.py` (UPDATED): Includes a new `format_message` utility function for printing actor-labeled messages.
+    *   **UPDATED**: `src/common/logging.py` (NEW): Provides a centralized `get_logger` utility for consistent log formatting and dynamic log level control via the `LOG_LEVEL` environment variable.
 *   **Project Directory:** A new `projects/` directory has been added to store project-specific files.
 *   `.gitignore` (UPDATED): Now excludes all files and directories under `projects/`. **UPDATED**: Also excludes files with the `.pem` extension.
 *   **Demo Configuration:** The demo script (`src/demo/orchestrate.py`) now configures `task_manager_agent` with `use_stub=False` and `coder_new_pr_agent`, `coder_change_request_agent` with `use_stub=True`. **UPDATED**: The demo script now configures the `tester_agent` with `use_stub=False` and passes `TesterConfiguration()`.
+*   **GitHub Branch Management Scripts (NEW):**
+    *   `tests/scenarios/setup_github.py`: A utility script to create specified base branches in a GitHub repository if they do not already exist, using GitHub App authentication.
+    *   `tests/scenarios/cleanup_github.py`: A utility script to delete branches in a GitHub repository that are not part of a predefined list of base branches, using GitHub App authentication.
+*   **Environment Variables (UPDATED):**
+    *   `.env.example`: Now includes `LOG_LEVEL=INFO` to configure the default logging level.
 *   (Other workflow aspects like `pytest.ini` setup as previously described, or minor updates not impacting core logic)
 
 ## 8. Overall Project Structure Summary
@@ -293,7 +302,7 @@ ai-nexus/
 ├── .cursor/
 │   └── rules/
 │       └── read-project-memories.mdc
-├── .env.example
+├── .env.example                   # UPDATED: Added LOG_LEVEL
 ├── .gitignore                    # UPDATED: Added projects/*, *.pem
 ├── .vscode/
 │   └── launch.json
@@ -312,7 +321,7 @@ ai-nexus/
 ├── project_memories/
 │   ├── PRD.md
 │   └── global.md
-├── pyproject.toml                # UPDATED: Dependency constraints changed to `~=`; package list reformatted.
+├── pyproject.toml                # UPDATED: Dependency constraints changed to `~=`; package list reformatted; `scenarios` package added.
 ├── pytest.ini                    # UPDATED: Minor formatting
 ├── scripts/
 │   └── generate_project_memory.sh
@@ -351,11 +360,12 @@ ai-nexus/
 │   │   └── README.md
 │   ├── common/
 │   │   ├── components/
-│   │   │   ├── github_mocks.py   # UPDATED: Added mocks for `create_issue_comment` and `get_latest_pr_workflow_run`. Updated existing mocks to return empty string instead of raising NotImplementedError.
+│   │   │   ├── github_mocks.py   # UPDATED: `maybe_mock_github` function now accepts an optional `base_branch` argument. Added mocks for `create_issue_comment` and `get_latest_pr_workflow_run`. Updated existing mocks to return empty string instead of raising NotImplementedError.
 │   │   │   ├── github_tools.py   # UPDATED: Added `create_issue_comment` and `get_latest_pr_workflow_run` tools. Modified `_run` methods of `CreatePullRequestReviewComment`, `GetPullRequestDiff`, `GetPullRequestHeadBranch` to call their `_arun` counterparts.
 │   │   │   └── memory.py
 │   │   ├── configuration.py
 │   │   ├── graph.py
+│   │   ├── logging.py            # NEW: Logging utilities
 │   │   ├── state.py              # NEW: Defines Project dataclass
 │   │   ├── tools/                # ADDED
 │   │   │   ├── __init__.py       # ADDED: Imports create_directory, create_file, list_files, read_file, summarize
@@ -371,8 +381,8 @@ ai-nexus/
 │   ├── grumpy/
 │   ├── orchestrator/
 │   │   ├── __init__.py
-│   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration. Defines OrchestratorConfiguration including fields for sub-agent configs (e.g., ArchitectAgentConfig, TaskManagerAgentConfig (NEW), TesterAgentConfig (NEW), SubAgentConfig for coders, reviewer). SubAgentConfig and its subclasses now include `stub_messages`. Coder agent configs now default to specific `MessageWheel` instances.
-│   │   ├── graph.py              # UPDATED: Major refactor to use ToolNode, direct agent tool calls (requirements, architect, task_manager (NEW), coder_new_pr, coder_change_request, tester, code_reviewer), memorize, and common.tools.summarize. Removed Delegate pattern. Sub-agent stubs now initialized with `stub_messages`.
+│   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration. Defines OrchestratorConfiguration including fields for sub-agent configs (e.g., ArchitectAgentConfig, TaskManagerAgentConfig (NEW), TesterAgentConfig (NEW), SubAgentConfig for coders, reviewer). SubAgentConfig and its subclasses now include `stub_messages`. Coder agent configs now default to specific `MessageWheel` instances. Added `github_base_branch` field.
+│   │   ├── graph.py              # UPDATED: Major refactor to use ToolNode, direct agent tool calls (requirements, architect, task_manager (NEW), coder_new_pr, coder_change_request, tester, code_reviewer), memorize, and common.tools.summarize. Removed Delegate pattern. Sub-agent stubs now initialized with `stub_messages`. `maybe_mock_github` now called with `base_branch` from agent config.
 │   │   ├── memory/
 │   │   │   ├── absolute.md       # UPDATED: Reflects new tools and workflow
 │   │   │   ├── process.md        # UPDATED: Reflects new tools and workflow
@@ -433,7 +443,10 @@ ai-nexus/
     │           ├── techContext.md
     │           └── testingContext.md
     ├── scenarios/                  # NEW
-    │   └── fibonacci.py            # NEW: Adds a new test scenario for a Rust Fibonacci iterator.
+    │   ├── __init__.py             # NEW: Defines BASE_BRANCHES for scenarios.
+    │   ├── cleanup_github.py       # NEW: Script to cleanup GitHub branches for scenarios.
+    │   ├── fibonacci.py            # NEW: Adds a new test scenario for a Rust Fibonacci iterator. UPDATED: OrchestratorConfiguration now explicitly sets `github_base_branch="fibonacci-base"`. UPDATED: Now defines a `BASE_BRANCH` constant and updates stub messages for `requirements_agent` and `task_manager_agent` to reflect the scenario's specific requirements. Includes logging for execution flow.
+    │   └── setup_github.py         # NEW: Script to setup GitHub branches for scenarios.
     ├── smoke/                      # ADDED
     │   └── langgraph_dev/          # ADDED
     │       ├── .gitignore          # ADDED

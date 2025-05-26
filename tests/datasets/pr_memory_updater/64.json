@@ -1,0 +1,9 @@
+{
+  "inputs": {
+    "repository": "Moonsong-Labs/ai-nexus",
+    "pr_num": "64"
+  },
+  "outputs": {
+    "output": "diff --git a/project_memories/global.md b/project_memories/global.md\nindex 3a478c6..189030f 100644\n--- a/project_memories/global.md\n+++ b/project_memories/global.md\n@@ -215,7 +215,7 @@ Agents like Orchestrator and Requirement Gatherer now subclass `AgentGraph` and\n \n ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`)\n \n-*   (No significant changes to the overall workflow mentioned in PR, Makefile targets for specific agent tests might be affected if agent names/structures change significantly, but core `make` commands remain.)\n+*   **Project Memory Update Script:** The script `scripts/update_project_memory_from_pr.sh`, responsible for incorporating PR details into the project memory (this document), had its LLM call configuration (`generationConfig`) modified. The parameters were set to `temperature: 0.1` (previously 0.2), `topK: 20` (previously 40), and `topP: 0.90` (previously 0.95) to reduce randomness and improve consistency in automated memory updates.\n *   **Ruff Linting:** `pyproject.toml` updated with per-file ignores for `T201` (print statements) in `src/orchestrator/{graph,test}.py` and `src/requirement_gatherer/graph.py` and `src/requirement_gatherer/tools.py`.\n \n \n@@ -238,7 +238,8 @@ ai-nexus/\n \u2502   \u2514\u2500\u2500 global.md\n \u251c\u2500\u2500 pyproject.toml                # UPDATED: Ruff per-file ignores\n \u251c\u2500\u2500 scripts/\n-\u2502   \u2514\u2500\u2500 generate_project_memory.sh\n+\u2502   \u251c\u2500\u2500 generate_project_memory.sh\n+\u2502   \u2514\u2500\u2500 update_project_memory_from_pr.sh # UPDATED: LLM params for memory generation\n \u251c\u2500\u2500 src/\n \u2502   \u251c\u2500\u2500 agent_template/\n \u2502   \u2502   \u251c\u2500\u2500 __init__.py"
+  }
+}
