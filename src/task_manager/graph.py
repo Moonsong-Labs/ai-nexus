@@ -19,7 +19,6 @@ from langgraph.types import Checkpointer
 import common.tools
 from common import utils
 from common.graph import AgentGraph
-from common.state import Project
 from task_manager.configuration import TASK_MANAGER_MODEL, Configuration
 from task_manager.state import State
 
@@ -72,12 +71,17 @@ def _create_call_model(
 
         project_name = "unnamed_project"
         project_path = "projects/"
-        
+
+        # Use hardcoded values when running with stubs
+        if agent_config.use_stub:
+            project_name = "simplestack"
+            project_path = "projects/simplestack"
+
         if state.project:
             if isinstance(state.project, dict):
                 # If it's a dictionary, extract name and path directly
-                project_name = state.project.get("name", "unnamed_project")
-                project_path = state.project.get("path", "projects/")
+                project_name = state.project.get("name", project_name)
+                project_path = state.project.get("path", project_path)
             else:
                 # Otherwise assume it's a Project object
                 project_name = state.project.name
