@@ -4,6 +4,7 @@ import uuid
 import dotenv
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
+from langchain_core.tracers.langchain import wait_for_all_tracers
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
 from langgraph.types import Command
@@ -28,6 +29,9 @@ logger = get_logger(__name__)
 BASE_BRANCH = "fibonacci-base"
 
 if __name__ == "__main__":
+    run_name = "scenarios-fibonacci"
+    run_id = uuid.uuid4()
+
     orchestrator = OrchestratorGraph(
         agent_config=OrchestratorConfiguration(
             github_base_branch=BASE_BRANCH,
@@ -88,9 +92,13 @@ if __name__ == "__main__":
 
     async def _exec():
         logger.info("Starting execution")
+        logger.info(f"Run name: {run_name}")
+        logger.info(f"Run id: {run_id}")
         config = orchestrator.create_runnable_config(
             RunnableConfig(
                 recursion_limit=250,
+                run_name=run_name,
+                run_id=str(run_id),
                 configurable={
                     "thread_id": str(uuid.uuid4()),
                 },
@@ -122,5 +130,12 @@ if __name__ == "__main__":
         logger.info("Execution complete")
         return result
 
-    result = asyncio.run(_exec())
-    print(result)
+    try:
+        result = asyncio.run(_exec())
+        coder_output = ""
+        for m in result["messages"]:
+            if m.name == "coder_new_pr":
+                coder_output += m.content
+        print(coder_output)
+    finally:
+        wait_for_all_tracers()
