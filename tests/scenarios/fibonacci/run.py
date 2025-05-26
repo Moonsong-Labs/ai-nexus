@@ -1,7 +1,9 @@
 import asyncio
 import uuid
+from typing import TypedDict
 
 import dotenv
+from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tracers.langchain import wait_for_all_tracers
@@ -22,15 +24,31 @@ from orchestrator.configuration import Configuration as OrchestratorConfiguratio
 from orchestrator.graph import OrchestratorGraph
 from orchestrator.state import State
 from orchestrator.stubs import MessageWheel
+from scenarios.fibonacci import BASE_BRANCH
 
 dotenv.load_dotenv()
 logger = get_logger(__name__)
 
-BASE_BRANCH = "fibonacci-base"
 
-if __name__ == "__main__":
+class CoderPR(TypedDict):
+    pr_number: int
+    branch: str
+
+
+class ScenarioRun(TypedDict):
+    run_name: str
+    run_id: str
+    pr_number: int
+    branch: str
+
+
+def run():
+    """Run scenario"""
     run_name = "scenarios-fibonacci"
     run_id = uuid.uuid4()
+
+    logger.info(f"Run name: {run_name}")
+    logger.info(f"Run id: {run_id}")
 
     orchestrator = OrchestratorGraph(
         agent_config=OrchestratorConfiguration(
@@ -91,9 +109,8 @@ if __name__ == "__main__":
     )
 
     async def _exec():
-        logger.info("Starting execution")
-        logger.info(f"Run name: {run_name}")
-        logger.info(f"Run id: {run_id}")
+        logger.debug("Starting execution")
+
         config = orchestrator.create_runnable_config(
             RunnableConfig(
                 recursion_limit=250,
@@ -127,15 +144,38 @@ if __name__ == "__main__":
             else:
                 break
 
-        logger.info("Execution complete")
+        logger.debug("Execution complete")
         return result
 
     try:
         result = asyncio.run(_exec())
-        coder_output = ""
-        for m in result["messages"]:
-            if m.name == "coder_new_pr":
-                coder_output += m.content
-        print(coder_output)
+        logger.debug(result)
     finally:
         wait_for_all_tracers()
+
+    logger.debug("Extracting PR number and branch name")
+    coder_output = ""
+    for m in result["messages"]:
+        if m.name == "coder_new_pr":
+            coder_output += m.content
+    logger.debug(f"Coder output: {coder_output}")
+    llm = init_chat_model(
+        "google_genai:gemini-2.0-flash", temperature=0
+    ).with_structured_output(CoderPR)
+    pr = llm.invoke(
+        f"From the following output, extract the PR number and branch name: {coder_output}"
+    )
+    logger.debug(f"PR: {pr}")
+
+    run = ScenarioRun(
+        run_name=run_name,
+        run_id=str(run_id),
+        pr_number=pr["pr_number"],
+        branch=pr["branch"],
+    )
+    return run
+
+
+if __name__ == "__main__":
+    ret = run()
+    logger.info(ret)
