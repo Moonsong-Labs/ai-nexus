@@ -167,5 +167,6 @@ cython_debug/
 # Custom
 dump.json
 projects/*
+scenario_runs
 
 *.pem

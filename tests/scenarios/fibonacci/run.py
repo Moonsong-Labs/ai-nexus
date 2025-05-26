@@ -1,4 +1,6 @@
 import asyncio
+import json
+import os
 import uuid
 from typing import TypedDict
 
@@ -45,7 +47,7 @@ class ScenarioRun(TypedDict):
 def run():
     """Run scenario"""
     run_name = "scenarios-fibonacci"
-    run_id = uuid.uuid4()
+    run_id = str(uuid.uuid4())
 
     logger.info(f"Run name: {run_name}")
     logger.info(f"Run id: {run_id}")
@@ -115,7 +117,7 @@ def run():
             RunnableConfig(
                 recursion_limit=250,
                 run_name=run_name,
-                run_id=str(run_id),
+                run_id=run_id,
                 configurable={
                     "thread_id": str(uuid.uuid4()),
                 },
@@ -169,13 +171,22 @@ def run():
 
     run = ScenarioRun(
         run_name=run_name,
-        run_id=str(run_id),
+        run_id=run_id,
         pr_number=pr["pr_number"],
         branch=pr["branch"],
     )
+
     return run
 
 
 if __name__ == "__main__":
     ret = run()
     logger.info(ret)
+    # Store run results
+    scenario_runs_dir = os.path.join(os.path.dirname(__file__), "scenario_runs")
+    os.makedirs(scenario_runs_dir, exist_ok=True)
+
+    run_file = os.path.join(scenario_runs_dir, f"{ret['run_id']}.json")
+    with open(run_file, "w") as f:
+        json.dump(ret, f, indent=1)
+    logger.info(f"Stored run results in {run_file}")
