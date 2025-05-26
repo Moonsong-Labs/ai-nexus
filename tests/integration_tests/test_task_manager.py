@@ -15,10 +15,10 @@ from testing import get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
+from common.state import Project
 from task_manager import prompts
 from task_manager.configuration import TASK_MANAGER_MODEL
 from task_manager.graph import TaskManagerGraph
-from common.state import Project
 
 # Setup basic logging for the test
 logger = get_logger(__name__)
@@ -82,7 +82,9 @@ def create_task_manager_graph_caller(
         state = {"messages": messages}
 
         # Add project information
-        project = Project(id="test-project", name="Test Project", path="/path/to/test/project")
+        project = Project(
+            id="test-project", name="Test Project", path="/path/to/test/project"
+        )
         state["project"] = project
 
         config = {
@@ -162,11 +164,7 @@ async def test_task_manager_with_project_path():
     graph = TaskManagerGraph(checkpointer=MemorySaver())
 
     # Create Project object for this test
-    project = Project(
-        id="api_rust", 
-        name="api_rust",
-        path=project_dir
-    )
+    project = Project(id="api_rust", name="api_rust", path=project_dir)
 
     # Prepare test message with project path
     messages = [
@@ -175,10 +173,7 @@ async def test_task_manager_with_project_path():
         )
     ]
 
-    state = {
-        "messages": messages,
-        "project": project
-    }
+    state = {"messages": messages, "project": project}
 
     config = {
         "configurable": {
