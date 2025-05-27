@@ -9,6 +9,8 @@ from typing import Annotated, Optional
 
 from langchain_core.tools import tool
 
+from common.tools import create_file, read_file
+
 
 def _invoke(
     cmd: str, *, cwd: Optional[str] = None, err_ctx: Optional[str] = None
@@ -124,8 +126,7 @@ def fetch_project_global_memory(
 ) -> str:
     """Fetch the contents of the given project's global memory file."""
     full_path = (project_dir / global_memory_file).resolve()
-    with open(full_path, "r+t") as f:
-        return f.read()
+    return read_file.invoke({"file_path": str(full_path)})
 
 
 @tool
@@ -136,8 +137,15 @@ def store_project_global_memory(
         Optional[Path], "the project global memory file path"
     ] = Path("project_memories/global.md"),
     content: Annotated[str, "the memory file contents to write"],
-) -> str:
-    """Store the given content to the project's global memory file."""
+) -> bool:
+    """Store the given content to the project's global memory file.
+
+    Returns:
+        A message indicating success or failure
+    """
     full_path = (project_dir / global_memory_file).resolve()
-    with open(full_path, "w+t") as f:
-        return f.write(content)
+    result = create_file.invoke({"file_path": str(full_path), "content": content})
+    if "success" in result:
+        return "Succesfully stored project global memory"
+    else:
+        return result
