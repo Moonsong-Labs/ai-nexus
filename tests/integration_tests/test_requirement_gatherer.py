@@ -144,20 +144,24 @@ async def test_requirement_gatherer_ends_with_summarize_tool_call():
         }
     }
 
-    result = await graph.ainvoke(test_input, config=config)
+    try:
+        result = await graph.ainvoke(test_input, config=config)
+    except Exception as e:
+        pytest.fail(f"Graph invocation failed: {e}")
 
     assert result is not None, "Graph did not return a result."
     assert "messages" in result, "Result dictionary does not contain 'messages'."
-    assert len(result["messages"]) >= 2, "Graph did not produce at least two messages."
+    messages = result["messages"]
+    assert len(messages) >= 2, f"Graph produced {len(messages)} messages, expected at least 2."
 
-    second_last_message = result["messages"][-2]
+    second_last_message = messages[-2]
 
     assert isinstance(
         second_last_message, ToolMessage
-    ), f"Expected second to last message to be a ToolMessage, got {type(second_last_message).__name__}"
+    ), f"Expected second to last message to be a ToolMessage, got {type(second_last_message).__name__}. Full message: {second_last_message}"
     assert (
         second_last_message.name == "summarize"
-    ), f"Expected ToolMessage name to be 'summarize', got '{second_last_message.name}'"
+    ), f"Expected ToolMessage name to be 'summarize', got '{second_last_message.name}'. Available tool names in messages: {[msg.name for msg in messages if isinstance(msg, ToolMessage)]}"
 
     logger.info("Test for summarize tool call passed successfully.")
 
