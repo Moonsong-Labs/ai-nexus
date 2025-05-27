@@ -3,4 +3,4 @@
 - When you need to determine the next task to work on, use the `get_next_task` tool with the project name .
 - Perform the task via that team member using the appropriate tool.
 - Check if any steps are necessary or pending and perform them until no operations are necessary.
-- When nothing is pending, call the `summarize` tool.
+- IF nothing is pending, call the `summarize` tool.
