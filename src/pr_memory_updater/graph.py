@@ -77,6 +77,7 @@ class PRMemoryUpdaterGraph(AgentGraph):
         """
         # Create config with any custom fields needed
         agent_config = agent_config or Configuration(
+            model = "google_genai:gemini-2.5-flash-preview-05-20",
             memory=MemoryConfiguration(use_memory=False), system_prompt=SYSTEM_PROMPT
         )
 
@@ -102,6 +103,8 @@ class PRMemoryUpdaterGraph(AgentGraph):
             all_tools += self._memory.get_tools()
 
         all_tools.append(AgentTools.invoke_pr_details)
+        all_tools.append(AgentTools.fetch_project_global_memory)
+        all_tools.append(AgentTools.store_project_global_memory)
 
         # Init model
         llm = init_chat_model(self._agent_config.model)

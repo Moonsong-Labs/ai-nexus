@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import tempfile
+from pathlib import Path
 from typing import Annotated, Optional
 
 from langchain_core.tools import tool
@@ -90,11 +91,11 @@ def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
 
 
 @tool(
-   "fetch_pr_details",
+    "fetch_pr_details",
     description="""Fetch the relevant details for a given repo, pr combination.
 
 The data returned by the tool will be in loosely-formatted text, and should be processed into a more meaningful output.
-"""
+""",
 )
 def invoke_pr_details(
     repo: Annotated[str, "the repository '<org>/<name>' which the PR belongs to"],
@@ -111,3 +112,32 @@ def invoke_pr_details(
         cwd=os.curdir,
         err_ctx="Failed to run fetch pr details script",
     )
+
+
+@tool
+def fetch_project_global_memory(
+    *,
+    project_dir: Annotated[Optional[str], "the project directory"] = os.curdir,
+    global_memory_file: Annotated[
+        Optional[Path], "the project global memory file path"
+    ] = Path("project_memories/global.md"),
+) -> str:
+    """Fetch the contents of the given project's global memory file."""
+    full_path = (project_dir / global_memory_file).resolve()
+    with open(full_path, "r+t") as f:
+        return f.read()
+
+
+@tool
+def store_project_global_memory(
+    *,
+    project_dir: Annotated[Optional[str], "the project directory"] = os.curdir,
+    global_memory_file: Annotated[
+        Optional[Path], "the project global memory file path"
+    ] = Path("project_memories/global.md"),
+    content: Annotated[str, "the memory file contents to write"],
+) -> str:
+    """Store the given content to the project's global memory file."""
+    full_path = (project_dir / global_memory_file).resolve()
+    with open(full_path, "w+t") as f:
+        return f.write(content)
