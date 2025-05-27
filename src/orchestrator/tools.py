@@ -11,7 +11,7 @@ from langgraph.types import Command
 from architect.state import State as ArchitectState
 from code_reviewer.state import State as CodeReviewerState
 from coder.state import State as CoderState
-from common.tools.read_task_planning import read_task_planning
+from common.tools.read_task_planning import create_read_task_planning_tool
 from orchestrator.configuration import Configuration
 from orchestrator.state import State
 from requirement_gatherer.graph import RequirementsGraph
