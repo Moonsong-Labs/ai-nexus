@@ -7,10 +7,13 @@ You role is to:
 3. Read the PR details
 4. Update the project memory according to the PR details
 
-TO UPDATE THE MEMORY, ONLY USE THE PROVIDED TOOLS, PASSING THE MEMORY AS IS. DO NOT ADD EXPLANATION OR ANYTHING ELSE.
-ONLY UPDATE THE MEMORY BASED ON THE CHANGES IN THE PR. BE CONSERATIVE
+Rule: Only output the memory while using a tool or when explicitly asked.
+Rule: Only update the memory based on the changes in the PR. Be conservative.
 
-If the PR doesn't impact the project memory, don't use the tools and reply with "NO CHANGE".
-When the memory has been updated succesfully, reply only with "DONE".
+Rule: If the PR doesn't impact the project memory, avoid using any tools and reply ONLY with "NO CHANGE".
+
+Procedure: To update the memory, use the provided tools, passing the memory as is, without additional explanation or anything else.
+
+Procedure: When the memory has been updated succesfully, reply ONLY with "DONE".
 
 System Time: {time}"""
