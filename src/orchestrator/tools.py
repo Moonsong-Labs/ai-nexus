@@ -65,8 +65,11 @@ def create_requirements_tool(
             update={
                 "messages": [
                     ToolMessage(
-                        content=result["summary"],
+                        content=result["summary"]
+                        if result["summary"]
+                        else result["error"],
                         tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
                     )
                 ],
                 "project": result["project"],
@@ -107,7 +110,19 @@ def create_architect_tool(
             config_with_recursion,
         )
 
-        return result["summary"]
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["summary"]
+                        if result["summary"]
+                        else result["error"],
+                        tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
+                    )
+                ],
+            }
+        )
 
     return architect
 
@@ -143,7 +158,19 @@ def create_task_manager_tool(
             config_with_recursion,
         )
 
-        return result["summary"]
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["summary"]
+                        if result["summary"]
+                        else result["error"],
+                        tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
+                    )
+                ],
+            }
+        )
 
     return task_manager
 
@@ -173,7 +200,19 @@ def create_coder_new_pr_tool(
             config,
         )
 
-        return result["messages"][-1].content
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["messages"][-1].content
+                        if not result["error"]
+                        else result["error"],
+                        tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
+                    )
+                ],
+            }
+        )
 
     return coder_new_pr
 
@@ -203,7 +242,19 @@ def create_coder_change_request_tool(
             config,
         )
 
-        return result["messages"][-1].content
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["messages"][-1].content
+                        if not result["error"]
+                        else result["error"],
+                        tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
+                    )
+                ],
+            }
+        )
 
     return coder_change_request
 
@@ -236,7 +287,19 @@ def create_tester_tool(
             config,
         )
 
-        return result["summary"]
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["summary"]
+                        if result["summary"]
+                        else result["error"],
+                        tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
+                    )
+                ],
+            }
+        )
 
     return tester
 
@@ -266,7 +329,19 @@ def create_code_reviewer_tool(
             config,
         )
 
-        return result["summary"]
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["summary"]
+                        if result["summary"]
+                        else result["error"],
+                        tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
+                    )
+                ],
+            }
+        )
 
     return code_reviewer
 

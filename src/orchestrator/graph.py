@@ -6,10 +6,7 @@ from typing import Any, Coroutine, Optional
 
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import LanguageModelInput
-from langchain_core.messages import (
-    BaseMessage,
-    SystemMessage,
-)
+from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
 from langchain_core.runnables import Runnable, RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
@@ -22,6 +19,7 @@ from architect.configuration import (
 )
 from architect.graph import ArchitectGraph
 from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
+from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.components.github_mocks import maybe_mock_github
 from common.components.github_tools import get_github_tools
 from common.configuration import AgentConfiguration
@@ -52,6 +50,7 @@ def _create_orchestrator(
     agent_config: Configuration,
     llm: Runnable[LanguageModelInput, BaseMessage],
 ) -> Coroutine[Any, Any, dict]:
+    @prechain(skip_on_summary_and_tool_errors())
     async def orchestrator(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:
@@ -79,9 +78,13 @@ def _create_orchestrate_condition(
     """
 
     async def orchestrate(state: State, config: RunnableConfig):
-        if state.messages and state.messages[-1].tool_calls:
+        if (
+            state.messages
+            and isinstance(state.messages[-1], AIMessage)
+            and state.messages[-1].tool_calls
+        ):
             return tool_node.name
-        elif state.summary:
+        elif state.summary or state.error:
             return END
         else:
             return orchestrator.__name__

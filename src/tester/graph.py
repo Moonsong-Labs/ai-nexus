@@ -18,6 +18,7 @@ from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
 import common
+from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.graph import AgentGraph
 from tester.configuration import Configuration
 from tester.prompts import get_stage_prompt
@@ -71,6 +72,7 @@ def _create_call_model(
     agent_config: Configuration,
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],
 ) -> Coroutine[Any, Any, dict]:
+    @prechain(skip_on_summary_and_tool_errors())
     async def call_model(
         state: State, config: RunnableConfig, *, store: Optional[BaseStore] = None
     ) -> dict:

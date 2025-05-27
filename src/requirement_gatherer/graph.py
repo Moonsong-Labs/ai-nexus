@@ -7,6 +7,7 @@ from typing import Any, Coroutine, Optional
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import LanguageModelInput
 from langchain_core.messages import (
+    AIMessage,
     BaseMessage,
     SystemMessage,
 )
@@ -17,6 +18,7 @@ from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
 import common.tools
+from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.graph import AgentGraph
 from requirement_gatherer import tools
 from requirement_gatherer.configuration import Configuration
@@ -34,6 +36,7 @@ def _create_call_model(
     The returned coroutine retrieves the user's recent memories from the store, formats them for context, constructs a system prompt including these memories and the current timestamp, and asynchronously calls the language model with the prompt and conversation history. Returns a dictionary containing the model's response message.
     """
 
+    @prechain(skip_on_summary_and_tool_errors())
     async def call_model(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:
@@ -68,8 +71,6 @@ def _create_call_model(
             config=config,
         )
 
-        # print(f"CALL_MODEL_REUSULT:\n{msg}")
-
         return {"messages": [msg]}
 
     return call_model
@@ -86,9 +87,13 @@ def _create_gather_requirements(
     """
 
     async def gather_requirements(state: State, config: RunnableConfig):
-        if state.messages and state.messages[-1].tool_calls:
+        if (
+            state.messages
+            and isinstance(state.messages[-1], AIMessage)
+            and state.messages[-1].tool_calls
+        ):
             return tool_node.name
-        elif state.summary:
+        elif state.summary or state.error:
             return END
         else:
             return call_model.__name__

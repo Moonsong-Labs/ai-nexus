@@ -21,6 +21,8 @@ class State:
     """The active project."""
     summary: str = ""
     """The design summary."""
+    error: str = ""
+    """If any fatal error occurred."""
 
 
 __all__ = [

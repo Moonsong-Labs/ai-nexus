@@ -17,6 +17,8 @@ class State:
     """The messages in the conversation."""
     summary: str = ""
     """The code review summary."""
+    error: str = ""
+    """If any fatal error occurred."""
 
 
 __all__ = [

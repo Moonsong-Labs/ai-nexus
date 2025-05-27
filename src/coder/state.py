@@ -14,6 +14,8 @@ class State:
     messages: Annotated[list[AnyMessage], add_messages]
     summary: str = ""
     """The coding summary."""
+    error: str = ""
+    """If any fatal error occurred."""
 
 
 __all__ = ["State"]
