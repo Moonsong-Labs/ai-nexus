@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import SystemMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import Tool
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
@@ -158,10 +159,15 @@ class CoderChangeRequestGraph(AgentGraph):
 
 def _create_call_model(github_tools: list[Tool], system_prompt: str):
     @prechain(skip_on_summary_and_tool_errors())
-    async def call_model(state: State) -> dict:
+    async def call_model(
+        state: State,
+        config: RunnableConfig,
+    ) -> dict:
         system_msg = SystemMessage(content=system_prompt)
         messages = [system_msg] + state.messages
-        messages_after_invoke = await llm.bind_tools(github_tools).ainvoke(messages)
+        messages_after_invoke = await llm.bind_tools(github_tools).ainvoke(
+            messages, config=config
+        )
         return {"messages": messages_after_invoke}
 
     return call_model
