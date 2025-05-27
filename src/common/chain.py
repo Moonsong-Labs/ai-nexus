@@ -38,6 +38,13 @@ def skip_on_summary_and_tool_errors(
     current_consecutive_errors: dict[str, int] = defaultdict(int)
 
     async def _exit_on_summary_or_error(state: Any, config: RunnableConfig, **kwargs):
+        if state.summary:
+            return {
+                "messages": [
+                    AIMessage(content=summary_message.format(summary=state.summary))
+                ]
+            }
+
         messages: list[BaseMessage] = state.messages
         if messages and messages[-1].type == "tool":
             tool_message: ToolMessage = messages[-1]
@@ -48,24 +55,15 @@ def skip_on_summary_and_tool_errors(
                 current_consecutive_errors[tool_message.name] += 1
 
                 # do nothing if number of errors is low
-                if current_consecutive_errors[tool_message.name] < error_threshold:
-                    return None
-
-                return {
-                    "messages": [
-                        AIMessage(
-                            content=error_message.format(error=tool_message.content)
-                        )
-                    ],
-                    "error": tool_message.content,
-                }
-
-            if state.summary:
-                return {
-                    "messages": [
-                        AIMessage(content=summary_message.format(summary=state.summary))
-                    ]
-                }
+                if current_consecutive_errors[tool_message.name] >= error_threshold:
+                    return {
+                        "messages": [
+                            AIMessage(
+                                content=error_message.format(error=tool_message.content)
+                            )
+                        ],
+                        "error": tool_message.content,
+                    }
         return None
 
     return _exit_on_summary_or_error
