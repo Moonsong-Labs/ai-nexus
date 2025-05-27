@@ -6,7 +6,7 @@
     "grumpy": "./src/grumpy/graph.py:graph",
     "coder_new_pr": "./src/coder/lg_server.py:graph_new_pr",
     "coder_change_request": "./src/coder/lg_server.py:graph_change_request",
-    "tester": "./src/tester/graph.py:graph",
+    "tester": "./src/tester/lg_server.py:graph",
     "code_reviewer_github": "./src/code_reviewer/lg_server.py:graph_with_github_tools",
     "code_reviewer_non_github": "./src/code_reviewer/lg_server.py:graph_no_github_tools",
     "requirement_gatherer": "./src/requirement_gatherer/graph.py:graph",
@@ -16,7 +16,5 @@
   },
   "env": ".env",
   "python_version": "3.12",
-  "dependencies": [
-    "."
-  ]
+  "dependencies": ["."]
 }

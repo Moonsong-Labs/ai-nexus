@@ -39,6 +39,7 @@ def create_async_graph_caller(
 
     return call_model
 
+
 def create_async_graph_caller_for_gatherer(
     graph: CompiledStateGraph,
 ) -> Callable[[dict], Awaitable[dict]]:
@@ -61,9 +62,12 @@ def create_async_graph_caller_for_gatherer(
         if isinstance(summary, ToolMessage) and summary.name == "summarize":
             return summary.content
         else:
-            raise ValueError(f"Expected a ToolMessage with name 'summarize', but got {type(summary).__name__} with name '{getattr(summary, 'name', 'no name')}'")
+            raise ValueError(
+                f"Expected a ToolMessage with name 'summarize', but got {type(summary).__name__} with name '{getattr(summary, 'name', 'no name')}'"
+            )
 
     return call_model
+
 
 __all__ = [
     get_logger.__name__,

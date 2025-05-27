@@ -14,7 +14,7 @@ from testing import get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
-from architect.graph import builder as graph_builder
+from architect.graph import ArchitectGraph
 
 # Setup basic logging for the test
 logger = get_logger(__name__)
@@ -151,9 +151,9 @@ async def run_graph_with_attachments(inputs: dict, attachments: dict):
     memory_store = InMemoryStore()
 
     # Compile the graph - needs checkpointer for stateful execution during evaluation
-    graph_compiled = graph_builder.compile(
+    graph_compiled = ArchitectGraph(
         checkpointer=memory_saver, store=memory_store
-    )
+    ).compiled_graph
     # Check if the input is already formatted as 'messages'
     if "messages" in inputs and isinstance(inputs["messages"], list):
         # Use the messages list directly, converting dicts to BaseMessage objects if needed

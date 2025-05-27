@@ -11,6 +11,7 @@ from langgraph.types import Command
 from architect.state import State as ArchitectState
 from code_reviewer.state import State as CodeReviewerState
 from coder.state import State as CoderState
+from common.tools.read_task_planning import read_task_planning
 from orchestrator.configuration import Configuration
 from orchestrator.state import State
 from requirement_gatherer.graph import RequirementsGraph
@@ -64,8 +65,11 @@ def create_requirements_tool(
             update={
                 "messages": [
                     ToolMessage(
-                        content=result["summary"],
+                        content=result["summary"]
+                        if result["summary"]
+                        else result["error"],
                         tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
                     )
                 ],
                 "project": result["project"],
@@ -106,7 +110,19 @@ def create_architect_tool(
             config_with_recursion,
         )
 
-        return result["summary"]
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["summary"]
+                        if result["summary"]
+                        else result["error"],
+                        tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
+                    )
+                ],
+            }
+        )
 
     return architect
 
@@ -142,7 +158,19 @@ def create_task_manager_tool(
             config_with_recursion,
         )
 
-        return result["summary"]
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["summary"]
+                        if result["summary"]
+                        else result["error"],
+                        tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
+                    )
+                ],
+            }
+        )
 
     return task_manager
 
@@ -172,7 +200,19 @@ def create_coder_new_pr_tool(
             config,
         )
 
-        return result["messages"][-1].content
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["messages"][-1].content
+                        if not result["error"]
+                        else result["error"],
+                        tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
+                    )
+                ],
+            }
+        )
 
     return coder_new_pr
 
@@ -202,7 +242,19 @@ def create_coder_change_request_tool(
             config,
         )
 
-        return result["messages"][-1].content
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["messages"][-1].content
+                        if not result["error"]
+                        else result["error"],
+                        tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
+                    )
+                ],
+            }
+        )
 
     return coder_change_request
 
@@ -235,7 +287,19 @@ def create_tester_tool(
             config,
         )
 
-        return result["summary"]
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["summary"]
+                        if result["summary"]
+                        else result["error"],
+                        tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
+                    )
+                ],
+            }
+        )
 
     return tester
 
@@ -265,7 +329,19 @@ def create_code_reviewer_tool(
             config,
         )
 
-        return result["summary"]
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content=result["summary"]
+                        if result["summary"]
+                        else result["error"],
+                        tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
+                    )
+                ],
+            }
+        )
 
     return code_reviewer
 
@@ -302,3 +378,22 @@ def memorize(
     """
     # print(f"[MEMORIZE] for {origin}: {content}")  # noqa: T201
     return f"Memorized '{content}' for '{origin}'"
+
+
+@tool("get_next_task", parse_docstring=True)
+def get_next_task(
+    project_name: str,
+) -> str:
+    """Get the next task from the project's task planning file.
+
+    This tool reads the task planning file for the specified project to determine
+    what the next task should be.
+
+    Args:
+        project_name: Name of the project to read the task planning file from.
+
+    Returns:
+        The content of the task planning file as a string, or an error message
+        if no task planning file is found.
+    """
+    return read_task_planning.invoke(project_name)

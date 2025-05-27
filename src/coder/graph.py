@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import SystemMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import Tool
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
@@ -13,6 +14,7 @@ from langgraph.types import Checkpointer
 
 from coder.prompts import CHANGE_REQUEST_SYSTEM_PROMPT, NEW_PR_SYSTEM_PROMPT
 from coder.state import State
+from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 
@@ -155,18 +157,20 @@ class CoderChangeRequestGraph(AgentGraph):
         return coder_change_request_config().graph_builder(self._github_tools)
 
 
-class CallModel:
-    def __init__(self, github_tools: list[Tool], system_prompt: str):
-        self.github_tools = github_tools
-        self.system_prompt = system_prompt
-
-    async def __call__(self, state: State) -> dict:
-        system_msg = SystemMessage(content=self.system_prompt)
+def _create_call_model(github_tools: list[Tool], system_prompt: str):
+    @prechain(skip_on_summary_and_tool_errors())
+    async def call_model(
+        state: State,
+        config: RunnableConfig,
+    ) -> dict:
+        system_msg = SystemMessage(content=system_prompt)
         messages = [system_msg] + state.messages
-        messages_after_invoke = await llm.bind_tools(self.github_tools).ainvoke(
-            messages
+        messages_after_invoke = await llm.bind_tools(github_tools).ainvoke(
+            messages, config=config
         )
         return {"messages": messages_after_invoke}
+
+    return call_model
 
 
 def _graph_builder(github_toolset: list[Tool], system_prompt: str):
@@ -175,7 +179,7 @@ def _graph_builder(github_toolset: list[Tool], system_prompt: str):
 
     tool_node = ToolNode(tools=github_toolset)
 
-    builder.add_node("call_model", CallModel(github_toolset, system_prompt))
+    builder.add_node("call_model", _create_call_model(github_toolset, system_prompt))
     builder.add_node("tools", tool_node)
 
     builder.add_edge("__start__", "call_model")

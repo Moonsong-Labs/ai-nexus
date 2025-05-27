@@ -18,6 +18,7 @@ from langgraph.types import Checkpointer
 
 import common.tools
 from common import utils
+from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.graph import AgentGraph
 from task_manager.configuration import TASK_MANAGER_MODEL, Configuration
 from task_manager.state import State
@@ -42,6 +43,7 @@ def _create_call_model(
         An asynchronous function that accepts the current state, configuration, and optional memory store, and returns a dictionary containing the model's response message.
     """
 
+    @prechain(skip_on_summary_and_tool_errors())
     async def call_model(
         state: State, config: RunnableConfig, *, store: BaseStore = None
     ) -> dict:
@@ -69,12 +71,30 @@ def _create_call_model(
     {formatted}
     </memories>"""
 
+        project_name = "unnamed_project"
+        project_path = "projects/"
+
+        # Use hardcoded values when running with stubs
+        if agent_config.use_stub:
+            project_name = "simplestack"
+            project_path = "projects/simplestack"
+
+        if state.project:
+            if isinstance(state.project, dict):
+                # If it's a dictionary, extract name and path directly
+                project_name = state.project.get("name", project_name)
+                project_path = state.project.get("path", project_path)
+            else:
+                # Otherwise assume it's a Project object
+                project_name = state.project.name
+                project_path = state.project.path
+
         # This helps the model understand the context and temporal relevance
         sys_prompt = agent_config.task_manager_system_prompt.format(
             user_info=formatted,
             time=datetime.now().isoformat(),
-            project_name=state.project.name,
-            project_path=state.project.path,
+            project_name=project_name,
+            project_path=project_path,
             project_context="",
         )
 
