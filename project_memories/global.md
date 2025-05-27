@@ -268,7 +268,7 @@ AI Nexus employs a few architectural patterns for its agents:
     *   Tests updated to reflect the Orchestrator's new tool usage (e.g., `memorize` instead of `store_memory`, and direct agent tool calls like `code_reviewer` instead of generic `Delegate`).
 *   **`tests/integration_tests/test_requirement_gatherer.py` (UPDATED):**
     *   The test setup now explicitly imports `Configuration` as `GathererConfig` from `requirement_gatherer.configuration`.
-    *   An `agent_config = GathererConfig(use_human_ai=True)` is now passed to the `RequirementsGraph` constructor. **UPDATED**: The `test_requirement_gatherer_ends_with_summarize_tool_call` test now explicitly sets `human_ai_product` in the `GathererConfig` and changes the initial `test_input` content to `"Start!"`. A `recursion_limit: 100` has been added to the `config`.
+    *   An `agent_config = GathererConfig(use_human_ai=True)` is now passed to the `RequirementsGraph` constructor. **UPDATED**: The `test_requirement_gatherer_ends_with_summarize_tool_call` test now explicitly sets `human_ai_product` in the `GathererConfig` and changes the initial `test_input` content to `"Start!"`. A `recursion_limit: 100` has been added to the `config`. **UPDATED**: The `test_requirement_gatherer_ends_with_summarize_tool_call` test now uses `{"role": "human", "content": "Start!"}` as input. It also includes new assertions to verify tool call counts using `get_tool_messages_count`: `human_feedback` is called 1-5 times, `memorize` is called at least as many times as `human_feedback`, and `set_project` is called exactly once.
     *   The `client.aevaluate` call now uses `create_async_graph_caller_for_gatherer(graph)` instead of `create_async_graph_caller(graph)`.
     *   The `num_repetitions` for evaluation has been reduced from `4` to `1`.
     *   **NEW**: A new asynchronous test `test_requirement_gatherer_ends_with_summarize_tool_call` has been added. This test verifies that the `RequirementsGraph` successfully invokes the `summarize` tool, asserting that the second-to-last message in the graph's output is a `ToolMessage` with the name "summarize".
@@ -293,6 +293,7 @@ AI Nexus employs a few architectural patterns for its agents:
 *   **`tests/testing/__init__.py` (UPDATED):**
     *   A new helper function `create_async_graph_caller_for_gatherer` has been added. This function is specifically designed for the requirement gatherer evaluation, expecting the final output to be a `ToolMessage` with the name "summarize" and returning its content.
     *   **UPDATED**: Minor formatting changes.
+*   **NEW**: `tests/testing/utils.py`: A new utility file providing helper functions for testing, including `get_tool_messages_count` for counting tool messages in agent outputs.
 *   **NEW**: `tests/unit_tests/common/test_chain.py`: New unit tests added to verify the functionality of `common.chain.prechain` and `common.chain.skip_on_summary_and_tool_errors`, specifically testing error propagation and summary-based skipping in agent workflows.
 *   (Other test files as previously described, or minor updates not impacting core logic)
 
@@ -476,7 +477,7 @@ ai-nexus/
     │   ├── test_graph.py
     │   ├── test_grumpy_agent.py
     │   ├── test_orchestrator.py    # UPDATED: Tests reflect new Orchestrator tool usage (e.g., memorize, direct agent calls like code_reviewer).
-    │   ├── test_requirement_gatherer.py # UPDATED: Uses create_async_graph_caller_for_gatherer, passes agent_config to RequirementsGraph, num_repetitions reduced. UPDATED: `test_requirement_gatherer_ends_with_summarize_tool_call` now explicitly sets `human_ai_product` in config and changes initial input. NEW: Added test_requirement_gatherer_ends_with_summarize_tool_call to verify summarize tool call.
+    │   ├── test_requirement_gatherer.py # UPDATED: Uses create_async_graph_caller_for_gatherer, passes agent_config to RequirementsGraph, num_repetitions reduced. UPDATED: `test_requirement_gatherer_ends_with_summarize_tool_call` now explicitly sets `human_ai_product` in config and changes initial input. NEW: Added test_requirement_gatherer_ends_with_summarize_tool_call to verify summarize tool call. UPDATED: `test_requirement_gatherer_ends_with_summarize_tool_call` now includes assertions for `human_feedback` (1-5 calls), `memorize` (at least as many as `human_feedback`), and `set_project` (exactly 1 call), and uses `get_tool_messages_count`.
     │   ├── test_task_manager.py    # UPDATED: Tests now provide explicit project context during task manager operations.
     │   ├── test_tester_agent.py
     │   └── inputs/
@@ -506,7 +507,8 @@ ai-nexus/
     ├── testing/
     │   ├── __init__.py             # UPDATED: Added create_async_graph_caller_for_gatherer helper function. UPDATED: Minor formatting.
     │   ├── evaluators.py
-    │   └── formatter.py
+    │   ├── formatter.py
+    │   └── utils.py                # NEW: New utility file providing helper functions for testing, including `get_tool_messages_count`.
     ├── unit_tests/
     │   ├── common/
     │   │   └── test_chain.py       # NEW: Unit tests for common.chain (prechain, skip_on_summary_and_tool_errors).
