@@ -16,6 +16,12 @@ class Configuration(AgentConfiguration):
     human_ai_product: Optional[str] = None
 
     def __post_init__(self):
+        """Initialize human_ai_product based on use_human_ai.
+
+        If use_human_ai is True and human_ai_product is not provided,
+        it defaults to prompts.HUMAN_AI_PRODUCT.
+        Raises ValueError if use_human_ai is False and human_ai_product is set.
+        """
         if self.use_human_ai:
             if self.human_ai_product is None:
                 self.human_ai_product = prompts.HUMAN_AI_PRODUCT

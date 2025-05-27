@@ -103,7 +103,11 @@ def create_human_feedback_tool(agent_config: Configuration) -> BaseTool:
 
         reply = await ai_user.ainvoke(
             [
-                SystemMessage(content=sys.format(input=state.messages, product=agent_config.human_ai_product)),
+                SystemMessage(
+                    content=sys.format(
+                        input=state.messages, product=agent_config.human_ai_product
+                    )
+                ),
                 HumanMessage(content=question),
             ],
             config,
