@@ -31,7 +31,7 @@ class CodeReviewerInstanceConfig:
     name: str
     system_prompt: str
     github_tools_filter: List[str]
-    other_tools: List[str]
+    other_tools: List[Tool]
 
     def graph_builder(self, github_toolset: list[Tool]):
         tools = self.other_tools + self.filter_github_tools(github_toolset)
