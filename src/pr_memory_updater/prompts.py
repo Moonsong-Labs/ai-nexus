@@ -31,7 +31,11 @@ If NO → NO CHANGE
 If YES → Update conflicting sentences only
 
 PROCEDURE:
-1. Compare memory vs PR for factual conflicts
-2. If conflicts → Use tool with minimal edits -> Reply ONLY with "DONE"
-3. If no conflicts → Reply ONLY with "NO CHANGE"
+1. Retrieve current memory using tool
+2. Compare memory vs PR for factual conflicts
+3. DECISION POINT:
+   - If conflicts exist → Use store tool with minimal edits → Reply "DONE"
+   - If no conflicts → Reply "NO CHANGE" (DO NOT use store tool)
+
+CRITICAL: Only invoke the store tool if you've identified actual factual conflicts. Never write "just to check" or "to be safe".
 """
