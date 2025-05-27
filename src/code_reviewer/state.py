@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
 
 from langchain_core.messages import AnyMessage
 from langgraph.graph import add_messages
@@ -17,7 +18,7 @@ class State:
     messages: Annotated[list[AnyMessage], add_messages]
     """The messages in the conversation."""
 
-    project: Project
+    project: Optional[Project] = None
     """The active project."""
 
     summary: str = ""

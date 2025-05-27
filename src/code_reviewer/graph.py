@@ -129,15 +129,18 @@ class CallModel:
         self.system_prompt = system_prompt
 
     async def __call__(self, state: State) -> dict:
+        project_path = state.project.path if state.project else "Unknown"
+
         system_prompt = self.system_prompt.format(
-            project_path=state.project.path,
+            project_path=project_path,
         )
+
         system_msg = SystemMessage(system_prompt)
         messages = [system_msg] + state.messages
         messages_after_invoke = await llm.bind_tools(self.github_tools).ainvoke(
             messages
         )
-        return {"messages": messages_after_invoke}
+        return {"messages": messages_after_invoke, "project": state.project}
 
 def _graph_builder(github_toolset: list[Tool], system_prompt: str):
     """Return code_reviewer graph builder."""
