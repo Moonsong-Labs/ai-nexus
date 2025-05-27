@@ -69,12 +69,30 @@ def _create_call_model(
     {formatted}
     </memories>"""
 
+        project_name = "unnamed_project"
+        project_path = "projects/"
+
+        # Use hardcoded values when running with stubs
+        if agent_config.use_stub:
+            project_name = "simplestack"
+            project_path = "projects/simplestack"
+
+        if state.project:
+            if isinstance(state.project, dict):
+                # If it's a dictionary, extract name and path directly
+                project_name = state.project.get("name", project_name)
+                project_path = state.project.get("path", project_path)
+            else:
+                # Otherwise assume it's a Project object
+                project_name = state.project.name
+                project_path = state.project.path
+
         # This helps the model understand the context and temporal relevance
         sys_prompt = agent_config.task_manager_system_prompt.format(
             user_info=formatted,
             time=datetime.now().isoformat(),
-            project_name=state.project.name,
-            project_path=state.project.path,
+            project_name=project_name,
+            project_path=project_path,
             project_context="",
         )
 

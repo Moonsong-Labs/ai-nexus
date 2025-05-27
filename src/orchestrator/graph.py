@@ -207,6 +207,7 @@ class OrchestratorGraph(AgentGraph):
                 agent_config=self._agent_config.tester_agent.config,
                 checkpointer=self._checkpointer,
                 store=self._store,
+                github_tools=github_tools,
             )
         )
         code_reviewer_graph = stubs.CodeReviewerStub(
@@ -227,6 +228,7 @@ class OrchestratorGraph(AgentGraph):
             tools.create_tester_tool(self._agent_config, tester_graph),
             tools.create_code_reviewer_tool(self._agent_config, code_reviewer_graph),
             tools.memorize,
+            tools.get_next_task,
             common.tools.summarize,
         ]
         tool_node = ToolNode(all_tools, name="tools")

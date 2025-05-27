@@ -15,6 +15,7 @@ from testing import get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
+from common.state import Project
 from task_manager import prompts
 from task_manager.configuration import TASK_MANAGER_MODEL
 from task_manager.graph import TaskManagerGraph
@@ -79,6 +80,12 @@ def create_task_manager_graph_caller(
         logger.info(f"Processed messages for task manager: {messages}")
 
         state = {"messages": messages}
+
+        # Add project information
+        project = Project(
+            id="test-project", name="Test Project", path="/path/to/test/project"
+        )
+        state["project"] = project
 
         config = {
             "configurable": {
@@ -156,14 +163,17 @@ async def test_task_manager_with_project_path():
     # Initialize a task manager graph
     graph = TaskManagerGraph(checkpointer=MemorySaver())
 
+    # Create Project object for this test
+    project = Project(id="api_rust", name="api_rust", path=project_dir)
+
     # Prepare test message with project path
     messages = [
         HumanMessage(
-            content="Start working with the api_rust project located at tests/integration_tests/inputs/api_rust"
+            content=f"Start working with the {project.name} project located at {project.path}"
         )
     ]
 
-    state = {"messages": messages}
+    state = {"messages": messages, "project": project}
 
     config = {
         "configurable": {

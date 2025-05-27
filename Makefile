@@ -48,6 +48,9 @@ test-task-manager:
 test_coder:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_coder.py
 
+test-pr-memory-updater:
+	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_pr_memory_updater.py
+
 test_unit:
 	uv run pytest tests/unit_tests
 test_integration:
@@ -63,6 +66,9 @@ set-requirement-dataset:
 
 set-task-manager-dataset:
 	uv run --env-file .env -- python tests/datasets/task_manager_dataset.py
+
+set-pr-memory-updater-dataset:
+	uv run --env-file .env -- python tests/datasets/pr_memory_updater_dataset.py
 
 ######################
 # LINTING AND FORMATTING
