@@ -156,19 +156,15 @@ class CoderChangeRequestGraph(AgentGraph):
         return coder_change_request_config().graph_builder(self._github_tools)
 
 
-class CallModel:
-    def __init__(self, github_tools: list[Tool], system_prompt: str):
-        self.github_tools = github_tools
-        self.system_prompt = system_prompt
-
+def _create_call_model(github_tools: list[Tool], system_prompt: str):
     @prechain(skip_on_summary_and_tool_errors())
-    async def __call__(self, state: State) -> dict:
-        system_msg = SystemMessage(content=self.system_prompt)
+    async def call_model(state: State) -> dict:
+        system_msg = SystemMessage(content=system_prompt)
         messages = [system_msg] + state.messages
-        messages_after_invoke = await llm.bind_tools(self.github_tools).ainvoke(
-            messages
-        )
+        messages_after_invoke = await llm.bind_tools(github_tools).ainvoke(messages)
         return {"messages": messages_after_invoke}
+
+    return call_model
 
 
 def _graph_builder(github_toolset: list[Tool], system_prompt: str):
@@ -177,7 +173,7 @@ def _graph_builder(github_toolset: list[Tool], system_prompt: str):
 
     tool_node = ToolNode(tools=github_toolset)
 
-    builder.add_node("call_model", CallModel(github_toolset, system_prompt))
+    builder.add_node("call_model", _create_call_model(github_toolset, system_prompt))
     builder.add_node("tools", tool_node)
 
     builder.add_edge("__start__", "call_model")
