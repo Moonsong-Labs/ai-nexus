@@ -12,11 +12,11 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+import pr_memory_updater.prompts as prompts
 import pr_memory_updater.tools as AgentTools
 from common.components.memory import MemoryConfiguration
 from common.graph import AgentGraph
 from pr_memory_updater.configuration import Configuration
-from pr_memory_updater.prompts import SYSTEM_PROMPT
 from pr_memory_updater.state import State
 
 logger = logging.getLogger(__name__)
@@ -78,7 +78,7 @@ class PRMemoryUpdaterGraph(AgentGraph):
         # Create config with any custom fields needed
         agent_config = agent_config or Configuration(
             model = "google_genai:gemini-2.5-flash-preview-05-20",
-            memory=MemoryConfiguration(use_memory=False), system_prompt=SYSTEM_PROMPT
+            memory=MemoryConfiguration(use_memory=False), system_prompt=prompts.NEW_SYSTEM_PROMPT
         )
 
         super().__init__(
