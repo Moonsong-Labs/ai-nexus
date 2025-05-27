@@ -4,6 +4,22 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from langchain_core.messages import AnyMessage
+from langgraph.graph import add_messages
+from typing_extensions import Annotated
+
+
+@dataclass(kw_only=True)
+class AgentState:
+    """Base agent state."""
+
+    messages: Annotated[list[AnyMessage], add_messages]
+    """The messages in the conversation."""
+    summary: str = ""
+    """The agent summary."""
+    error: str = ""
+    """If any fatal error occurred."""
+
 
 @dataclass(kw_only=True)
 class Project:

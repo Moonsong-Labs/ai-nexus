@@ -8,10 +8,8 @@ from langgraph.prebuilt import ToolNode
 
 from common import tools
 from common.chain import prechain, skip_on_summary_and_tool_errors
-from orchestrator.configuration import (
-    Configuration,
-)
-from orchestrator.state import State
+from common.configuration import AgentConfiguration
+from common.state import AgentState
 
 
 @pytest.mark.asyncio
@@ -30,7 +28,7 @@ async def test_tool_errors_are_propagated() -> None:
             error_message="[Abort] {error}",
         )
     )
-    async def call_model(state: State, config: RunnableConfig) -> dict:
+    async def call_model(state: AgentState, config: RunnableConfig) -> dict:
         """Extract the user's state from the conversation and update the memory."""
 
         if config["configurable"]["invoke_count"] < error_threshold:
@@ -47,7 +45,7 @@ async def test_tool_errors_are_propagated() -> None:
 
         return {"messages": "LLM was called"}
 
-    async def call_model_condition(state: State):
+    async def call_model_condition(state: AgentState):
         if (
             state.messages
             and isinstance(state.messages[-1], AIMessage)
@@ -61,7 +59,7 @@ async def test_tool_errors_are_propagated() -> None:
 
     tool_node = ToolNode([failure], name="tools", handle_tool_errors=lambda e: str(e))
 
-    builder = StateGraph(State, config_schema=Configuration)
+    builder = StateGraph(AgentState, config_schema=AgentConfiguration)
     builder.add_node(call_model)
     builder.add_node(tool_node.name, tool_node)
     builder.add_edge(START, call_model.__name__)
@@ -108,7 +106,7 @@ async def test_tool_errors_are_propagated() -> None:
 @pytest.mark.asyncio
 async def test_summary_is_propagated() -> None:
     @prechain(skip_on_summary_and_tool_errors(summary_message="[Summary] {summary}"))
-    async def call_model(state: State, config: RunnableConfig) -> dict:
+    async def call_model(state: AgentState, config: RunnableConfig) -> dict:
         """Extract the user's state from the conversation and update the memory."""
 
         if config["configurable"]["first_run"]:
@@ -125,7 +123,7 @@ async def test_summary_is_propagated() -> None:
 
         return {"messages": "LLM was called"}
 
-    async def call_model_condition(state: State):
+    async def call_model_condition(state: AgentState):
         if (
             state.messages
             and isinstance(state.messages[-1], AIMessage)
@@ -141,7 +139,7 @@ async def test_summary_is_propagated() -> None:
         [tools.summarize], name="tools", handle_tool_errors=lambda e: str(e)
     )
 
-    builder = StateGraph(State, config_schema=Configuration)
+    builder = StateGraph(AgentState, config_schema=AgentConfiguration)
     builder.add_node(call_model)
     builder.add_node(tool_node.name, tool_node)
     builder.add_edge(START, call_model.__name__)
@@ -167,8 +165,6 @@ async def test_summary_is_propagated() -> None:
                 "configurable": {"first_run": True},
             },
         )
-
-        print(state)
 
         last_message = state["messages"][-1].content
 
