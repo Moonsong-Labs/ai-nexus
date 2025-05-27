@@ -32,6 +32,6 @@ If YES → Update conflicting sentences only
 
 PROCEDURE:
 1. Compare memory vs PR for factual conflicts
-2. If conflicts → Use tool with minimal edits -> "DONE"
-3. If no conflicts → "NO CHANGE"
+2. If conflicts → Use tool with minimal edits -> Reply ONLY with "DONE"
+3. If no conflicts → Reply ONLY with "NO CHANGE"
 """
