@@ -1,5 +1,11 @@
+import uuid
+
 import pytest
-from datasets.requirement_gatherer_dataset import REQUIREMENT_GATHERER_DATASET_NAME
+from datasets.requirement_gatherer_dataset import (
+    FIRST_MESSAGE,
+    REQUIREMENT_GATHERER_DATASET_NAME,
+)
+from langchain_core.messages import ToolMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.memory import InMemoryStore
 from langsmith import Client
@@ -92,7 +98,7 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
     memory_saver = MemorySaver()  # Checkpointer for the graph
     memory_store = InMemoryStore()
     agent_config = GathererConfig(use_human_ai=True)
-    
+
     # Compile the graph - needs checkpointer for stateful execution during evaluation
     graph = RequirementsGraph(
         checkpointer=memory_saver, store=memory_store, agent_config=agent_config
@@ -116,3 +122,51 @@ async def test_requirement_gatherer_langsmith(pytestconfig):
 
     # Assert that results were produced.
     assert results is not None, "evaluation did not return results"
+
+
+@pytest.mark.asyncio
+async def test_requirement_gatherer_ends_with_summarize_tool_call():
+    """
+    Tests that the RequirementsGraph produces a ToolMessage with name 'summarize'
+    as the second to last message.
+    """
+    logger.info("Testing if requirement gatherer ends with summarize tool call.")
+    memory_saver = MemorySaver()
+    memory_store = InMemoryStore()
+    agent_config = GathererConfig(use_human_ai=True)
+
+    graph = RequirementsGraph(
+        checkpointer=memory_saver, store=memory_store, agent_config=agent_config
+    ).compiled_graph
+
+    test_input = {"messages": [{"role": "user", "content": FIRST_MESSAGE}]}
+    config = {
+        "configurable": {
+            "thread_id": str(uuid.uuid4()),
+            "user_id": "test_user",
+            "model": "google_genai:gemini-2.0-flash-lite",
+        }
+    }
+
+    try:
+        result = await graph.ainvoke(test_input, config=config)
+    except Exception as e:
+        pytest.fail(f"Graph invocation failed: {e}")
+
+    assert result is not None, "Graph did not return a result."
+    assert "messages" in result, "Result dictionary does not contain 'messages'."
+    messages = result["messages"]
+    assert len(messages) >= 2, (
+        f"Graph produced {len(messages)} messages, expected at least 2."
+    )
+
+    second_last_message = messages[-2]
+
+    assert isinstance(second_last_message, ToolMessage), (
+        f"Expected second to last message to be a ToolMessage, got {type(second_last_message).__name__}. Full message: {second_last_message}"
+    )
+    assert second_last_message.name == "summarize", (
+        f"Expected ToolMessage name to be 'summarize', got '{second_last_message.name}'. Available tool names in messages: {[msg.name for msg in messages if isinstance(msg, ToolMessage)]}"
+    )
+
+    logger.info("Test for summarize tool call passed successfully.")
