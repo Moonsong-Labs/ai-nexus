@@ -27,21 +27,17 @@ def _invoke(
     return result.stdout.decode("utf-8").strip()
 
 
-def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
-    """Invoke the `update_project_memory_from_pr` script.
+def checkout_and_edit(repo: str, pr: str, *, thunk) -> str:
+    """Run the given `thunk` in a fresh checkout of the given repo.
 
-    Will take care of checking out the PR in a temporary directory and doing the necessary setup for the script to run
+    The checkout will be in a temporary directory, which will be passed in the given thunk.
 
     Args:
-      repo: the repository org/name to use the tool with
-      pr: the PR number to generate the project memory for
+       repo: the repository org/name to use
+       pr: the PR number to checkout
 
-    Will return a diff of the applied changes from the agent.
+    Will return a diff of the applied changes.
     """
-    # TODO: ensure GEMINI_API_KEY is set?
-    # TODO: ensure git, gh, jq, curl are available?
-    # TODO: ensure gh is authenticated?
-
     if not re.match(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", repo):
         raise ValueError(f"Invalid repository format: {repo}. Expected <org>/<name>.")
     if not re.match(r"^\d+$", pr):
@@ -59,10 +55,8 @@ def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
             f"Could not find valid commit for PR {pr} in repository {repo}"
         )
 
-    memory_changes = None
+    changes = None
 
-    # script excepts to be run in a checkout
-    # so set it up for given PR at tmpdir to not pollute environment
     with tempfile.TemporaryDirectory() as dir:
         _invoke(
             f"git clone https://github.com/{repo} --depth=1 --revision={rev} .",
@@ -70,6 +64,32 @@ def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
             err_ctx="Failed to clone repository",
         )
 
+        thunk(dir)
+
+        # retrieve the updates that were made from the script
+        changes = _invoke(
+            "git diff", cwd=dir, err_ctx="Failed to retrieve memory updates"
+        )
+
+    return changes
+
+
+def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
+    """Invoke the `update_project_memory_from_pr` script.
+
+    Will take care of checking out the PR in a temporary directory and doing the necessary setup for the script to run
+
+    Args:
+      repo: the repository org/name to use the tool with
+      pr: the PR number to generate the project memory for
+
+    Will return a diff of the applied changes from the agent.
+    """
+    # TODO: ensure GEMINI_API_KEY is set?
+    # TODO: ensure git, gh, jq, curl are available?
+    # TODO: ensure gh is authenticated?
+
+    def _thunk(dir):
         # mark scripts as runnable
         _invoke(
             "chmod +x ./scripts/update_project_memory_from_pr.sh ./scripts/fetch_pr_details.sh",
@@ -84,13 +104,7 @@ def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
             err_ctx="Failed to run memory updater script",
         )
 
-        # retrieve the updates that were made from the script
-        memory_changes = _invoke(
-            "git diff", cwd=dir, err_ctx="Failed to retrieve memory updates"
-        )
-
-    return memory_changes
-
+    return checkout_and_edit(repo, pr, thunk=_thunk)
 
 @tool(
     "fetch_pr_details",
