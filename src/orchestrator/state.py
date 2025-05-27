@@ -18,6 +18,8 @@ class State:
     """The messages in the conversation."""
     summary: str = ""
     """The orchestrator summary."""
+    error: str = ""
+    """If any fatal error occurred."""
     project: Optional[Project] = None
 
 

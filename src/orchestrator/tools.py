@@ -65,8 +65,11 @@ def create_requirements_tool(
             update={
                 "messages": [
                     ToolMessage(
-                        content=result["summary"],
+                        content=result["summary"]
+                        if result["summary"]
+                        else result["error"],
                         tool_call_id=tool_call_id,
+                        status="error" if result["error"] else "success",
                     )
                 ],
                 "project": result["project"],
