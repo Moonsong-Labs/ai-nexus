@@ -17,9 +17,11 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-import common
 from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.graph import AgentGraph
+from common.tools.list_files import list_files
+from common.tools.read_file import read_file
+from common.tools.summarize import summarize
 from tester.configuration import Configuration
 from tester.prompts import get_stage_prompt
 from tester.state import State, WorkflowStage
@@ -205,10 +207,7 @@ class TesterAgentGraph(AgentGraph):
         )
 
         # Initialize the language model and the tools
-        all_tools = [
-            *filtered_github_tools,
-            common.tools.summarize,
-        ]
+        all_tools = [*filtered_github_tools, summarize, list_files, read_file]
 
         # Define node names explicitly to avoid confusion
         call_model_name = "call_model"
