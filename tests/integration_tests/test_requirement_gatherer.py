@@ -136,7 +136,13 @@ async def test_requirement_gatherer_ends_with_summarize_tool_call():
     ).compiled_graph
 
     test_input = {"messages": [{"role": "user", "content": FIRST_MESSAGE}]}
-    config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+    config = {
+        "configurable": {
+            "thread_id": str(uuid.uuid4()),
+            "user_id": "test_user",
+            "model": "google_genai:gemini-2.0-flash-lite",
+        }
+    }
 
     result = await graph.ainvoke(test_input, config=config)
 
@@ -154,5 +160,6 @@ async def test_requirement_gatherer_ends_with_summarize_tool_call():
     ), f"Expected ToolMessage name to be 'summarize', got '{second_last_message.name}'"
 
     logger.info("Test for summarize tool call passed successfully.")
+
 
 
