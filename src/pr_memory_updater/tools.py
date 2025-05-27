@@ -145,7 +145,7 @@ def store_project_global_memory(
     """
     full_path = (project_dir / global_memory_file).resolve()
     result = create_file.invoke({"file_path": str(full_path), "content": content})
-    if "success" in result:
+    if "Successfully" in result:
         return "Succesfully stored project global memory"
     else:
         return result
