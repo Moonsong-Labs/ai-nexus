@@ -16,17 +16,25 @@ from orchestrator.state import State
 
 @pytest.mark.asyncio
 async def test_tool_errors_are_propagated() -> None:
+    error_threshold = 2
+    error_msg = "DIVIDE_BY_ZERO"
+
     @tool("failure", parse_docstring=True)
     def failure():
         """Called when a failure occurs"""
-        raise Exception("DIVIDE_BY_ZERO")
+        raise Exception(error_msg)
 
-    @prechain(skip_on_summary_and_tool_errors(error_message="[Error] {error}"))
+    @prechain(
+        skip_on_summary_and_tool_errors(
+            error_threshold=error_threshold,
+            error_message="[Abort] {error}",
+        )
+    )
     async def call_model(state: State, config: RunnableConfig) -> dict:
         """Extract the user's state from the conversation and update the memory."""
 
-        if config["configurable"]["first_run"]:
-            config["configurable"]["first_run"] = False
+        if config["configurable"]["invoke_count"] < error_threshold:
+            config["configurable"]["invoke_count"] += 1
             msg = AIMessage(content="Using tool")
             msg.tool_calls.append(
                 {
@@ -74,17 +82,25 @@ async def test_tool_errors_are_propagated() -> None:
                 "error": "",
             },
             {
-                "recursion_limit": 5,  # test will fail due to recursion limit if behavior incorrect
+                "recursion_limit": 10,  # test will fail due to recursion limit if behavior incorrect
                 "run_name": "test",
-                "configurable": {"first_run": True},
+                "configurable": {"invoke_count": 0},
             },
         )
 
-        last_message = state["messages"][-1].content
+        expected_messages = [
+            ("human", "test"),
+            ("ai", "Using tool"),
+            ("tool", error_msg),
+            ("ai", "Using tool"),
+            ("tool", error_msg),
+            ("ai", f"[Abort] {error_msg}"),
+        ]
+        actual_messages = [(msg.type, msg.content) for msg in state["messages"]]
 
         assert state["summary"] == ""
-        assert state["error"] == "DIVIDE_BY_ZERO"
-        assert last_message == "[Error] DIVIDE_BY_ZERO"
+        assert state["error"] == error_msg
+        assert expected_messages == actual_messages
     except GraphRecursionError:
         pytest.fail("graph was not interrupted on tool error")
 
@@ -146,7 +162,7 @@ async def test_summary_is_propagated() -> None:
                 "error": "",
             },
             {
-                "recursion_limit": 5,  # test will fail due to recursion limit if behavior incorrect
+                "recursion_limit": 10,  # test will fail due to recursion limit if behavior incorrect
                 "run_name": "test",
                 "configurable": {"first_run": True},
             },
