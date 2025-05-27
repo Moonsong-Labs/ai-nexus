@@ -133,19 +133,20 @@ async def test_requirement_gatherer_ends_with_summarize_tool_call():
     logger.info("Testing if requirement gatherer ends with summarize tool call.")
     memory_saver = MemorySaver()
     memory_store = InMemoryStore()
-    agent_config = GathererConfig(use_human_ai=True)
+    agent_config = GathererConfig(use_human_ai=True, human_ai_product="I want to build a fibonnaci code. the name of the project is 'fiboFLA'. Its a hobby project to have fun. I need to be able to pass the inputs and it will calculate the fibonacci")
 
     graph = RequirementsGraph(
         checkpointer=memory_saver, store=memory_store, agent_config=agent_config
     ).compiled_graph
 
-    test_input = {"messages": [{"role": "user", "content": FIRST_MESSAGE}]}
+    test_input = {"messages": [{"role": "user", "content": "Start!"}]}
     config = {
         "configurable": {
             "thread_id": str(uuid.uuid4()),
             "user_id": "test_user",
             "model": "google_genai:gemini-2.0-flash-lite",
-        }
+        },
+        "recursion_limit": 100
     }
 
     try:
