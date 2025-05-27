@@ -11,7 +11,6 @@ from langgraph.types import Command
 from architect.state import State as ArchitectState
 from code_reviewer.state import State as CodeReviewerState
 from coder.state import State as CoderState
-from common.tools.read_task_planning import create_read_task_planning_tool
 from orchestrator.configuration import Configuration
 from orchestrator.state import State
 from requirement_gatherer.graph import RequirementsGraph
@@ -378,22 +377,3 @@ def memorize(
     """
     # print(f"[MEMORIZE] for {origin}: {content}")  # noqa: T201
     return f"Memorized '{content}' for '{origin}'"
-
-
-@tool("get_next_task", parse_docstring=True)
-def get_next_task(
-    project_name: str,
-) -> str:
-    """Get the next task from the project's task planning file.
-
-    This tool reads the task planning file for the specified project to determine
-    what the next task should be.
-
-    Args:
-        project_name: Name of the project to read the task planning file from.
-
-    Returns:
-        The content of the task planning file as a string, or an error message
-        if no task planning file is found.
-    """
-    return read_task_planning.invoke(project_name)

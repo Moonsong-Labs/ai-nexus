@@ -10,19 +10,21 @@ from langchain_core.tools import tool
 # Set up logger for this module
 logger = logging.getLogger(__name__)
 
+
 def create_read_task_planning_tool(use_stub: bool) -> Callable:
     """Create a read_task_planning tool that can read task planning files from a project or return a default for stubs.
-    
+
     Args:
         use_stub: Whether to use the stub version of the tool
-        
+
     Returns:
         A tool function that can read task planning files or return a default for stubs
     """
+
     @tool("read_task_planning", parse_docstring=True)
     def read_task_planning(project_name: str) -> str:
         """Read the content of a task planning file matching the pattern task-01*.
-        
+
         When running with stubs, returns a default task planning content.
 
         Args:
@@ -33,7 +35,9 @@ def create_read_task_planning_tool(use_stub: bool) -> Callable:
         """
         # If using stubs, return a default task planning content
         if use_stub:
-            logger.info(f"Using stub for project '{project_name}'. Returning default task planning.")
+            logger.info(
+                f"Using stub for project '{project_name}'. Returning default task planning."
+            )
             return """# Task Planning for Stub Project
             
 Task: Implement this awesome feature
@@ -72,5 +76,5 @@ Task: Implement this awesome feature
 
         except Exception as e:
             return f"Error reading task planning file: {e}"
-            
+
     return read_task_planning
