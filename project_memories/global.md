@@ -7,18 +7,18 @@
 **Core Mission:** To develop a system for managing and orchestrating a team of AI agents capable of designing, developing, and maintaining technical projects. An initial focus is on an agent named "Cursor" which operates with a memory that resets between sessions, necessitating a robust external "Memory Bank" system for continuity. A specific rule (`.cursor/rules/read-project-memories.mdc`) now configures Cursor to always read all files within the `project_memories/` directory for every interaction, ensuring this core project context is consistently available to it. AI Nexus aims to be a platform for developing and managing such AI agents. The system now includes robust project management capabilities, allowing the tracking and utilization of project names and paths across various agent workflows.
 
 **Key Concepts:**
-1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager (NEW)) working collaboratively. The Orchestrator agent's delegation mechanism to other agents (Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Task Manager) has been refactored. It now uses direct tool calls for each agent task instead of a generic `Delegate` tool. The Code Reviewer is consistently referred to as "Code Reviewer" (e.g., Orchestrator tool name `code_reviewer`). A `Project` object is now passed and updated across agent states to maintain consistent project context. Agent stubs now support dynamic, cycling messages for more flexible scenario testing.
+1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager (NEW)) working collaboratively. The Orchestrator agent's delegation mechanism to other agents (Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Task Manager) has been refactored. It now uses direct tool calls for each agent task instead of a generic `Delegate` tool. The Code Reviewer is consistently referred to as "Code Reviewer" (e.g., Orchestrator tool name `code_reviewer`). A `Project` object is now passed and updated across agent states to maintain consistent project context. Agent stubs now support dynamic, cycling messages for more flexible scenario testing. **UPDATED**: Agent states now consistently include an `error` field to track fatal errors, and agent workflows are designed to propagate and react to these errors, preventing infinite loops or runaway processes.
 2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is `langmem`, providing semantic search capabilities over stored memories. `AgentGraph` can now automatically initialize and provide `SemanticMemory` and its tools to subclasses based on its configuration. The Tester agent, for instance, now includes logic to read from a `BaseStore` for contextual memories.
-3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow.
+3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow. **UPDATED**: Agent `call_model` functions are now decorated with a `prechain` mechanism that includes `skip_on_summary_and_tool_errors`, allowing for pre-execution checks to halt processing if a summary is already present or if a tool has encountered consecutive errors beyond a defined threshold.
 4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory.
     *   Orchestrator (REVISED): The `Delegate` tool has been removed. It now uses a set of specific tools:
-        *   `requirements`: Invokes the Requirement Gatherer agent/stub. This tool now returns a `Command` to update the Orchestrator's state with the `project` information from the sub-agent's result.
-        *   `architect`: Invokes the Architect agent/stub. This tool now returns a `Command` to update the Orchestrator's state with the `project` information from the sub-agent's result.
-        *   `task_manager` (NEW): Invokes the Task Manager agent/stub. This tool now returns a `Command` to update the Orchestrator's state with the `project` information from the sub-agent's result.
-        *   `coder_new_pr`: Invokes the Coder agent/stub for new pull requests.
-        *   `coder_change_request`: Invokes the Coder agent/stub for changes to existing pull requests.
-        *   `tester`: Invokes the Tester agent/stub. **UPDATED**: This tool now passes the Orchestrator's `project` state to the Tester agent's state, and the Orchestrator's `github_tools` to the Tester agent's graph.
-        *   `code_reviewer`: Invokes the Code Reviewer agent/stub.
+        *   `requirements`: Invokes the Requirement Gatherer agent/stub. This tool now returns a `Command` to update the Orchestrator's state with the `project` information from the sub-agent's result. **UPDATED**: The `ToolMessage` returned by this tool now includes a `status` field (`"success"` or `"error"`) and its `content` can be the sub-agent's `summary` or `error` message.
+        *   `architect`: Invokes the Architect agent/stub. This tool now returns a `Command` to update the Orchestrator's state with the `project` information from the sub-agent's result. **UPDATED**: The `ToolMessage` returned by this tool now includes a `status` field (`"success"` or `"error"`) and its `content` can be the sub-agent's `summary` or `error` message.
+        *   `task_manager` (NEW): Invokes the Task Manager agent/stub. This tool now returns a `Command` to update the Orchestrator's state with the `project` information from the sub-agent's result. **UPDATED**: The `ToolMessage` returned by this tool now includes a `status` field (`"success"` or `"error"`) and its `content` can be the sub-agent's `summary` or `error` message.
+        *   `coder_new_pr`: Invokes the Coder agent/stub for new pull requests. **UPDATED**: This tool now returns a `Command` with a `ToolMessage` including a `status` field (`"success"` or `"error"`) and its `content` can be the last message from the sub-agent's result or the sub-agent's `error` message.
+        *   `coder_change_request`: Invokes the Coder agent/stub for changes to existing pull requests. **UPDATED**: This tool now returns a `Command` with a `ToolMessage` including a `status` field (`"success"` or `"error"`) and its `content` can be the last message from the sub-agent's result or the sub-agent's `error` message.
+        *   `tester`: Invokes the Tester agent/stub. **UPDATED**: This tool now passes the Orchestrator's `project` state to the Tester agent's state, and the Orchestrator's `github_tools` to the Tester agent's graph. **UPDATED**: The `ToolMessage` returned by this tool now includes a `status` field (`"success"` or `"error"`) and its `content` can be the sub-agent's `summary` or `error` message.
+        *   `code_reviewer`: Invokes the Code Reviewer agent/stub. **UPDATED**: The `ToolMessage` returned by this tool now includes a `status` field (`"success"` or `"error"`) and its `content` can be the sub-agent's `summary` or `error` message.
         *   `memorize`: (Replaces its previous `store_memory` tool concept) For persisting information, created by `tools.memorize`.
         *   `summarize`: (NEW) For the Orchestrator to output a final summary of its operations, now provided by `common.tools.summarize`.
         *   `get_next_task` (NEW): For retrieving the next task from the project's task planning file.
@@ -31,7 +31,7 @@
     *   Coder (REVISED): **UPDATED**: Now includes the `get_latest_pr_workflow_run` tool. The `create_issue_comment` tool is *not* provided to the Coder agent.
     *   General: Tools like `file_dump` can be used by agents. A common `summarize` tool is now available in `src/common/tools/summarize.py` for reuse across agents. New common file system tools (`common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`) are available for reuse. **UPDATED**: New common GitHub tools `common.components.github_tools.create_issue_comment` (for commenting on issues/PRs) and `common.components.github_tools.get_latest_pr_workflow_run` (for fetching workflow run logs) are now available. **NEW**: A new common tool `common.tools.read_task_planning` is available for reading task planning files. Agent outputs are now enhanced with formatted, actor-labeled messages for improved clarity.
 5.  **System Prompts (REVISED):** Detailed system prompts define each agent's role, behavior, constraints, and interaction protocols. System prompts are now typically part of agent-specific `Configuration` classes.
-    *   Orchestrator (REVISED): Its system prompt, dynamically loaded from markdown files in `src/orchestrator/memory/`, has been updated to reflect its new toolset (direct agent calls like `requirements`, `architect`, `task_manager`, `coder_new_pr`, `coder_change_request`, `tester`, `code_reviewer`, plus `memorize`, `summarize`, and `get_next_task`) and refined workflow logic (e.g., using the `summarize` tool when no tasks are pending, and using `get_next_task` to pick tasks). The static `ORCHESTRATOR_SYSTEM_PROMPT` string in `src/orchestrator/prompts.py` has been removed.
+    *   Orchestrator (REVISED): Its system prompt, dynamically loaded from markdown files in `src/orchestrator/memory/`, has been updated to reflect its new toolset (direct agent calls like `requirements`, `architect`, `task_manager`, `coder_new_pr`, `coder_change_request`, `tester`, `code_reviewer`, plus `memorize`, `summarize`, and `get_next_task`) and refined workflow logic (e.g., using the `summarize` tool when no tasks are pending, and using `get_next_task` to pick tasks). The static `ORCHESTRATOR_SYSTEM_PROMPT` string in `src/orchestrator/prompts.py` has been removed. **UPDATED**: The prompt now states that the `summarize` tool should be called *IF* no tasks are pending, emphasizing the conditional nature.
     *   Task Manager (NEW, REVISED): System prompt defined in `task_manager.configuration.Configuration` via `task_manager_system_prompt` (which defaults to `prompts.SYSTEM_PROMPT` from `src/task_manager/prompts.py`). This prompt has been significantly updated to include stricter guidelines for task splitting (smaller tasks, buildable deliverables), mandatory testing requirements (unit, integration, edge cases), early CI/CD setup (GitHub Actions), expanded task metadata (contextual, technical, security, testing info), and reinforced roadmap creation and task sequencing rules (repo init -> project setup -> CI -> features). The prompt now dynamically references the active project name (`{project_name}`) and path (`{project_path}`). **UPDATED**: The prompt's list of required files has been updated: `techContext.md` is now `techPatterns.md`, `featuresContext.md` is now `codingContext.md`, and `securityContext.md` has been removed from the list. The prompt's internal descriptions and extraction guidelines for these files have been updated accordingly, including the removal of specific security context extraction instructions and the renaming of `relatedFeatureContext` to `relatedCodingContext` in the task metadata schema. The count of "Additional Context Files" has been adjusted from 4-8 to 4-7. **UPDATED**: The prompt now explicitly states that it will receive input documents in `{project_path}` and the project name is `{project_name}`. It also includes a new mandatory instruction to write a `summary` of the created tasks and call the `summarize` tool. The prompt now states that it will verify "all seven required files" (previously "eight"). **NEW**: The prompt now includes a comprehensive "Path Security Constraints" section, strictly confining file operations to the `{project_path}`. **NEW**: A "HOBBY MODE" section has been added, detailing how the agent should behave (single task, no testing, no CI/CD, no roadmap, simplified output) if the user's request contains "HOBBY". The `description` field format for tasks has been updated, replacing the previous `details` field. A new `tasks.json` schema has been introduced for a flat list of tasks. The "Execution Process" and "Technical Guardrails" sections have been extensively updated to reflect HOBBY mode, path security, and new task/roadmap generation rules.
     *   Architect (REVISED): Its system prompt (`architect_system_prompt`) now dynamically references the active project directory (`{project_dir}`). **UPDATED**: The prompt's description of the core project files and their interdependencies (including the Mermaid flowchart and numbered list) has been updated. `projectRequirements.md` is now explicitly listed as a core file and is positioned as an intermediary document between `projectbrief.md` and `systemPatterns.md`/`techPatterns.md`. The description of `projectbrief.md` is now more focused on its foundational role. The numbering of core files in the prompt has been adjusted (e.g., `systemPatterns.md` is now 3, `techPatterns.md` is 4, `progress.md` is 5). **UPDATED**: The prompt now includes an instruction to ensure the `{project_dir}` exists and create it if necessary before writing new files, specifically mentioning the `create_directory` tool. It also clarifies that `list_files` should be used on the `{project_dir}` directory and that `create_file` should write files under `{project_dir}`. **UPDATED**: The prompt for `projectbrief.md` now instructs the Architect to add "This project is for hobby purposes" if it's a hobby/personal project. The "Summarize" step now explicitly requires the Architect to clarify if the project is a 'hobby' project in its summary.
     *   Requirement Gatherer (REVISED): Its system prompt now includes an explicit instruction to use the `set_project` tool if no project name is provided.
@@ -60,7 +60,7 @@ The original "Memory Bank" concept described a system of structured Markdown fil
 *   **Storage:** Memories are stored in a `BaseStore`.
 *   **Namespace:** Memories are namespaced.
 *   **Tools:**
-    *   Orchestrator (REVISED): Uses direct tools `requirements`, `architect`, `task_manager` (NEW), `coder_new_pr`, `coder_change_request`, `tester`, `code_reviewer` (which invoke sub-graphs/stubs), `memorize` (for memory persistence), `summarize` (now from `common.tools.summarize`), and `get_next_task` (NEW). The `requirements`, `architect`, and `task_manager` tools now update the Orchestrator's state with the `project` object returned by the sub-agent. The `coder_new_pr` and `coder_change_request` tools now return the content of the last message from the sub-agent's result, rather than a summary. **UPDATED**: The `tester` tool now passes the Orchestrator's `project` state to the Tester agent's state, and the Orchestrator's `github_tools` to the Tester agent's graph.
+    *   Orchestrator (REVISED): Uses direct tools `requirements`, `architect`, `task_manager` (NEW), `coder_new_pr`, `coder_change_request`, `tester`, `code_reviewer` (which invoke sub-graphs/stubs), `memorize` (for memory persistence), `summarize` (now from `common.tools.summarize`), and `get_next_task` (NEW). The `requirements`, `architect`, and `task_manager` tools now update the Orchestrator's state with the `project` object returned by the sub-agent. The `coder_new_pr` and `coder_change_request` tools now return the content of the last message from the sub-agent's result, rather than a summary. **UPDATED**: The `tester` tool now passes the Orchestrator's `project` state to the Tester agent's state, and the Orchestrator's `github_tools` to the Tester agent's graph. **UPDATED**: All sub-agent invocation tools (`requirements`, `architect`, `task_manager`, `coder_new_pr`, `coder_change_request`, `tester`, `code_reviewer`) now return a `Command` object that updates the Orchestrator's state with a `ToolMessage` that includes a `status` (`"success"` or `"error"`) and the sub-agent's `summary` or `error` content.
     *   Agents based on `AgentGraph` (like `AgentTemplateGraph`): Can get memory tools from `AgentGraph`.
     *   Requirement Gatherer: Uses `create_memorize_tool` and `human_feedback` tool. Its `summarize` tool is now from `common.tools.summarize`. A new `set_project` tool is available.
     *   Tester: Custom `upsert_memory` tool removed. **UPDATED**: Now includes `common.tools.summarize` and a filtered set of GitHub tools (`set_active_branch`, `create_a_new_branch`, `get_files_from_a_directory`, `create_pull_request`, `create_file`, `update_file`, `read_file`, `delete_file`, `get_latest_pr_workflow_run`). It **no longer includes** `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`.
@@ -85,7 +85,8 @@ AI Nexus employs a few architectural patterns for its agents:
 *   (No changes from PR)
 
 **4.2. `AgentGraph` based Architecture (REVISED - e.g., Orchestrator, Requirement Gatherer, Coder, Task Manager (NEW), AgentTemplateGraph, Tester, Architect)**
-*   (No direct changes to base `AgentGraph` or `AgentConfiguration` structure from this PR, but Orchestrator's implementation using it is heavily revised, and Task Manager is now an example)
+*   **UPDATED**: All `AgentGraph`-based agents now utilize a `prechain` mechanism on their `call_model` functions, incorporating `skip_on_summary_and_tool_errors` to manage workflow execution based on summary presence or consecutive tool errors.
+*   **UPDATED**: Agent states (e.g., `State` dataclasses) now consistently include an `error: str = ""` field to track fatal errors, building upon the new `AgentState` base.
 
 **4.3. Custom `StateGraph` Architecture (e.g., Code Reviewer - NEW)**
 *   (No changes from PR)
@@ -108,7 +109,7 @@ AI Nexus employs a few architectural patterns for its agents:
     *   **UPDATED**: `SubAgentConfig` now includes `stub_messages: MessageWheel = MessageWheel(["I finished the task."])`. Its subclasses (`RequirementsAgentConfig`, `ArchitectAgentConfig`, `TaskManagerAgentConfig`) now default `stub_messages` to specific `model_*_messages` instances. The `coder_new_pr_agent` and `coder_change_request_agent` in `OrchestratorConfiguration` are now initialized with `SubAgentConfig` instances that explicitly set their `stub_messages` to `model_coder_new_pr_messages` and `model_coder_change_request_messages` respectively.
     *   **UPDATED**: A new `TesterAgentConfig` dataclass is introduced, subclassing `SubAgentConfig`, with `use_stub: bool = True` and `config: TesterConfiguration = field(default_factory=TesterConfiguration)`.
     *   As an example of nested configuration, the `ArchitectAgentConfig` contains a nested `config: architect.configuration.Configuration` field, and this nested Architect configuration is what reflects changes like the removal of `use_human_ai` from the Architect's own configuration file. The new `TaskManagerAgentConfig` similarly contains a nested `config: task_manager.configuration.Configuration`.
-*   **State (`src/orchestrator/state.py` - REVISED):** Added `summary: str = ""` field to its `State` dataclass. A new `project: Optional[Project] = None` field has been added to store the active project information.
+*   **State (`src/orchestrator/state.py` - REVISED):** Added `summary: str = ""` field to its `State` dataclass. A new `project: Optional[Project] = None` field has been added to store the active project information. **UPDATED**: A new `error: str = ""` field has been added to track fatal errors.
 *   **Graph (`src/orchestrator/graph.py` - REVISED):**
     *   The graph structure has been refactored to use a `ToolNode` for invoking all agent-specific tasks and other utilities.
     *   The `_create_orchestrate` node is renamed to `_create_orchestrator`.
@@ -116,8 +117,9 @@ AI Nexus employs a few architectural patterns for its agents:
     *   The LLM is now bound with a new set of tools (see Orchestrator Tools under Key Concepts or Tools section below). This now includes a `task_manager` tool. The `summarize` tool is now imported from `common.tools`. **UPDATED**: The `get_next_task` tool has been added to the Orchestrator's toolset.
     *   **UPDATED**: All sub-agent stub initializations (e.g., `RequirementsGathererStub`, `ArchitectStub`, `TaskManagerStub`, `CoderNewPRStub`, `CoderChangeRequestStub`, `TesterStub`, `CodeReviewerStub`) now pass the `stub_messages` from their respective agent configurations (`self._agent_config.<agent_name>_agent.stub_messages`) to the stub constructors.
     *   **UPDATED**: The `maybe_mock_github` function, used to get GitHub tools, now receives `base_branch=self._agent_config.github_base_branch`, allowing the Orchestrator to use a configurable base branch for GitHub interactions. The `TesterAgentGraph` is now initialized with `github_tools`.
-    *   Conditional logic (`_create_orchestrate_condition`) routes from the main `orchestrator` (model call) node to the `ToolNode` if tool calls are present, or to `END` if a `summary` is available in the state, otherwise back to the `orchestrator` node.
+    *   Conditional logic (`_create_orchestrate_condition`) routes from the main `orchestrator` (model call) node to the `ToolNode` if tool calls are present, or to `END` if a `summary` or `error` is available in the state, otherwise back to the `orchestrator` node. **UPDATED**: The condition for routing to `ToolNode` now explicitly checks if the last message is an `AIMessage` with tool calls.
     *   Sub-agent graphs (or their stubs, including for Task Manager) are passed to tool factory functions which create the tools bound to the Orchestrator's LLM.
+    *   **UPDATED**: The `orchestrator` function (model call) is now decorated with `@prechain(skip_on_summary_and_tool_errors())`.
 *   **Stubs (`src/orchestrator/stubs/__init__.py` - REVISED):**
     *   **UPDATED**: The `MessageWheel` class (for cycling through predefined messages) is now defined at the top level of this module.
     *   **UPDATED**: The `StubGraph` base class now has a `_stub_messages` attribute, initialized via its constructor, and its `run_fn` now uses `self._stub_messages.next()` to retrieve the next message. This ensures each stub instance maintains its own message sequence.
@@ -133,28 +135,29 @@ AI Nexus employs a few architectural patterns for its agents:
     *   The `Delegate` tool has been removed.
     *   The `store_memory` tool has been effectively replaced by the `memorize` tool. Its `origin` parameter's type hint is updated to include `code_reviewer`.
     *   New tool factory functions are introduced:
-        *   `create_requirements_tool(agent_config, requirements_graph)`: Creates the `requirements` tool. This tool now returns a `Command` to update the Orchestrator's state with the `project` information from the sub-agent's result.
-        *   `create_architect_tool(agent_config, architect_graph)`: Creates the `architect` tool. This tool now returns a `Command` to update the Orchestrator's state with the `project` information from the sub-agent's result.
-        *   `create_task_manager_tool(agent_config, task_manager_graph)` (NEW): Creates the `task_manager` tool. This tool now returns a `Command` to update the Orchestrator's state with the `project` information from the sub-agent's result.
-        *   `create_coder_new_pr_tool(agent_config, coder_new_pr_graph)`: Creates the `coder_new_pr` tool.
-        *   `create_coder_change_request_tool(agent_config, coder_change_request_graph)`: Creates the `coder_change_request` tool.
-        *   `create_tester_tool(agent_config, tester_graph)`: Creates the `tester` tool. **UPDATED**: This tool now passes the Orchestrator's `project` state to the Tester agent's state, and the Orchestrator's `github_tools` to the Tester agent's graph.
-        *   `create_code_reviewer_tool(agent_config, code_reviewer_graph)`: Creates the `code_reviewer` tool.
+        *   `create_requirements_tool(agent_config, requirements_graph)`: Creates the `requirements` tool. This tool now returns a `Command` to update the Orchestrator's state with the `project` information from the sub-agent's result. **UPDATED**: The `ToolMessage` returned now includes a `status` field (`"success"` or `"error"`) and its `content` can be the sub-agent's `summary` or `error` message.
+        *   `create_architect_tool(agent_config, architect_graph)`: Creates the `architect` tool. This tool now returns a `Command` to update the Orchestrator's state with the `project` information from the sub-agent's result. **UPDATED**: The `ToolMessage` returned now includes a `status` field (`"success"` or `"error"`) and its `content` can be the sub-agent's `summary` or `error` message.
+        *   `create_task_manager_tool(agent_config, task_manager_graph)` (NEW): Creates the `task_manager` tool. This tool now returns a `Command` to update the Orchestrator's state with the `project` information from the sub-agent's result. **UPDATED**: The `ToolMessage` returned now includes a `status` field (`"success"` or `"error"`) and its `content` can be the sub-agent's `summary` or `error` message.
+        *   `create_coder_new_pr_tool(agent_config, coder_new_pr_graph)`: Creates the `coder_new_pr` tool. **UPDATED**: This tool now returns a `Command` with a `ToolMessage` including a `status` field (`"success"` or `"error"`) and its `content` can be the last message from the sub-agent's result or the sub-agent's `error` message.
+        *   `create_coder_change_request_tool(agent_config, coder_change_request_graph)`: Creates the `coder_change_request` tool. **UPDATED**: This tool now returns a `Command` with a `ToolMessage` including a `status` field (`"success"` or `"error"`) and its `content` can be the last message from the sub-agent's result or the sub-agent's `error` message.
+        *   `create_tester_tool(agent_config, tester_graph)`: Creates the `tester` tool. **UPDATED**: This tool now passes the Orchestrator's `project` state to the Tester agent's state, and the Orchestrator's `github_tools` to the Tester agent's graph. **UPDATED**: The `ToolMessage` returned now includes a `status` field (`"success"` or `"error"`) and its `content` can be the sub-agent's `summary` or `error` message.
+        *   `create_code_reviewer_tool(agent_config, code_reviewer_graph)`: Creates the `code_reviewer` tool. **UPDATED**: The `ToolMessage` returned now includes a `status` field (`"success"` or `"error"`) and its `content` can be the sub-agent's `summary` or `error` message.
     *   These tools take `content` (and other injected args like `tool_call_id`, `state`, `config`), invoke the respective sub-graph (or stub), and return the `summary` from the sub-graph's result as the tool's output.
     *   **UPDATED**: The `coder_new_pr` and `coder_change_request` tools now return `result["messages"][-1].content` (the content of the last message) instead of `result["summary"]`.
     *   The `summarize` tool implementation has been removed from this file, as it is now centralized in `src/common/tools/summarize.py`.
     *   **NEW**: `get_next_task` tool has been added, which invokes `common.tools.read_task_planning`.
 *   **Prompts (`src/orchestrator/prompts.py` and `src/orchestrator/memory/` - REVISED):**
     *   `src/orchestrator/prompts.py`: The static `ORCHESTRATOR_SYSTEM_PROMPT` string definition has been removed. The `get_prompt()` function continues to load prompt content from markdown files.
-    *   `src/orchestrator/memory/absolute.md`, `process.md`, `project_states.md`, `team.md`: These markdown files, which constitute the Orchestrator's system prompt, have been significantly updated to reflect the new toolset (direct agent invocation tools including `task_manager`, `memorize`, `summarize`, `get_next_task`) and the refined operational workflow (e.g., explicit instruction to use the `summarize` tool when no tasks are pending, and using `get_next_task` to determine the next task). `project_states.md` now includes a "Create tasks" step and an updated Mermaid flowchart that includes a "Get task" step. `team.md` now includes a section for the "Task Manager" agent and clarifies that the Coder agent uses tasks from the `task_manager` and that the Orchestrator should use `get_next_task` to retrieve task content for the Coder.
+    *   `src/orchestrator/memory/absolute.md`, `process.md`, `project_states.md`, `team.md`: These markdown files, which constitute the Orchestrator's system prompt, have been significantly updated to reflect the new toolset (direct agent invocation tools including `task_manager`, `memorize`, `summarize`, `get_next_task`) and the refined operational workflow (e.g., explicit instruction to use the `summarize` tool when no tasks are pending, and using `get_next_task` to determine the next task). `project_states.md` now includes a "Create tasks" step and an updated Mermaid flowchart that includes a "Get task" step. `team.md` now includes a section for the "Task Manager" agent and clarifies that the Coder agent uses tasks from the `task_manager` and that the Orchestrator should use `get_next_task` to retrieve task content for the Coder. **UPDATED**: The instruction to call the `summarize` tool when no tasks are pending has been rephrased to emphasize it is a conditional action ("IF no tasks are pending").
 
 #### 5.2. Architect (`src/architect/`) (REWORKED, REVISED)
 *   **Configuration (`src/architect/configuration.py` - REVISED):**
     *   The `use_human_ai: bool = False` field has been removed.
-*   **State (`src/architect/state.py` - REVISED):** Added `summary: str = ""` field. A new `project: Project` field has been added to store the active project information.
+*   **State (`src/architect/state.py` - REVISED):** Added `summary: str = ""` field. A new `project: Project` field has been added to store the active project information. **UPDATED**: A new `error: str = ""` field has been added to track fatal errors.
 *   **Graph (`src/architect/graph.py` - REVISED):**
     *   The Architect's graph now includes `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`, and a `summarize` tool (now imported from `common.tools`) in its set of available tools.
     *   The `call_model` function now formats the system prompt with `project_dir=state.project.path`. It also prints formatted messages using `common.utils.format_message`.
+    *   **UPDATED**: The `_create_call_model` function is now decorated with `@prechain(skip_on_summary_and_tool_errors())`.
 *   **Tools (`src/architect/tools.py` - REVISED):**
     *   The `summarize` tool implementation has been removed from this file, as it is now centralized in `src/common/tools/summarize.py`.
     *   The `read_file`, `create_file`, and `list_files` tools have been removed from this file, as they are now centralized in `src/common/tools/`.
@@ -164,22 +167,23 @@ AI Nexus employs a few architectural patterns for its agents:
 #### 5.3. Coder (`src/coder/`)
 *   **State (`src/coder/state.py` - REVISED):**
     *   Changed from `TypedDict` to `@dataclass(kw_only=True)`.
-    *   Added `summary: str = ""` field.
-*   **Graph (`src/coder/graph.py` - UPDATED):** Accesses state messages via `state.messages` instead of `state["messages"]` due to state being a dataclass. **UPDATED**: The `coder_new_pr_config` and `coder_change_request_config` now include the `get_latest_pr_workflow_run` tool in their `allowed_tools` list.
+    *   Added `summary: str = ""` field. **UPDATED**: A new `error: str = ""` field has been added to track fatal errors.
+*   **Graph (`src/coder/graph.py` - UPDATED):** Accesses state messages via `state.messages` instead of `state["messages"]` due to state being a dataclass. **UPDATED**: The `coder_new_pr_config` and `coder_change_request_config` now include the `get_latest_pr_workflow_run` tool in their `allowed_tools` list. **UPDATED**: The `CallModel` class has been refactored into a function `_create_call_model`, which is now decorated with `@prechain(skip_on_summary_and_tool_errors())`.
 *   **Prompts (`src/coder/prompts.py` - UPDATED):** The `NEW_PR_SYSTEM_PROMPT` has been updated to refer to the "base branch" instead of "main" for repository interactions. **UPDATED**: The `NEW_PR_SYSTEM_PROMPT` now includes an explicit instruction to use the actual branch name returned by the `get_branch_name` tool, as it may differ from the requested branch name.
 
 #### 5.4. Code Reviewer (`src/code_reviewer/`) (REVISED)
-*   **State (`src/code_reviewer/state.py` - REVISED):** Added `summary: str = ""` field.
+*   **State (`src/code_reviewer/state.py` - REVISED):** Added `summary: str = ""` field. **UPDATED**: A new `error: str = ""` field has been added to track fatal errors.
 *   **Tool Naming:** Referred to as `code_reviewer` in Orchestrator's tools and stubs.
 
 #### 5.5. Tester (`src/tester/`) (REWORKED)
-*   **State (`src/tester/state.py` - REVISED):** Added `summary: str = ""` field. **UPDATED**: A new `project: Project` field has been added to store the active project information.
+*   **State (`src/tester/state.py` - REVISED):** Added `summary: str = ""` field. **UPDATED**: A new `project: Project` field has been added to store the active project information. **UPDATED**: A new `error: str = ""` field has been added to track fatal errors.
 *   **Graph (`src/tester/graph.py` - REVISED):**
     *   The internal `_create_call_model` function, responsible for preparing and invoking the LLM, now explicitly accepts the agent's `Configuration` (as `agent_config`).
     *   The system prompt used in `_create_call_model` is now directly sourced from `agent_config.system_prompt`, improving how the configured prompt is passed and utilized within the graph's execution logic. **UPDATED**: The `call_model` function now formats the system prompt with `project_path=state.project.path`.
     *   **UPDATED**: The `__init__` method now accepts `github_tools: List[Tool]` and passes it to the instance. It also includes `common.tools.summarize` and a filtered set of GitHub tools (`set_active_branch`, `create_a_new_branch`, `get_files_from_a_directory`, `create_pull_request`, `create_file`, `update_file`, `read_file`, `delete_file`, `get_latest_pr_workflow_run`) in the agent's set of available tools. It **no longer includes** `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, and `common.tools.read_file`.
     *   **NEW**: `get_tester_github_tools()` and `filter_github_tools()` helper functions are added to manage the specific GitHub tools required by the Tester agent.
     *   **UPDATED**: The direct export of `graph = TesterAgentGraph().compiled_graph` has been removed from this file.
+    *   **UPDATED**: The `_create_call_model` function is now decorated with `@prechain(skip_on_summary_and_tool_errors())`.
 *   **`src/tester/lg_server.py` (NEW FILE):** This new file is responsible for setting up the Tester agent's graph for the LangGraph server. It initializes GitHub tools using `maybe_mock_github` and `get_github_tools`, then creates and compiles the `TesterAgentGraph` instance, passing the initialized `github_tools`. It exports the compiled graph as `graph`.
 *   **`src/tester/__init__.py` (UPDATED):** The `graph` import path has been updated from `tester.graph` to `tester.lg_server`.
 *   **Prompts (`src/tester/prompts.py` - REVISED):**
@@ -199,8 +203,8 @@ AI Nexus employs a few architectural patterns for its agents:
         *   The "Workflow Checklist" and "Key Rules" are updated to reflect these new, stricter guidelines, emphasizing acceptance criteria, user workflows, and the absolute prohibition on creating application source code. It also adds a final instruction to reply with the PR number and branch name upon completion.
 
 #### 5.6. Requirement Gatherer (`src/requirement_gatherer/`) (REVISED)
-*   **State (`src/requirement_gatherer/state.py` - REVISED):** Added `summary: str = ""` field. A new `project: Optional[Project] = None` field has been added to store the active project information.
-*   **Graph (`src/requirement_gatherer/graph.py` - REVISED):** The conditional logic in `_create_gather_requirements` for routing to the tool node is updated to `if state.messages and state.messages[-1].tool_calls:`. The `summarize` tool is now imported from `common.tools`. The `set_project` tool has been added to the agent's toolset.
+*   **State (`src/requirement_gatherer/state.py` - REVISED):** Added `summary: str = ""` field. A new `project: Optional[Project] = None` field has been added to store the active project information. **UPDATED**: A new `error: str = ""` field has been added to track fatal errors.
+*   **Graph (`src/requirement_gatherer/graph.py` - REVISED):** The conditional logic in `_create_gather_requirements` for routing to the tool node is updated to `if state.messages and state.messages[-1].tool_calls:`. The `summarize` tool is now imported from `common.tools`. The `set_project` tool has been added to the agent's toolset. **UPDATED**: The `_create_call_model` function is now decorated with `@prechain(skip_on_summary_and_tool_errors())`. **UPDATED**: The condition for routing to `ToolNode` now explicitly checks if the last message is an `AIMessage` with tool calls. The condition for `END` now includes `state.error`.
 *   **Tools (`src/requirement_gatherer/tools.py` - REVISED):** The `summarize` tool implementation has been removed from this file, as it is now centralized in `src/common/tools/summarize.py`. A new `set_project` tool is introduced to set the project name and initialize the `Project` object in the state.
 *   **Prompts (`src/requirement_gatherer/prompts.py` - REVISED):** The prompt has been updated to include a new step `0. **Project name**` which instructs the agent to ask for the project name and use the `set_project` tool if it's not provided.
 
@@ -216,7 +220,7 @@ AI Nexus employs a few architectural patterns for its agents:
     *   Added `use_human_ai: bool = False` (default).
     *   `task_manager_system_prompt: str` field, defaults to `prompts.SYSTEM_PROMPT` from `src/task_manager/prompts.py`.
     *   `model: str` field, defaults to `TASK_MANAGER_MODEL`.
-*   **State (`src/task_manager/state.py` - REVISED):** Added `summary: str = ""` field. (Used by `TaskManagerStub` and consistent with other agents). A new `project: Project` field has been added to store the active project information.
+*   **State (`src/task_manager/state.py` - REVISED):** Added `summary: str = ""` field. (Used by `TaskManagerStub` and consistent with other agents). A new `project: Project` field has been added to store the active project information. **UPDATED**: A new `error: str = ""` field has been added to track fatal errors.
 *   **Tools:** Uses `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`. The Orchestrator uses a `task_manager` tool to invoke this agent. Now also uses the `summarize` tool (from `common.tools.summarize`).
 *   **Prompts (`src/task_manager/prompts.py` - UPDATED):** Contains `SYSTEM_PROMPT` used by the agent. This prompt has been significantly updated to include:
     *   **NEW**: "Path Security Constraints" section, strictly confining file operations to the `{project_path}`.
@@ -238,11 +242,11 @@ AI Nexus employs a few architectural patterns for its agents:
         *   `CI/CD Task Creation Guidelines`: Instructions for creating CI/CD tasks, their sequencing, and evolution.
         *   `Details Field Format` section removed, replaced by `Description Field Format`.
         *   `Test Creation Guidelines`: Guidance on specific test cases, edge cases, positive/negative scenarios, mocking, and testing levels. **UPDATED**: References to `techContext.md` changed to `techPatterns.md`.
-        *   `Functional Deliverable Guidelines`: Ensures each task produces a buildable, runnable deliverable, from "hello world" for initialization to integrated features. **UPDATED**: Now distinguishes between "Normal Mode Deliverable Requirements" and "HOBBY Mode Deliverable Requirements".
+        *   `Functional Deliverable Guidelines`: Ensures each task produces a buildable, runnable deliverable, from "hello world" for initialization to integrated features. **UPDATED**: Now distinguishes between "Normal Mode Deliverable Requirements" and "HOBBY Mode Deliverable Requirements`.
         *   `GitHub Actions CI Configuration Guidelines`: Details for configuring CI workflows. **UPDATED**: Now describes workflow configuration requirements using natural language specifications (never actual YAML code).
     *   **Updated Technical Guardrails:** Reinforces that tasks must be self-contained, no external file references, mandatory test implementation, required CI setup regardless of input, CI/CD setup after repo init/basic setup, every task must result in a buildable/runnable deliverable, and task sequencing must follow logical order. **UPDATED**: Guardrails implicitly updated to align with the removal of `securityContext.md` and the renaming of `featuresContext.md` to `codingContext.md`. **NEW**: Includes strict security rules for path access, explicit instructions to never include `{project_path}`, `{project_name}`, or variables in task details, and to never include actual code in task definitions. Distinguishes guardrails for Normal vs. HOBBY mode.
     *   The prompt now dynamically references the active project name (`{project_name}`) and path (`{project_path}`). **UPDATED**: The prompt now explicitly states that it will receive input documents in `{project_path}` and the project name is `{project_name}`. It also includes a new mandatory instruction to write a `summary` of the created tasks and call the `summarize` tool. The prompt now states that it will verify "all seven required files" (previously "eight").
-*   **Graph (`src/task_manager/graph.py` - UPDATED):** The `call_model` function now includes logic to dynamically determine `project_name` and `project_path` from `state.project` (handling both dict and Project object types), with hardcoded defaults for `use_stub=True`. These values are then used to format the system prompt.
+*   **Graph (`src/task_manager/graph.py` - UPDATED):** The `call_model` function now includes logic to dynamically determine `project_name` and `project_path` from `state.project` (handling both dict and Project object types), with hardcoded defaults for `use_stub=True`. These values are then used to format the system prompt. **UPDATED**: The `_create_call_model` function is now decorated with `@prechain(skip_on_summary_and_tool_errors())`.
 
 ## 6. Testing Framework (`tests/`) (UPDATED)
 
@@ -251,6 +255,10 @@ AI Nexus employs a few architectural patterns for its agents:
     *   A new `FIRST_MESSAGE` constant has been added, providing a detailed initial project description for the agent.
     *   The input content for the human message in the dataset examples now uses `FIRST_MESSAGE`.
     *   The expected output content has been updated to `"Requirements are confirmed"`.
+    *   **UPDATED**: Minor formatting change in the `outputs` dictionary.
+*   **`tests/integration_tests/test_architect_agent.py` (UPDATED):**
+    *   Tests updated to reflect the Orchestrator's new tool usage (e.g., `memorize` instead of `store_memory`, and direct agent tool calls like `code_reviewer` instead of generic `Delegate`).
+    *   **UPDATED**: The graph compilation now directly uses `ArchitectGraph(checkpointer=memory_saver, store=memory_store).compiled_graph` instead of `graph_builder.compile(...)`.
 *   **`tests/integration_tests/test_orchestrator.py` (UPDATED):**
     *   Tests updated to reflect the Orchestrator's new tool usage (e.g., `memorize` instead of `store_memory`, and direct agent tool calls like `code_reviewer` instead of generic `Delegate`).
 *   **`tests/integration_tests/test_requirement_gatherer.py` (UPDATED):**
@@ -279,6 +287,8 @@ AI Nexus employs a few architectural patterns for its agents:
 *   **`tests/scenarios/__init__.py` (NEW):** Defines `BASE_BRANCHES` list for centralized management of base branch names used in testing scenarios.
 *   **`tests/testing/__init__.py` (UPDATED):**
     *   A new helper function `create_async_graph_caller_for_gatherer` has been added. This function is specifically designed for the requirement gatherer evaluation, expecting the final output to be a `ToolMessage` with the name "summarize" and returning its content.
+    *   **UPDATED**: Minor formatting changes.
+*   **NEW**: `tests/unit_tests/common/test_chain.py`: New unit tests added to verify the functionality of `common.chain.prechain` and `common.chain.skip_on_summary_and_tool_errors`, specifically testing error propagation and summary-based skipping in agent workflows.
 *   (Other test files as previously described, or minor updates not impacting core logic)
 
 ## 7. Development Workflow & Tools (from `README.md` & `project_memories/PRD.md`) (UPDATED)
@@ -307,7 +317,8 @@ AI Nexus employs a few architectural patterns for its agents:
 *   **LangSmith Tracing (NEW aspect for demo):**
     *   The demo script (`src/demo/orchestrate.py`) now integrates LangSmith tracing, providing a trace URL for each run. This includes user identification and run metadata. **UPDATED**: Scenario runs (e.g., `tests/scenarios/fibonacci/run.py`) now also explicitly set `run_name` and `run_id` in `RunnableConfig` and use `wait_for_all_tracers()` for complete tracing.
 *   **New/Updated Utility Files:**
-    *   `src/common/state.py` (NEW): Defines the `Project` dataclass for managing project ID, name, and path.
+    *   `src/common/chain.py` (NEW): Defines `prechain` decorator and `skip_on_summary_and_tool_errors` function for advanced control flow and error handling in agent chains.
+    *   `src/common/state.py` (NEW): Defines the `Project` dataclass for managing project ID, name, and path. **UPDATED**: Now also defines `AgentState` as a base dataclass for all agent states, including `messages`, `summary`, and `error` fields.
     *   `src/common/utils/__init__.py` (UPDATED): Includes a new `format_message` utility function for printing actor-labeled messages.
     *   **UPDATED**: `src/common/logging.py` (NEW): Provides a centralized `get_logger` utility for consistent log formatting and dynamic log level control via the `LOG_LEVEL` environment variable.
     *   **NEW**: `src/common/tools/read_task_planning.py`: New file defining the `read_task_planning` tool.
@@ -365,27 +376,28 @@ ai-nexus/
 │   ├── architect/
 │   │   ├── __init__.py
 │   │   ├── configuration.py      # UPDATED: Subclasses common.configuration.AgentConfiguration, defines architect_system_prompt, use_human_ai removed
-│   │   ├── graph.py              # UPDATED: Added common.tools.summarize, common.tools.create_directory, common.tools.create_file, common.tools.list_files, common.tools.read_file to the agent's toolset; call_model uses state.project.path and prints formatted messages.
+│   │   ├── graph.py              # UPDATED: Added common.tools.summarize, common.tools.create_directory, common.tools.create_file, common.tools.list_files, common.tools.read_file to the agent's toolset; call_model uses state.project.path and prints formatted messages. UPDATED: `_create_call_model` is now decorated with `@prechain(skip_on_summary_and_tool_errors())`.
 │   │   ├── prompts.py            # UPDATED: System prompt includes new "Summarize" step and use of summarize tool; uses {project_dir}. UPDATED: Prompt's description of core files and their flow (Mermaid, numbered list) updated to include projectRequirements.md as an intermediary and adjusted numbering. UPDATED: Prompt now includes instruction to ensure {project_dir} exists and create it if necessary, using create_directory, and clarifies list_files and create_file usage. UPDATED: Prompt for projectbrief.md now instructs to add hobby sentence; summarize step requires clarifying if hobby project.
-│   │   ├── state.py              # UPDATED: summary field added; project field added.
+│   │   ├── state.py              # UPDATED: summary field added; project field added. UPDATED: `error` field added.
 │   │   └── tools.py              # UPDATED: Removed 'summarize', 'read_file', 'create_file', 'list_files' tools (now in common)
 │   ├── code_reviewer/
 │   │   ├── __init__.py
 │   │   ├── graph.py
 │   │   ├── lg_server.py
 │   │   ├── prompts.py
-│   │   ├── state.py              # UPDATED: summary field added
+│   │   ├── state.py              # UPDATED: summary field added. UPDATED: `error` field added.
 │   │   └── system_prompt.md
 │   ├── coder/
 │   │   ├── __init__.py
-│   │   ├── graph.py              # UPDATED: Minor state access change (state.messages). UPDATED: `coder_new_pr_config` and `coder_change_request_config` now include `get_latest_pr_workflow_run` tool.
+│   │   ├── graph.py              # UPDATED: Minor state access change (state.messages). UPDATED: `coder_new_pr_config` and `coder_change_request_config` now include `get_latest_pr_workflow_run` tool. UPDATED: `CallModel` class removed, `_create_call_model` function now decorated with `@prechain(skip_on_summary_and_tool_errors())`.
 │   │   ├── lg_server.py
 │   │   ├── mocks.py
 │   │   ├── prompts.py            # UPDATED: NEW_PR_SYSTEM_PROMPT updated to use "base branch". UPDATED: NEW_PR_SYSTEM_PROMPT now includes instruction to use actual branch name from `get_branch_name` tool.
-│   │   ├── state.py              # UPDATED: Now a dataclass, summary field added
+│   │   ├── state.py              # UPDATED: Now a dataclass, summary field added. UPDATED: `error` field added.
 │   │   ├── tools.py
 │   │   └── README.md
 │   ├── common/
+│   │   ├── chain.py              # NEW: Defines prechain and skip_on_summary_and_tool_errors for control flow.
 │   │   ├── components/
 │   │   │   ├── github_mocks.py   # UPDATED: `maybe_mock_github` function now accepts an optional `base_branch` argument. Added mocks for `create_issue_comment` and `get_latest_pr_workflow_run`. Updated existing mocks to return empty string instead of raising NotImplementedError.
 │   │   │   ├── github_tools.py   # UPDATED: Added `create_issue_comment` and `get_latest_pr_workflow_run` tools. Modified `_run` methods of `CreatePullRequestReviewComment`, `GetPullRequestDiff`, `GetPullRequestHeadBranch` to call their `_arun` counterparts.
@@ -393,7 +405,7 @@ ai-nexus/
 │   │   ├── configuration.py
 │   │   ├── graph.py
 │   │   ├── logging.py            # NEW: Logging utilities
-│   │   ├── state.py              # NEW: Defines Project dataclass
+│   │   ├── state.py              # NEW: Defines Project dataclass. UPDATED: Now also defines `AgentState` base dataclass.
 │   │   ├── tools/                # ADDED
 │   │   │   ├── __init__.py       # ADDED: Imports create_directory, create_file, list_files, read_file, summarize, read_task_planning
 │   │   │   ├── create_directory.py # NEW: Centralized create_directory tool
@@ -410,50 +422,50 @@ ai-nexus/
 │   ├── orchestrator/
 │   │   ├── __init__.py
 │   │   ├── configuration.py      # UPDATED: Subclasses AgentConfiguration. Defines OrchestratorConfiguration including fields for sub-agent configs (e.g., ArchitectAgentConfig, TaskManagerAgentConfig (NEW), TesterAgentConfig (NEW), SubAgentConfig for coders, reviewer). SubAgentConfig and its subclasses now include `stub_messages`. Coder agent configs now default to specific `MessageWheel` instances. Added `github_base_branch` field.
-│   │   ├── graph.py              # UPDATED: Major refactor to use ToolNode, direct agent tool calls (requirements, architect, task_manager (NEW), coder_new_pr, coder_change_request, tester, code_reviewer), memorize, and common.tools.summarize. Removed Delegate pattern. Sub-agent stubs now initialized with `stub_messages`. `maybe_mock_github` now called with `base_branch` from agent config. `TesterAgentGraph` is now initialized with `github_tools`. UPDATED: Added `tools.get_next_task` to the Orchestrator's toolset.
+│   │   ├── graph.py              # UPDATED: Major refactor to use ToolNode, direct agent tool calls (requirements, architect, task_manager (NEW), coder_new_pr, coder_change_request, tester, code_reviewer), memorize, and common.tools.summarize. Removed Delegate pattern. Sub-agent stubs now initialized with `stub_messages`. `maybe_mock_github` now called with `base_branch` from agent config. `TesterAgentGraph` is now initialized with `github_tools`. UPDATED: Added `tools.get_next_task` to the Orchestrator's toolset. UPDATED: `_create_orchestrator` is now decorated with `@prechain(skip_on_summary_and_tool_errors())`. `_create_orchestrate_condition` now checks for `AIMessage` and `state.error`.
 │   │   ├── memory/
-│   │   │   ├── absolute.md       # UPDATED: Reflects new tools and workflow
-│   │   │   ├── process.md        # UPDATED: Reflects new tools and workflow, includes instruction to use `get_next_task`.
+│   │   │   ├── absolute.md       # UPDATED: Reflects new tools and workflow. UPDATED: `summarize` tool call instruction changed to "IF no tasks are pending".
+│   │   │   ├── process.md        # UPDATED: Reflects new tools and workflow, includes instruction to use `get_next_task`. UPDATED: `summarize` tool call instruction changed to "IF nothing is pending".
 │   │   │   ├── project_states.md # UPDATED: Reflects new tools, workflow (incl. task creation, pick a task), includes Mermaid diagram with "Get task" step.
 │   │   │   └── team.md           # UPDATED: Reflects new tools (direct calls, memorize, summarize, get_next_task), includes Task Manager agent, clarifies Coder's input from Task Manager and Orchestrator's use of `get_next_task`.
 │   │   ├── prompts.py            # UPDATED: Static ORCHESTRATOR_SYSTEM_PROMPT string removed, get_prompt() loads from memory files.
-│   │   ├── state.py              # UPDATED: summary field added; project field added.
+│   │   ├── state.py              # UPDATED: summary field added; project field added. UPDATED: `error` field added.
 │   │   ├── stubs/
 │   │   │   └── __init__.py       # UPDATED: StubGraph base class modified (returns summary, END edge, uses `_stub_messages`). MessageWheel class moved to top-level. All specific *Stub classes now accept and pass `stub_messages` to super(). Predefined `model_*_messages` instances added. RequirementsGathererStub, ArchitectStub, CoderNewPRStub, CoderChangeRequestStub updated. New TesterStub, CodeReviewerStub, TaskManagerStub (NEW) classes. Old simple stub functions removed. Imports TaskManagerState. RequirementsGathererStub now returns project_name.
-│   │   ├── tools.py              # UPDATED: Delegate tool removed. store_memory effectively replaced by memorize. New tool factories (create_requirements_tool, etc.) for direct agent invocation, including create_task_manager_tool (NEW). `coder_new_pr` and `coder_change_request` tools now return `result["messages"][-1].content`. Removed 'summarize' tool (now in common). Imports TaskManagerGraph, TaskManagerState. Requirements, Architect, and Task Manager tools now update the project state. Tester tool now passes project state and github_tools. NEW: Added `get_next_task` tool.
+│   │   ├── tools.py              # UPDATED: Delegate tool removed. store_memory effectively replaced by memorize. New tool factories (create_requirements_tool, etc.) for direct agent invocation, including create_task_manager_tool (NEW). `coder_new_pr` and `coder_change_request` tools now return `result["messages"][-1].content`. Removed 'summarize' tool (now in common). Imports TaskManagerGraph, TaskManagerState. Requirements, Architect, and Task Manager tools now update the project state. Tester tool now passes project state and github_tools. NEW: Added `get_next_task` tool. UPDATED: All sub-agent invocation tools now return `Command` with `ToolMessage` including `status` and `error` content.
 │   │   └── utils.py              # ADDED: Contains utility functions like split_model_and_provider.
 │   ├── requirement_gatherer/
 │   │   ├── __init__.py
 │   │   ├── configuration.py
-│   │   ├── graph.py              # UPDATED: Renamed to RequirementsGraph, uses AgentConfiguration, new AgentGraph init; helpers receive agent_config; memorize tool now created via create_memorize_tool(self._agent_config); minor conditional logic update in _create_gather_requirements; uses common.tools.summarize. Added set_project tool.
+│   │   ├── graph.py              # UPDATED: Renamed to RequirementsGraph, uses AgentConfiguration, new AgentGraph init; helpers receive agent_config; memorize tool now created via create_memorize_tool(self._agent_config); minor conditional logic update in _create_gather_requirements; uses common.tools.summarize. Added set_project tool. UPDATED: `_create_call_model` is now decorated with `@prechain(skip_on_summary_and_tool_errors())`. `_create_gather_requirements` now checks for `AIMessage` and `state.error`.
 │   │   ├── prompts.py            # UPDATED: Prompt includes instruction for set_project tool.
-│   │   ├── state.py              # UPDATED: summary field added; project field added.
+│   │   ├── state.py              # UPDATED: summary field added; project field added. UPDATED: `error` field added.
 │   │   └── tools.py              # UPDATED: Removed 'summarize' tool (now in common). Added set_project tool.
 │   ├── task_manager/
 │   │   ├── configuration.py      # UPDATED: Added use_stub, use_human_ai fields; uses prompts.SYSTEM_PROMPT.
-│   │   ├── graph.py              # UPDATED: call_model uses project_name and project_path in prompt and prints formatted messages. UPDATED: Added common.tools.summarize, common.tools.create_directory, common.tools.create_file, common.tools.list_files, common.tools.read_file to the agent's toolset. UPDATED: `call_model` now handles `use_stub` for project name/path and extracts from `state.project`.
+│   │   ├── graph.py              # UPDATED: call_model uses project_name and project_path in prompt and prints formatted messages. UPDATED: Added common.tools.summarize, common.tools.create_directory, common.tools.create_file, common.tools.list_files, common.tools.read_file to the agent's toolset. UPDATED: `call_model` now handles `use_stub` for project name/path and extracts from `state.project`. UPDATED: `_create_call_model` is now decorated with `@prechain(skip_on_summary_and_tool_errors())`.
 │   │   ├── prompts.py            # UPDATED: System prompt significantly updated with stricter task splitting, mandatory testing/CI/CD requirements, expanded task metadata, and reinforced roadmap/sequencing rules. Uses {project_name} and {project_path}. UPDATED: Prompt's list of required files, file descriptions, task metadata schema, and context extraction guidelines updated to reflect techContext.md -> techPatterns.md, featuresContext.md -> codingContext.md, and removal of securityContext.md. UPDATED: Prompt now explicitly states input document location and project name, and includes a mandatory instruction to write a summary and call the summarize tool. The prompt now states it will verify "all seven required files". NEW: Added "Path Security Constraints" and "HOBBY MODE" sections. Updated `description` field format and introduced `tasks.json` schema. Updated "Execution Process" and "Technical Guardrails" sections for HOBBY mode and path security.
-│   │   └── state.py              # UPDATED: summary field added; project field added.
+│   │   └── state.py              # UPDATED: summary field added; project field added. UPDATED: `error` field added.
 │   └── tester/
 │       ├── __init__.py           # UPDATED: `graph` import changed from `tester.graph` to `tester.lg_server`.
 │       ├── configuration.py
 │       ├── deprecated/
 │       │   ├── deprecated-test-agent-system-prompt.md
 │       │   └── test-agent-analyze-requirements-workflow-stage.md
-│       ├── graph.py              # UPDATED: `TesterAgentGraph` constructor now accepts `github_tools`. `create_builder` now includes `filtered_github_tools` and removes `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`. New helper functions `get_tester_github_tools` and `filter_github_tools` added. `call_model` uses project_path in prompt. Direct `graph` export removed.
+│       ├── graph.py              # UPDATED: `TesterAgentGraph` constructor now accepts `github_tools`. `create_builder` now includes `filtered_github_tools` and removes `common.tools.create_directory`, `common.tools.create_file`, `common.tools.list_files`, `common.tools.read_file`. New helper functions `get_tester_github_tools` and `filter_github_tools` added. `call_model` uses project_path in prompt. Direct `graph` export removed. UPDATED: `_create_call_model` is now decorated with `@prechain(skip_on_summary_and_tool_errors())`.
 │       ├── lg_server.py          # NEW: File for LangGraph server setup for Tester agent, initializes and passes GitHub tools to TesterAgentGraph.
 │       ├── prompts.py            # UPDATED: SYSTEM_PROMPT includes {project_path}.
-│       ├── state.py              # UPDATED: New WorkflowStage enum, State includes workflow_stage, summary field added, project field added.
+│       ├── state.py              # UPDATED: New WorkflowStage enum, State includes workflow_stage, summary field added, project field added. UPDATED: `error` field added.
 │       ├── test-agent-system-prompt.md # UPDATED: Content significantly changed with absolute prohibitions, file restrictions, critical assumption rules, focus on e2e/acceptance testing, updated workflow (including branch creation, mandatory validation, GitHub uploads, PR creation), and stricter key rules.
 │       ├── test-agent-testing-workflow-stage.md
 │       └── tools.py
 └── tests/
     ├── datasets/
     │   ├── coder_dataset.py
-    │   ├── requirement_gatherer_dataset.py # UPDATED: Dataset name, FIRST_MESSAGE, input/output content updated.
+    │   ├── requirement_gatherer_dataset.py # UPDATED: Dataset name, FIRST_MESSAGE, input/output content updated. UPDATED: Minor formatting in outputs.
     │   └── task_manager_dataset.py
     ├── integration_tests/
-    │   ├── test_architect_agent.py
+    │   ├── test_architect_agent.py # UPDATED: Graph compilation now uses `ArchitectGraph(...).compiled_graph`.
     │   ├── test_coder.py
     │   ├── eval_coder.py
     │   ├── test_graph.py
@@ -487,8 +499,11 @@ ai-nexus/
     │       │   └── index.ts        # ADDED
     │       └── tsconfig.json       # ADDED
     ├── testing/
-    │   ├── __init__.py             # UPDATED: Added create_async_graph_caller_for_gatherer helper function.
+    │   ├── __init__.py             # UPDATED: Added create_async_graph_caller_for_gatherer helper function. UPDATED: Minor formatting.
     │   ├── evaluators.py
     │   └── formatter.py
-    └── unit_tests/
-        └── test_configuration.py
+    ├── unit_tests/
+    │   ├── common/
+    │   │   └── test_chain.py       # NEW: Unit tests for common.chain (prechain, skip_on_summary_and_tool_errors).
+    │   └── test_configuration.py
+```
