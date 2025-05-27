@@ -113,6 +113,7 @@ class Configuration(AgentConfiguration):
     reviewer_agent: CodeReviewerAgentConfig = field(
         default_factory=SubAgentConfig(stub_messages=model_code_reviewer_messages)
     )
+    github_base_branch: str = "main"
 
 
 __all__ = ["Configuration", "RequirementsAgentConfig", "SubAgentConfig"]

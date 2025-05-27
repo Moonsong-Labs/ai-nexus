@@ -22,6 +22,8 @@ class State:
 
     summary: str = ""
     """The code review summary."""
+    error: str = ""
+    """If any fatal error occurred."""
 
 
 __all__ = [

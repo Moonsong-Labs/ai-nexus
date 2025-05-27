@@ -125,7 +125,7 @@ if __name__ == "__main__":
                     config=TesterConfiguration(),
                 ),
                 coder_new_pr_agent=SubAgentConfig(
-                    use_stub=True,
+                    use_stub=False,
                 ),
                 coder_change_request_agent=SubAgentConfig(
                     use_stub=True,

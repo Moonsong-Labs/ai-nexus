@@ -29,9 +29,7 @@ def create_dataset():
                     }
                 ]
             },
-            "outputs": {
-                "message": {"content": "Requirements are confirmed"}
-            },
+            "outputs": {"message": {"content": "Requirements are confirmed"}},
         },
     ]
 
