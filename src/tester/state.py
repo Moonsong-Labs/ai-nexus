@@ -34,6 +34,9 @@ class State:
     summary: str = ""
     """The testing summary."""
 
+    error: str = ""
+    """If any fatal error occurred."""
+
 
 __all__ = [
     "State",

@@ -21,6 +21,7 @@ from architect import tools
 from architect.configuration import Configuration
 from architect.state import State
 from common import utils
+from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.graph import AgentGraph
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ def _create_call_model(
     The returned coroutine retrieves the user's recent memories from the store, formats them for context, constructs a system prompt including these memories and the current timestamp, and asynchronously calls the language model with the prompt and conversation history. Returns a dictionary containing the model's response message.
     """
 
+    @prechain(skip_on_summary_and_tool_errors())
     async def call_model(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> dict:

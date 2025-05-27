@@ -13,6 +13,7 @@ from langgraph.types import Checkpointer
 
 from coder.prompts import CHANGE_REQUEST_SYSTEM_PROMPT, NEW_PR_SYSTEM_PROMPT
 from coder.state import State
+from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 
@@ -160,6 +161,7 @@ class CallModel:
         self.github_tools = github_tools
         self.system_prompt = system_prompt
 
+    @prechain(skip_on_summary_and_tool_errors())
     async def __call__(self, state: State) -> dict:
         system_msg = SystemMessage(content=self.system_prompt)
         messages = [system_msg] + state.messages

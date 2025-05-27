@@ -18,6 +18,7 @@ from langgraph.types import Checkpointer
 
 import common.tools
 from common import utils
+from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.graph import AgentGraph
 from task_manager.configuration import TASK_MANAGER_MODEL, Configuration
 from task_manager.state import State
@@ -42,6 +43,7 @@ def _create_call_model(
         An asynchronous function that accepts the current state, configuration, and optional memory store, and returns a dictionary containing the model's response message.
     """
 
+    @prechain(skip_on_summary_and_tool_errors())
     async def call_model(
         state: State, config: RunnableConfig, *, store: BaseStore = None
     ) -> dict:
