@@ -258,6 +258,7 @@ AI Nexus employs a few architectural patterns for its agents:
     *   An `agent_config = GathererConfig(use_human_ai=True)` is now passed to the `RequirementsGraph` constructor.
     *   The `client.aevaluate` call now uses `create_async_graph_caller_for_gatherer(graph)` instead of `create_async_graph_caller(graph)`.
     *   The `num_repetitions` for evaluation has been reduced from `4` to `1`.
+    *   **NEW**: A new asynchronous test `test_requirement_gatherer_ends_with_summarize_tool_call` has been added. This test verifies that the `RequirementsGraph` successfully invokes the `summarize` tool, asserting that the second-to-last message in the graph's output is a `ToolMessage` with the name "summarize".
 *   **`tests/integration_tests/test_task_manager.py` (UPDATED):**
     *   The `call_model` function and `test_task_manager_with_project_path` now explicitly add a `Project` object to the state dictionary for testing, providing explicit project context during task manager operations.
 *   **Smoke Tests (NEW - UPDATED):**
@@ -458,7 +459,7 @@ ai-nexus/
     │   ├── test_graph.py
     │   ├── test_grumpy_agent.py
     │   ├── test_orchestrator.py    # UPDATED: Tests reflect new Orchestrator tool usage (e.g., memorize, direct agent calls like code_reviewer).
-    │   ├── test_requirement_gatherer.py # UPDATED: Uses create_async_graph_caller_for_gatherer, passes agent_config to RequirementsGraph, num_repetitions reduced.
+    │   ├── test_requirement_gatherer.py # UPDATED: Uses create_async_graph_caller_for_gatherer, passes agent_config to RequirementsGraph, num_repetitions reduced. NEW: Added test_requirement_gatherer_ends_with_summarize_tool_call to verify summarize tool call.
     │   ├── test_task_manager.py    # UPDATED: Tests now provide explicit project context during task manager operations.
     │   ├── test_tester_agent.py
     │   └── inputs/
