@@ -114,7 +114,9 @@ class Configuration(AgentConfiguration):
     )
     tester_agent: TesterAgentConfig = field(default_factory=TesterAgentConfig)
     reviewer_agent: CodeReviewerAgentConfig = field(
-        default_factory=SubAgentConfig(stub_messages=model_code_reviewer_messages)
+        default_factory=lambda: SubAgentConfig(
+            stub_messages=model_code_reviewer_messages
+        )
     )
     github_base_branch: str = "main"
 
