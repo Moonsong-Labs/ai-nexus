@@ -27,7 +27,9 @@ def _invoke(
     return result.stdout.decode("utf-8").strip()
 
 
-async def checkout_and_edit(repo: str, pr: str, *, thunk: Callable[[str], Awaitable[Any]]) -> str:
+async def checkout_and_edit(
+    repo: str, pr: str, *, thunk: Callable[[str], Awaitable[Any]]
+) -> str:
     """Run the given `thunk` in a fresh checkout of the given repo.
 
     The checkout will be in a temporary directory, which will be passed in the given thunk.
@@ -106,6 +108,7 @@ async def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
 
     return await checkout_and_edit(repo, pr, thunk=_thunk)
 
+
 @tool(
     "fetch_pr_details",
     description="""Fetch the relevant details for a given repo, pr combination.
@@ -121,7 +124,7 @@ def invoke_pr_details(
     if not re.match(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", repo):
         raise ValueError(f"Invalid repository format: {repo}. Expected <org>/<name>.")
 
-    pr = pr.lstrip('#')
+    pr = pr.lstrip("#")
     if not re.match(r"^\d+$", pr):
         raise ValueError(f"Invalid PR number: {pr}. Expected 1 or more digits only.")
 
@@ -135,12 +138,17 @@ def invoke_pr_details(
 @tool
 def fetch_project_global_memory(
     *,
-    project_dir: Annotated[Optional[str], "the project directory"] = os.curdir,
+    project_dir: Annotated[Optional[Path], "the project directory path"] = Path(
+        os.curdir
+    ),
     global_memory_file: Annotated[
         Optional[Path], "the project global memory file path"
     ] = Path("project_memories/global.md"),
 ) -> str:
     """Fetch the contents of the given project's global memory file."""
+    project_dir = (
+        Path(project_dir) if not isinstance(project_dir, Path) else project_dir
+    )
     full_path = (project_dir / global_memory_file).resolve()
     return read_file.invoke({"file_path": str(full_path)})
 
@@ -148,7 +156,9 @@ def fetch_project_global_memory(
 @tool
 def store_project_global_memory(
     *,
-    project_dir: Annotated[Optional[str], "the project directory"] = os.curdir,
+    project_dir: Annotated[Optional[Path], "the project directory path"] = Path(
+        os.curdir
+    ),
     global_memory_file: Annotated[
         Optional[Path], "the project global memory file path"
     ] = Path("project_memories/global.md"),
@@ -159,6 +169,9 @@ def store_project_global_memory(
     Returns:
         A message indicating success or failure
     """
+    project_dir = (
+        Path(project_dir) if not isinstance(project_dir, Path) else project_dir
+    )
     full_path = (project_dir / global_memory_file).resolve()
     result = create_file.invoke({"file_path": str(full_path), "content": content})
     if "Successfully" in result:
