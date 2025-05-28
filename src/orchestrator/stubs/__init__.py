@@ -14,6 +14,7 @@ from code_reviewer.state import State as CodeReviewerState
 from coder.state import State as CoderState
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
+from common.state import Project
 from requirement_gatherer.state import State as RequirementsState
 from task_manager.state import State as TaskManagerState
 from tester.state import State as TesterState
@@ -135,6 +136,9 @@ class RequirementsGathererStub(StubGraph[RequirementsState]):
         store: Optional[BaseStore] = None,
         stub_messages: MessageWheel = model_requirements_messages,
     ):
+        project_name = "My Stub Project"
+        project = Project.from_name(project_name)
+
         super().__init__(
             name="Requirements Gatherer Stub",
             stub_messages=stub_messages,
@@ -142,8 +146,8 @@ class RequirementsGathererStub(StubGraph[RequirementsState]):
             run_fn=lambda state, config: {
                 "messages": state.messages,
                 "summary": self._stub_messages.next(),
-                "project_name": "My Stub Project",
-                "project": Project.from_name("My Stub Project"),
+                "project_name": project_name,
+                "project": project,
             },
             agent_config=agent_config,
             checkpointer=checkpointer,
