@@ -15,9 +15,6 @@ def get_tool_args_with_names(messages: list[AnyMessage], tool_name: str) -> list
 
     return tool_args_list
 
-
-
-
 def get_list_diff(list1, list2):
     """
     Finds the elements that are missing from list1 and extra in list2,
