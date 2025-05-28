@@ -61,6 +61,8 @@ jobs:
         run: make deps
       - name: Run tests
         run: make test_unit
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }}
   coder-tests:
     name: Coder Tests
     runs-on: ubuntu-latest

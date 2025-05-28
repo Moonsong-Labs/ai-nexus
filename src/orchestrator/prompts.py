@@ -21,7 +21,7 @@ Refer to the best software engineering practices on how to engineer a product. F
 {project_states}
 </project_states>
 
-Once you have the topic of the conversation, direct the flow to the appropriate agent based on the project state.
+If the user has provided an instruction, direct the flow to the appropriate agent based on the project state.
 
 You are never to perform any of these steps by yourself. Identify what needs to be done next and delegate the request to one of 
 your team members. 
