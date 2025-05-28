@@ -24,11 +24,7 @@ async def test_tool_call_none() -> None:
     )
 
     last_message = result["messages"][-1]
-    expected_tool_calls = [
-        t["name"]
-        for t in last_message.tool_calls
-        if hasattr(last_message, "tool_calls")
-    ]
+    expected_tool_calls = [t["name"] for t in getattr(last_message, "tool_calls", [])]
 
     assert [] == expected_tool_calls
 
@@ -49,11 +45,7 @@ async def test_tool_call_requirements() -> None:
     )
 
     last_message = result["messages"][-1]
-    expected_tool_calls = [
-        t["name"]
-        for t in last_message.tool_calls
-        if hasattr(last_message, "tool_calls")
-    ]
+    expected_tool_calls = [t["name"] for t in getattr(last_message, "tool_calls", [])]
 
     assert ["requirements"] == expected_tool_calls
 
@@ -99,10 +91,6 @@ async def test_tool_call_architect() -> None:
     )
 
     last_message = result["messages"][-1]
-    expected_tool_calls = [
-        t["name"]
-        for t in last_message.tool_calls
-        if hasattr(last_message, "tool_calls")
-    ]
+    expected_tool_calls = [t["name"] for t in getattr(last_message, "tool_calls", [])]
 
     assert ["architect"] == expected_tool_calls

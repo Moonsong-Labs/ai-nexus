@@ -1,5 +1,5 @@
-from collections import Counter
 import uuid
+from collections import Counter
 
 import pytest
 from datasets.requirement_gatherer_dataset import (
@@ -12,7 +12,6 @@ from langsmith import Client
 from testing import create_async_graph_caller_for_gatherer, get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
-
 
 from requirement_gatherer.configuration import Configuration as GathererConfig
 from requirement_gatherer.graph import RequirementsGraph
@@ -171,9 +170,9 @@ async def test_requirement_gatherer_ends_with_summarize_tool_call():
 
     # Requirement gatherer needs to finish with the summarize (also checks its called once)
     second_last_message = messages[-2]
-    assert isinstance(
-        second_last_message, ToolMessage
-    ), f"Expected second to last message to be a ToolMessage, got {type(second_last_message).__name__}. Full message: {second_last_message}"
-    assert (
-        second_last_message.name == "summarize"
-    ), f"Expected ToolMessage name to be 'summarize', got '{second_last_message.name}'. Available tool names in messages: {[msg.name for msg in messages if isinstance(msg, ToolMessage)]}"
+    assert isinstance(second_last_message, ToolMessage), (
+        f"Expected second to last message to be a ToolMessage, got {type(second_last_message).__name__}. Full message: {second_last_message}"
+    )
+    assert second_last_message.name == "summarize", (
+        f"Expected ToolMessage name to be 'summarize', got '{second_last_message.name}'. Available tool names in messages: {[msg.name for msg in messages if isinstance(msg, ToolMessage)]}"
+    )

@@ -30,8 +30,6 @@ class BaseMessageEncoder(json.JSONEncoder):
             return obj.model_dump()
         elif isinstance(obj, BaseModel):
             return obj.model_dump()
-        elif isinstance(obj, BaseModel):
-            return obj.model_dump()
         elif isinstance(obj, EvaluationResult):
             return obj.dict()
         elif isinstance(obj, Client):  # Handle LangSmith Client
