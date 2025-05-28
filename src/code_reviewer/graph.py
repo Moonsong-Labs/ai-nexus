@@ -11,7 +11,6 @@ from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
-from pydantic import BaseModel, Field
 
 import common.tools
 from code_reviewer.prompts import LOCAL_REVIEW_PROMPT, PR_REVIEW_PROMPT, SYSTEM_PROMPT
@@ -103,7 +102,7 @@ class CodeReviewerGraph(AgentGraph):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        """Initialize the CodeReviewerGraph
+        """Initialize the CodeReviewerGraph.
 
         Args:
             github_tools: List of GitHub tools to be used in the graph.

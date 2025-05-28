@@ -13,12 +13,12 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
-from code_reviewer.graph import CodeReviewerGraph, local_code_reviewer_config
 import common.tools
 from architect.configuration import (
     Configuration as ArchitectConfiguration,
 )
 from architect.graph import ArchitectGraph
+from code_reviewer.graph import CodeReviewerGraph, local_code_reviewer_config
 from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
 from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.components.github_mocks import maybe_mock_github

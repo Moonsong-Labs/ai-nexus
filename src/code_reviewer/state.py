@@ -11,6 +11,7 @@ from typing_extensions import Annotated
 
 from common.state import Project
 
+
 @dataclass(kw_only=True)
 class State:
     """Main graph state."""

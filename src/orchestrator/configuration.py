@@ -10,9 +10,9 @@ from orchestrator import prompts
 from orchestrator.stubs import (
     MessageWheel,
     model_architect_messages,
+    model_code_reviewer_messages,
     model_coder_change_request_messages,
     model_coder_new_pr_messages,
-    model_code_reviewer_messages,
     model_requirements_messages,
     model_task_manager_messages,
 )
