@@ -5,7 +5,7 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Awaitable, Callable, Optional
 
 from langchain_core.tools import tool
 
@@ -27,7 +27,7 @@ def _invoke(
     return result.stdout.decode("utf-8").strip()
 
 
-def checkout_and_edit(repo: str, pr: str, *, thunk) -> str:
+async def checkout_and_edit(repo: str, pr: str, *, thunk: Callable[str, Awaitable]) -> str:
     """Run the given `thunk` in a fresh checkout of the given repo.
 
     The checkout will be in a temporary directory, which will be passed in the given thunk.
@@ -64,7 +64,7 @@ def checkout_and_edit(repo: str, pr: str, *, thunk) -> str:
             err_ctx="Failed to clone repository",
         )
 
-        thunk(dir)
+        await thunk(dir)
 
         # retrieve the updates that were made from the script
         changes = _invoke(
@@ -74,7 +74,7 @@ def checkout_and_edit(repo: str, pr: str, *, thunk) -> str:
     return changes
 
 
-def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
+async def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
     """Invoke the `update_project_memory_from_pr` script.
 
     Will take care of checking out the PR in a temporary directory and doing the necessary setup for the script to run
@@ -89,7 +89,7 @@ def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
     # TODO: ensure git, gh, jq, curl are available?
     # TODO: ensure gh is authenticated?
 
-    def _thunk(dir):
+    async def _thunk(dir):
         # mark scripts as runnable
         _invoke(
             "chmod +x ./scripts/update_project_memory_from_pr.sh ./scripts/fetch_pr_details.sh",
@@ -104,7 +104,7 @@ def invoke_project_memory_from_pr(repo: str, pr: str) -> str:
             err_ctx="Failed to run memory updater script",
         )
 
-    return checkout_and_edit(repo, pr, thunk=_thunk)
+    return await checkout_and_edit(repo, pr, thunk=_thunk)
 
 @tool(
     "fetch_pr_details",

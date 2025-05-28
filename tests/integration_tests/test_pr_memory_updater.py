@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 # Create a LLMJudge
 llm_judge = LLMJudge()
 
-def eval_target(graph, inputs: dict) -> dict:
+async def eval_target(graph, inputs: dict) -> dict:
         config = {
             "configurable": {
                 "thread_id": str(uuid.uuid4()),
@@ -33,18 +33,21 @@ def eval_target(graph, inputs: dict) -> dict:
         repo = inputs["repository"]
         pr = inputs["pr_num"]
 
-        def invoke_memory_updater(dir):
+        async def invoke_memory_updater(dir):
             messages = {
                 "messages": [{
                     "role": "user",
-                    "content": f"Update the project memory. The repo is {repo} and the PR is #{pr}. Working directory is: {dir}"
+                    "content": f"Update the project memory. The repo is {repo} and the PR is number {pr}. Working directory is: {dir}"
                 }]
             }
 
-            graph.invoke(messages, config)
+            try:
+                await graph.ainvoke(messages, config)
+            except Exception as e:
+                logger.error(f"Failed to invoke agent: {str(e)}")
 
         try:
-            result = checkout_and_edit(repo, pr, thunk=invoke_memory_updater)
+            result = await checkout_and_edit(repo, pr, thunk=invoke_memory_updater)
             return {"output": result}
         except Exception as e:
             logger.error(
@@ -84,7 +87,7 @@ async def test_pr_memory_updater(pytestconfig):
     ).compiled_graph
 
     # Define the function to be evaluated for each dataset example
-    results = client.evaluate(
+    results = await client.aevaluate(
         partial(eval_target, graph),
         data=DATASET_NAME,  # The whole dataset is used
         evaluators=[llm_judge.create_correctness_evaluator()],
