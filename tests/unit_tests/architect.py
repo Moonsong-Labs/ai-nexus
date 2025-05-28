@@ -66,19 +66,21 @@ async def test_architect_create_files(pytestconfig):
     )
 
     # Assert that results were produced.
-    assert result is not None
+    try:
+        assert result is not None
 
-    assert os.path.exists(TEST_DIR)
-    assert os.path.isdir(TEST_DIR)
+        assert os.path.exists(TEST_DIR)
+        assert os.path.isdir(TEST_DIR)
 
-    assert os.path.exists(TEST_DIR + "/projectbrief.md")
-    assert os.path.exists(TEST_DIR + "/projectRequirements.md")
-    assert os.path.exists(TEST_DIR + "/systemPatterns.md")
-    assert os.path.exists(TEST_DIR + "/techPatterns.md")
-    assert os.path.exists(TEST_DIR + "/progress.md")
-    assert os.path.exists(TEST_DIR + "/codingContext.md")
-    assert os.path.exists(TEST_DIR + "/testingContext.md")
+        assert os.path.exists(TEST_DIR + "/projectbrief.md")
+        assert os.path.exists(TEST_DIR + "/projectRequirements.md")
+        assert os.path.exists(TEST_DIR + "/systemPatterns.md")
+        assert os.path.exists(TEST_DIR + "/techPatterns.md")
+        assert os.path.exists(TEST_DIR + "/progress.md")
+        assert os.path.exists(TEST_DIR + "/codingContext.md")
+        assert os.path.exists(TEST_DIR + "/testingContext.md")
 
-    # Clean up after tests
-    if os.path.exists(TEST_DIR):
-        shutil.rmtree(TEST_DIR)
+    finally:
+        # Clean up after tests
+        if os.path.exists(TEST_DIR):
+            shutil.rmtree(TEST_DIR)
