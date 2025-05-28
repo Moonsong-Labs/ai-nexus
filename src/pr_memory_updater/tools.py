@@ -120,8 +120,10 @@ def invoke_pr_details(
     """Invoke the `fetch_pr_details` script."""
     if not re.match(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", repo):
         raise ValueError(f"Invalid repository format: {repo}. Expected <org>/<name>.")
+
+    pr = pr.lstrip('#')
     if not re.match(r"^\d+$", pr):
-        raise ValueError(f"Invalid PR number: {pr}. Expected 1 or more digits.")
+        raise ValueError(f"Invalid PR number: {pr}. Expected 1 or more digits only.")
 
     return _invoke(
         f"./scripts/fetch_pr_details.sh -r {repo} -p {pr}",
