@@ -50,7 +50,7 @@ def _create_call_model(
             logger.info(
                 "system_prompt was None in the configuration. Using default prompt."
             )
-            system_prompt = "You are a helpful AI assistant."
+            system_prompt = prompts.SYSTEM_PROMPT
 
         system = SystemMessage(content=system_prompt)
         msg = await llm.ainvoke([system, *state.messages], config)
@@ -77,8 +77,9 @@ class PRMemoryUpdaterGraph(AgentGraph):
         """
         # Create config with any custom fields needed
         agent_config = agent_config or Configuration(
-            model = "google_genai:gemini-2.5-flash-preview-05-20",
-            memory=MemoryConfiguration(use_memory=False), system_prompt=prompts.SYSTEM_PROMPT
+            model="google_genai:gemini-2.5-flash-preview-05-20",
+            memory=MemoryConfiguration(use_memory=False),
+            system_prompt=prompts.SYSTEM_PROMPT,
         )
 
         super().__init__(

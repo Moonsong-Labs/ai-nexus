@@ -1,5 +1,6 @@
 """PR memory updater agent module."""
 
+from pr_memory_updater import tools
 from pr_memory_updater.configuration import Configuration
 from pr_memory_updater.graph import PRMemoryUpdaterGraph, graph
 from pr_memory_updater.state import State

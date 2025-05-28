@@ -45,6 +45,7 @@ async def eval_target(graph, inputs: dict) -> dict:
                 await graph.ainvoke(messages, config)
             except Exception as e:
                 logger.error(f"Failed to invoke agent: {str(e)}")
+                raise
 
         try:
             result = await checkout_and_edit(repo, pr, thunk=invoke_memory_updater)
