@@ -103,16 +103,20 @@ class Configuration(AgentConfiguration):
         default_factory=TaskManagerAgentConfig
     )
     coder_new_pr_agent: SubAgentConfig = field(
-        default_factory=SubAgentConfig(stub_messages=model_coder_new_pr_messages)
+        default_factory=lambda: SubAgentConfig(
+            stub_messages=model_coder_new_pr_messages
+        )
     )
     coder_change_request_agent: SubAgentConfig = field(
-        default_factory=SubAgentConfig(
+        default_factory=lambda: SubAgentConfig(
             stub_messages=model_coder_change_request_messages
         )
     )
     tester_agent: TesterAgentConfig = field(default_factory=TesterAgentConfig)
     reviewer_agent: CodeReviewerAgentConfig = field(
-        default_factory=SubAgentConfig(stub_messages=model_code_reviewer_messages)
+        default_factory=lambda: SubAgentConfig(
+            stub_messages=model_code_reviewer_messages
+        )
     )
     github_base_branch: str = "main"
 

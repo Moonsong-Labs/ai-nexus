@@ -1,4 +1,5 @@
 import uuid
+from collections import Counter
 
 import pytest
 from datasets.requirement_gatherer_dataset import (
@@ -11,7 +12,7 @@ from langsmith import Client
 from testing import create_async_graph_caller_for_gatherer, get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
-from testing.utils import get_tool_args_with_names, get_tool_messages_count
+from testing.utils import get_tool_args_with_names
 
 from requirement_gatherer.configuration import Configuration as GathererConfig
 from requirement_gatherer.graph import RequirementsGraph
@@ -158,7 +159,9 @@ async def test_requirement_gatherer_ends_with_summarize_tool_call():
     # At least two messages need to be generated
     assert len(messages) >= 2
 
-    tool_count_dict = get_tool_messages_count(messages=messages)
+    tool_count_dict = Counter(
+        message.name for message in messages if isinstance(message, ToolMessage)
+    )
     # Each tool involved in gatherer need to be called at least once
     # 'memorize' need to be called the same number or more times than 'human_feedback'
     # 'human_feedback' cant be called more that 5 times for a hobby project
