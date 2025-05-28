@@ -24,9 +24,9 @@ async def test_tool_call_none() -> None:
     )
 
     last_message = result["messages"][-1]
-    expected_tool_calls = [t["name"] for t in getattr(last_message, "tool_calls", [])]
+    actual_tool_calls = [t["name"] for t in getattr(last_message, "tool_calls", [])]
 
-    assert [] == expected_tool_calls
+    assert [] == actual_tool_calls
 
 
 @pytest.mark.asyncio
@@ -45,9 +45,9 @@ async def test_tool_call_requirements() -> None:
     )
 
     last_message = result["messages"][-1]
-    expected_tool_calls = [t["name"] for t in getattr(last_message, "tool_calls", [])]
+    actual_tool_calls = [t["name"] for t in getattr(last_message, "tool_calls", [])]
 
-    assert ["requirements"] == expected_tool_calls
+    assert ["requirements"] == actual_tool_calls
 
 
 @pytest.mark.asyncio
@@ -91,6 +91,6 @@ async def test_tool_call_architect() -> None:
     )
 
     last_message = result["messages"][-1]
-    expected_tool_calls = [t["name"] for t in getattr(last_message, "tool_calls", [])]
+    actual_tool_calls = [t["name"] for t in getattr(last_message, "tool_calls", [])]
 
-    assert ["architect"] == expected_tool_calls
+    assert ["architect"] == actual_tool_calls

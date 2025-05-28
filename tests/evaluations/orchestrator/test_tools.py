@@ -39,13 +39,7 @@ async def test_correctness() -> None:
         )
 
         last_message = result["messages"][-1]
-        return {
-            "tools": [
-                t["name"]
-                for t in last_message.tool_calls
-                if hasattr(last_message, "tool_calls")
-            ]
-        }
+        return {"tools": [t["name"] for t in getattr(last_message, "tool_calls", [])]}
 
     def tool_usage_correctness(inputs, outputs, reference_outputs):
         missing, extra = get_list_diff(reference_outputs["tools"], outputs["tools"])
