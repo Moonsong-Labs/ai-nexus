@@ -3,9 +3,9 @@
 - This agent reads the conversation and identifies if any of its memories need to be updated or something new memorized. Use this agent ONLY when explicitly asked to remember something or memorize something.
 
 ## Requirements Gatherer
-- MUST use `requirements` tool with topic set to `content`.
-- This agent uses a topic and will handle all the research associated with requirement elicitation and requirements engineering on that topic.
-- MUST delegate to it for when requirements are either missing, unclear, need updating, or requires further exploration.
+- MUST use `requirements` tool with topic set to `content` or `""` if missing.
+- This agent uses an optional topic and will handle all the research associated with requirement elicitation and requirements engineering on that topic.
+- MUST delegate to it for when user instructs to start/begin the process, build, or develop and the requirements are missing or require further exploration.
 
 
 ## Architect  
