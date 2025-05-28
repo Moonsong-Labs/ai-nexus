@@ -22,6 +22,17 @@ logger = get_logger(__name__)
 llm_judge = LLMJudge()
 
 async def eval_target(graph, inputs: dict) -> dict:
+        """
+        Asynchronously evaluates the PR memory updater graph on a given repository and pull request.
+        
+        Constructs a unique configuration and invokes the graph to update project memory within a checked-out working directory. Returns the result of the memory update operation, or an error message if the process fails.
+        
+        Args:
+            inputs: A dictionary containing "repository" and "pr_num" keys specifying the target repository and pull request number.
+        
+        Returns:
+            A dictionary with the key "output" containing the result of the memory update, or an error message and an "error" flag if an exception occurs.
+        """
         config = {
             "configurable": {
                 "thread_id": str(uuid.uuid4()),
@@ -34,6 +45,12 @@ async def eval_target(graph, inputs: dict) -> dict:
         pr = inputs["pr_num"]
 
         async def invoke_memory_updater(dir):
+            """
+            Sends a user message to the PR memory updater agent to update project memory for a specific repository and pull request in the given working directory.
+            
+            Args:
+                dir: The working directory path where the memory update should be performed.
+            """
             messages = {
                 "messages": [{
                     "role": "user",
@@ -61,9 +78,9 @@ async def eval_target(graph, inputs: dict) -> dict:
 @pytest.mark.asyncio
 async def test_pr_memory_updater(pytestconfig):
     """
-    Asynchronously tests the PR Memory Updater agent using LangSmith's evaluation framework.
-
-    This test verifies that the specified LangSmith dataset exists, evaluates the PR Memory Updater agent over the dataset using an LLM-based correctness evaluator, and asserts that evaluation results are produced.
+    Asynchronously evaluates the PR Memory Updater agent on a LangSmith dataset and verifies results.
+    
+    This test checks for the existence of the required dataset in LangSmith, runs the PR Memory Updater agent over the dataset using an LLM-based correctness evaluator, prints detailed evaluation results, and asserts that evaluation results are produced.
     """
     client = Client()
 

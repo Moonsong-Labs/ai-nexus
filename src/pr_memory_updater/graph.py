@@ -26,21 +26,23 @@ def _create_call_model(
     agent_config: Configuration,
     llm: Runnable[LanguageModelInput, BaseMessage],
 ) -> Callable[..., Coroutine[Any, Any, Dict]]:
-    """Create an asynchronous function that invokes a language model with a system prompt and conversation history.
-
-    The returned coroutine takes the current state and configuration, retrieves the system prompt from the agent configuration (using a default if none is set), constructs a system message, and calls the language model with the system message and the state's messages. The model's response is returned as a dictionary containing the new message.
+    """
+    Creates an asynchronous callable that invokes a language model with a system prompt and conversation history.
+    
+    The returned coroutine accepts the current state and configuration, retrieves the system prompt from the agent configuration (falling back to a default if unset), constructs a system message, and calls the language model with the system and conversation messages. The model's response is returned as a dictionary under the "messages" key.
     """
 
     async def call_model(
         state: Any, config: RunnableConfig, *, store: BaseStore = None
     ) -> Dict:
-        """Invoke the language model with the current conversation state and system prompt.
-
+        """
+        Invokes the language model asynchronously using the system prompt and conversation history.
+        
         Args:
-            state: The current conversation state, expected to have a 'messages' attribute.
-            config: Runnable configuration containing the agent's configuration.
+            state: The current conversation state, which must include a 'messages' attribute.
+            config: Configuration for the language model invocation.
             store: Optional storage backend.
-
+        
         Returns:
             A dictionary containing the model's response message under the 'messages' key.
         """
@@ -71,9 +73,10 @@ class PRMemoryUpdaterGraph(AgentGraph):
         checkpointer: Optional[Checkpointer] = None,
         store: Optional[BaseStore] = None,
     ):
-        """Initialize a PRMemoryUpdaterGraph with the specified configuration, checkpointer, and store.
-
-        If no agent configuration is provided, a default configuration with memory enabled and a predefined system prompt is used.
+        """
+        Initializes a PRMemoryUpdaterGraph with optional configuration, checkpointer, and store.
+        
+        If no agent configuration is provided, uses a default model, disables memory, and sets a predefined system prompt.
         """
         # Create config with any custom fields needed
         agent_config = agent_config or Configuration(
@@ -89,10 +92,13 @@ class PRMemoryUpdaterGraph(AgentGraph):
         )
 
     def create_builder(self) -> StateGraph:
-        """Construct and configures a StateGraph for the agent, integrating the language model and optional tools.
-
+        """
+        Builds and configures a StateGraph representing the agent's execution flow.
+        
+        The graph integrates the language model and, if enabled, relevant tools for PR memory updating. Nodes and edges are added to support model calls and conditional tool usage based on the agent's configuration.
+        
         Returns:
-            A StateGraph instance representing the agent's execution flow, with nodes and edges set up for model calls and tool usage as appropriate.
+            A StateGraph instance defining the agent's operational flow.
         """
         # Create the graph
         builder = StateGraph(State)
