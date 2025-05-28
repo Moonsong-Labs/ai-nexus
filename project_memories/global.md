@@ -294,6 +294,8 @@ AI Nexus employs a few architectural patterns for its agents:
     *   A new helper function `create_async_graph_caller_for_gatherer` has been added. This function is specifically designed for the requirement gatherer evaluation, expecting the final output to be a `ToolMessage` with the name "summarize" and returning its content.
     *   **UPDATED**: Minor formatting changes.
 *   **NEW**: `tests/testing/utils.py`: A new utility file providing helper functions for testing, including `get_tool_messages_count` for counting tool messages in agent outputs.
+*   **NEW**: `tests/unit_tests/architect.py`: New asynchronous tests verifying architecture creation workflows, including file generation for project structures.
+*   **NEW**: `tests/unit_tests/common.py`: New comprehensive unit tests for `common.tools.read_file`, `common.tools.list_files`, `common.tools.create_directory`, and `common.tools.create_file`, ensuring correct functionality and error handling across various scenarios.
 *   **NEW**: `tests/unit_tests/common/test_chain.py`: New unit tests added to verify the functionality of `common.chain.prechain` and `common.chain.skip_on_summary_and_tool_errors`, specifically testing error propagation and summary-based skipping in agent workflows.
 *   (Other test files as previously described, or minor updates not impacting core logic)
 
@@ -314,6 +316,7 @@ AI Nexus employs a few architectural patterns for its agents:
             *   Navigates to `tests/smoke/langgraph_dev`, installs Node.js dependencies (`npm i`), and runs the smoke test (`npm test`).
             *   Uploads `tests/smoke/langgraph_dev/langgraph-test-result.png` as an artifact with a 10-day retention period if the test runs (regardless of pass/fail).
     *   `compile-check.yml`: Ensures the LangGraph graphs can be compiled.
+    *   `run_common_tests.yml` (NEW): A new workflow to run common unit tests on `push` to `main`, `pull_request` to `main`, and `workflow_dispatch`.
     *   `update_project_memory.yml`: (As previously described)
 *   **Project Maintenance Scripts (UPDATED):**
     *   The `generate_project_memory.sh`, `update_project_memory_from_pr.sh`, and `update_project_readmes.sh` scripts now use the `gemini-2.5-flash-preview-05-20` model for their API calls.
@@ -354,6 +357,7 @@ ai-nexus/
 │   └── workflows/
 │       ├── checks.yml            # UPDATED: Added smoke-test job
 │       ├── compile-check.yml
+│       ├── run_common_tests.yml  # NEW: Workflow to run common unit tests
 │       └── update_project_memory.yml
 ├── Makefile                      # UPDATED: Changed demo target to demo-% (e.g., demo-ai, demo-human).
 ├── README.md                     # UPDATED: Local demo instructions updated.
@@ -510,7 +514,9 @@ ai-nexus/
     │   ├── formatter.py
     │   └── utils.py                # NEW: New utility file providing helper functions for testing, including `get_tool_messages_count`.
     ├── unit_tests/
+    │   ├── architect.py            # NEW: New asynchronous tests verifying architecture creation workflows, including file generation for project structures.
     │   ├── common/
     │   │   └── test_chain.py       # NEW: Unit tests for common.chain (prechain, skip_on_summary_and_tool_errors).
+    │   ├── common.py               # NEW: New comprehensive unit tests for `common.tools.read_file`, `common.tools.list_files`, `common.tools.create_directory`, and `common.tools.create_file`.
     │   └── test_configuration.py
 ```
