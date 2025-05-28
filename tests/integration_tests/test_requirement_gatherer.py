@@ -11,7 +11,7 @@ from langsmith import Client
 from testing import create_async_graph_caller_for_gatherer, get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
-from testing.utils import get_tool_messages_count
+from testing.utils import get_tool_args_with_names, get_tool_messages_count
 
 from requirement_gatherer.configuration import Configuration as GathererConfig
 from requirement_gatherer.graph import RequirementsGraph
@@ -174,3 +174,26 @@ async def test_requirement_gatherer_ends_with_summarize_tool_call():
     assert second_last_message.name == "summarize", (
         f"Expected ToolMessage name to be 'summarize', got '{second_last_message.name}'. Available tool names in messages: {[msg.name for msg in messages if isinstance(msg, ToolMessage)]}"
     )
+
+    # Retrieve stored memories
+    stored_memories = memory_store.search(
+        ("memories", "test_user"),
+        query=str([m.content for m in messages]),
+        limit=10,
+    )
+    # Get arguments with which AI called tool
+    memories_args = get_tool_args_with_names(messages=messages, tool_name="memorize")
+
+    assert len(memories_args) == len(stored_memories)
+
+    # Check that content and context match between tool args and stored memories
+    for memory_arg, stored_memory in zip(memories_args, stored_memories):
+        arg_content = memory_arg["content"]
+        arg_context = memory_arg["context"]
+
+        stored_value = stored_memory.value
+        stored_content = stored_value["content"]
+        stored_context = stored_value["context"]
+
+        assert arg_content == stored_content
+        assert arg_context == stored_context
