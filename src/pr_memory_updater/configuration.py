@@ -11,5 +11,5 @@ AGENT_NAME = "pr_memory_updater"
 class Configuration(AgentConfiguration):
     """Configuration class for the pr memory updater agent."""
 
-    system_prompt: str = prompts.SYSTEM_PROMPT
+    system_prompt: str = prompts.SCRIPT_SYSTEM_PROMPT
     """The system prompt to use for the agent."""
