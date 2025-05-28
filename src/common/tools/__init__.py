@@ -4,7 +4,7 @@ from common.tools.create_directory import create_directory
 from common.tools.create_file import create_file
 from common.tools.list_files import list_files
 from common.tools.read_file import read_file
-from common.tools.read_task_planning import read_task_planning
+from common.tools.read_task_planning import create_read_task_planning_tool
 from common.tools.summarize import summarize
 
 __all__ = [
@@ -13,5 +13,5 @@ __all__ = [
     "create_file",
     "list_files",
     "read_file",
-    "read_task_planning",
+    "create_read_task_planning_tool",
 ]

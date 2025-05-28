@@ -2,7 +2,6 @@ import uuid
 
 import pytest
 from datasets.requirement_gatherer_dataset import (
-    FIRST_MESSAGE,
     REQUIREMENT_GATHERER_DATASET_NAME,
 )
 from langchain_core.messages import ToolMessage
@@ -12,6 +11,7 @@ from langsmith import Client
 from testing import create_async_graph_caller_for_gatherer, get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
+from testing.utils import get_tool_messages_count
 
 from requirement_gatherer.configuration import Configuration as GathererConfig
 from requirement_gatherer.graph import RequirementsGraph
@@ -130,7 +130,7 @@ async def test_requirement_gatherer_ends_with_summarize_tool_call():
     Tests that the RequirementsGraph produces a ToolMessage with name 'summarize'
     as the second to last message.
     """
-    logger.info("Testing if requirement gatherer ends with summarize tool call.")
+
     memory_saver = MemorySaver()
     memory_store = InMemoryStore()
     agent_config = GathererConfig(use_human_ai=True)
@@ -139,34 +139,38 @@ async def test_requirement_gatherer_ends_with_summarize_tool_call():
         checkpointer=memory_saver, store=memory_store, agent_config=agent_config
     ).compiled_graph
 
-    test_input = {"messages": [{"role": "user", "content": FIRST_MESSAGE}]}
+    test_input = {"messages": [{"role": "human", "content": "Start!"}]}
     config = {
         "configurable": {
             "thread_id": str(uuid.uuid4()),
             "user_id": "test_user",
             "model": "google_genai:gemini-2.0-flash-lite",
-        }
+        },
+        "recursion_limit": 100,
     }
 
-    try:
-        result = await graph.ainvoke(test_input, config=config)
-    except Exception as e:
-        pytest.fail(f"Graph invocation failed: {e}")
+    result = await graph.ainvoke(test_input, config=config)
 
-    assert result is not None, "Graph did not return a result."
-    assert "messages" in result, "Result dictionary does not contain 'messages'."
+    assert result is not None
+    assert "messages" in result
+
     messages = result["messages"]
-    assert len(messages) >= 2, (
-        f"Graph produced {len(messages)} messages, expected at least 2."
-    )
+    # At least two messages need to be generated
+    assert len(messages) >= 2
 
+    tool_count_dict = get_tool_messages_count(messages=messages)
+    # Each tool involved in gatherer need to be called at least once
+    # 'memorize' need to be called the same number or more times than 'human_feedback'
+    # 'human_feedback' cant be called more that 5 times for a hobby project
+    assert 1 <= tool_count_dict["human_feedback"] <= 5
+    assert tool_count_dict["human_feedback"] <= tool_count_dict["memorize"]
+    assert tool_count_dict["set_project"] == 1
+
+    # Requirement gatherer needs to finish with the summarize (also checks its called once)
     second_last_message = messages[-2]
-
     assert isinstance(second_last_message, ToolMessage), (
         f"Expected second to last message to be a ToolMessage, got {type(second_last_message).__name__}. Full message: {second_last_message}"
     )
     assert second_last_message.name == "summarize", (
         f"Expected ToolMessage name to be 'summarize', got '{second_last_message.name}'. Available tool names in messages: {[msg.name for msg in messages if isinstance(msg, ToolMessage)]}"
     )
-
-    logger.info("Test for summarize tool call passed successfully.")
