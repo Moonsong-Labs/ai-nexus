@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model("google_genai:gemini-2.0-flash")
 
+
 @dataclass
 class CodeReviewerInstanceConfig:
     """Configuration for a code_reviewer instance."""
@@ -48,13 +49,16 @@ class CodeReviewerInstanceConfig:
         Raises:
             AssertionError: If the number of filtered tools doesn't match github_tools
         """
-        filtered_tools = [tool for tool in tools if tool.name in self.github_tools_filter]
+        filtered_tools = [
+            tool for tool in tools if tool.name in self.github_tools_filter
+        ]
         if len(filtered_tools) != len(self.github_tools_filter):
             raise ValueError(
                 f"Tool mismatch. Expected {len(self.github_tools_filter)} tools, got {len(filtered_tools)}. "
                 f"Expected tools: {self.github_tools_filter}, Got tools: {[t.name for t in filtered_tools]}"
             )
         return filtered_tools
+
 
 def local_code_reviewer_config():
     """Instance config for code reviewer with tools to use the local environment for code."""
@@ -69,11 +73,16 @@ def local_code_reviewer_config():
         ],
     )
 
+
 def non_github_code_reviewer_config():
     """Instance config for code reviewer without GitHub tools."""
     return CodeReviewerInstanceConfig(
-        name="NonGithubCodeReviewer", system_prompt=SYSTEM_PROMPT, github_tools_filter=[], other_tools=[],
+        name="NonGithubCodeReviewer",
+        system_prompt=SYSTEM_PROMPT,
+        github_tools_filter=[],
+        other_tools=[],
     )
+
 
 def github_code_reviewer_config():
     """Instance config for code reviewer with GitHub tools."""
@@ -89,6 +98,7 @@ def github_code_reviewer_config():
         ],
         other_tools=[],
     )
+
 
 class CodeReviewerGraph(AgentGraph):
     """CodeReviewer non-Github graph."""
@@ -122,6 +132,7 @@ class CodeReviewerGraph(AgentGraph):
     def create_builder(self) -> StateGraph:
         return self._config.graph_builder(self._github_tools)
 
+
 class CallModel:
     def __init__(self, github_tools: list[Tool], system_prompt: str):
         self.github_tools = github_tools
@@ -141,6 +152,7 @@ class CallModel:
         )
         return {"messages": messages_after_invoke, "project": state.project}
 
+
 def _graph_builder(github_toolset: list[Tool], system_prompt: str):
     """Return code_reviewer graph builder."""
     builder = StateGraph(State)
@@ -154,6 +166,7 @@ def _graph_builder(github_toolset: list[Tool], system_prompt: str):
     builder.add_conditional_edges("call_model", tools_condition)
     builder.add_edge("tools", "call_model")
     return builder
+
 
 __all__ = [
     "non_github_code_reviewer_config",

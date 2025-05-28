@@ -80,6 +80,7 @@ class TesterAgentConfig(SubAgentConfig):
     use_stub: bool = True
     config: TesterConfiguration = field(default_factory=TesterConfiguration)
 
+
 @dataclass(kw_only=True)
 class CodeReviewerAgentConfig(SubAgentConfig):
     """Code reviewer configuration for orchestrator."""
