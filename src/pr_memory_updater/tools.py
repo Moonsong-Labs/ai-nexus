@@ -5,7 +5,7 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Annotated, Awaitable, Callable, Optional
+from typing import Annotated, Any, Awaitable, Callable, Optional
 
 from langchain_core.tools import tool
 
@@ -27,7 +27,7 @@ def _invoke(
     return result.stdout.decode("utf-8").strip()
 
 
-async def checkout_and_edit(repo: str, pr: str, *, thunk: Callable[str, Awaitable]) -> str:
+async def checkout_and_edit(repo: str, pr: str, *, thunk: Callable[[str], Awaitable[Any]]) -> str:
     """Run the given `thunk` in a fresh checkout of the given repo.
 
     The checkout will be in a temporary directory, which will be passed in the given thunk.
