@@ -153,7 +153,7 @@ def store_project_global_memory(
         Optional[Path], "the project global memory file path"
     ] = Path("project_memories/global.md"),
     content: Annotated[str, "the memory file contents to write"],
-) -> bool:
+) -> str:
     """Store the given content to the project's global memory file.
 
     Returns:
@@ -162,6 +162,6 @@ def store_project_global_memory(
     full_path = (project_dir / global_memory_file).resolve()
     result = create_file.invoke({"file_path": str(full_path), "content": content})
     if "Successfully" in result:
-        return "Succesfully stored project global memory"
+        return "Successfully stored project global memory"
     else:
         return result
