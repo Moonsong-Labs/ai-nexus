@@ -143,6 +143,7 @@ class RequirementsGathererStub(StubGraph[RequirementsState]):
                 "messages": state.messages,
                 "summary": self._stub_messages.next(),
                 "project_name": "My Stub Project",
+                "project": Project.from_name("My Stub Project"),
             },
             agent_config=agent_config,
             checkpointer=checkpointer,
