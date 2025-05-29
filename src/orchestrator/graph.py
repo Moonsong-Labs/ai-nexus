@@ -33,6 +33,7 @@ from orchestrator.configuration import (
     RequirementsAgentConfig,
     SubAgentConfig,
     TaskManagerAgentConfig,
+    TesterAgentConfig,
 )
 from orchestrator.state import State
 from requirement_gatherer.configuration import (
@@ -43,6 +44,7 @@ from task_manager.configuration import (
     Configuration as TaskManagerConfiguration,
 )
 from task_manager.graph import TaskManagerGraph
+from tester.configuration import Configuration as TesterConfiguration
 from tester.graph import TesterAgentGraph
 
 logger = logging.getLogger(__name__)
@@ -282,6 +284,7 @@ graph = OrchestratorGraph(
         task_manager_agent=TaskManagerAgentConfig(
             use_stub=False, config=TaskManagerConfiguration(use_human_ai=False)
         ),
+        tester_agent=TesterAgentConfig(use_stub=False, config=TesterConfiguration()),
         coder_new_pr_agent=SubAgentConfig(use_stub=False, config=AgentConfiguration()),
         coder_change_request_agent=SubAgentConfig(
             use_stub=False, config=AgentConfiguration()
