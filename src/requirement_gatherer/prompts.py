@@ -162,8 +162,7 @@ System Time: {time}
 """
 
 HUMAN_AI_PRODUCT = """
-The product is **Hobby** project called 'Buen Fla Project'.\n
-Its a Rust based stack (data structure).\n
-The **vision** is "learning and having fun"\n
-For the **functional requirements**, it just need to have pop, push and is_empty functions.\n
+The product is **Hobby** project.\n
+Project name should be two words at most.\n
+The **vision** is "learning and having fun", so very short and concise.\n
 """
