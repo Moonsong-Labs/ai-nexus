@@ -33,13 +33,15 @@ async def test_tool_errors_are_propagated() -> None:
 
         if config["configurable"]["invoke_count"] < error_threshold:
             config["configurable"]["invoke_count"] += 1
-            msg = AIMessage(content="Using tool")
-            msg.tool_calls.append(
-                {
-                    "id": "1",
-                    "name": "failure",
-                    "args": {},
-                }
+            msg = AIMessage(
+                content="Using tool",
+                tool_calls=[
+                    {
+                        "id": "1",
+                        "name": "failure",
+                        "args": {},
+                    }
+                ],
             )
             return {"messages": [msg]}
 
@@ -111,13 +113,15 @@ async def test_summary_is_propagated() -> None:
 
         if config["configurable"]["first_run"]:
             config["configurable"]["first_run"] = False
-            msg = AIMessage(content="Using tool")
-            msg.tool_calls.append(
-                {
-                    "id": "1",
-                    "name": "summarize",
-                    "args": {"summary": "Answer is 42"},
-                }
+            msg = AIMessage(
+                content="Using tool",
+                tool_calls=[
+                    {
+                        "id": "1",
+                        "name": "summarize",
+                        "args": {"summary": "Answer is 42"},
+                    }
+                ],
             )
             return {"messages": [msg]}
 
