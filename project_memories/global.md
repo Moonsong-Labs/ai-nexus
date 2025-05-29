@@ -309,6 +309,17 @@ AI Nexus employs a few architectural patterns for its agents:
         *   **Configuration**: Requires `GOOGLE_API_KEY` (via `.env` file at project root) for the `langgraph dev` server.
 *   **`tests/scenarios/fibonacci/run.py` (RENAMED & UPDATED):** This file was `tests/scenarios/fibonacci.py`. It is now `tests/scenarios/fibonacci/run.py`. It is a new test scenario demonstrating the orchestration of multiple agents (using stubbed responses for most, and a real Coder agent) to create a Rust Fibonacci iterator library. This scenario showcases the dynamic stub message feature. **UPDATED**: The `OrchestratorConfiguration` in this scenario now explicitly sets `github_base_branch="fibonacci-base"`. **UPDATED**: Now defines a `BASE_BRANCH` constant (imported from `tests/scenarios/fibonacci/__init__.py`) and updates stub messages for `requirements_agent` and `task_manager_agent` to reflect the scenario's specific requirements. Includes logging for execution flow. **NEW**: The scenario now includes a concept of a "run" with structured metadata (`ScenarioRun` TypedDict) including `run_name`, `run_id`, `pr_number`, and `branch`. It extracts the PR number and branch name from the Coder agent's output using an LLM (`google_genai:gemini-2.0-flash`) and persists this run metadata to a JSON file (e.g., `tests/scenarios/fibonacci/scenario_runs/{run_id}.json`). The `RunnableConfig` for the Orchestrator now includes `run_name` and `run_id`.
 *   **`tests/scenarios/fibonacci/__init__.py` (NEW FILE):** A new `__init__.py` file has been added to `tests/scenarios/fibonacci/`, making it a Python package. It defines `BASE_BRANCH = "fibonacci-base"`.
+*   **NEW**: `tests/scenarios/stack/` (NEW SCENARIO): A new end-to-end test scenario for building a Rust stack library.
+    *   **`tests/scenarios/stack/__init__.py` (NEW FILE):** Defines `BASE_BRANCH = "stack-base"`.
+    *   **`tests/scenarios/stack/run.py` (NEW FILE):**
+        *   Demonstrates an orchestrated AI workflow for creating a Rust stack library.
+        *   Configures the Orchestrator with `github_base_branch="stack-base"`.
+        *   Sets `requirements_agent`, `architect_agent`, `task_manager_agent`, `reviewer_agent`, and `tester_agent` to `use_stub=True` with specific `MessageWheel` messages.
+        *   Sets `coder_new_pr_agent` and `coder_change_request_agent` to `use_stub=False` (using real Coder agent).
+        *   Includes logic to handle human interrupts during the workflow.
+        *   Extracts the PR number and branch name from the Coder agent's output using an LLM (`google_genai:gemini-2.0-flash`) and persists the scenario run metadata (including `run_name`, `run_id`, `pr_number`, `branch`) to a JSON file in `tests/scenarios/stack/scenario_runs/{run_id}.json`.
+        *   Utilizes `InMemorySaver` and `InMemoryStore` for graph state management.
+        *   Ensures LangSmith tracing is completed using `wait_for_all_tracers()`.
 *   **`tests/scenarios/__init__.py` (NEW):** Defines `BASE_BRANCHES` list for centralized management of base branch names used in testing scenarios.
 *   **`tests/testing/__init__.py` (UPDATED):**
     *   A new helper function `create_async_graph_caller_for_gatherer` has been added. This function is specifically designed for the requirement gatherer evaluation, expecting the final output to be a `ToolMessage` with the name "summarize" and returning its content.
@@ -525,6 +536,10 @@ ai-nexus/
     │   ├── fibonacci/              # NEW: Directory for fibonacci scenario
     │   │   ├── __init__.py         # NEW: Defines BASE_BRANCH for fibonacci scenario.
     │   │   ├── run.py              # RENAMED from tests/scenarios/fibonacci.py; UPDATED: Adds concept of a scenario "run" with structured metadata (run_name, run_id, pr_number, branch), extracts PR details using LLM, and persists run results to JSON in `scenario_runs/` directory. RunnableConfig now includes run_name and run_id.
+    │   │   └── scenario_runs/      # NEW: Directory for scenario run outputs (implicitly created by run.py)
+    │   ├── stack/                  # NEW: Directory for stack scenario
+    │   │   ├── __init__.py         # NEW: Defines BASE_BRANCH for stack scenario.
+    │   │   ├── run.py              # NEW: New E2E test scenario for building a Rust stack library, including Orchestrator configuration with stubbed agents, real Coder agent, interrupt handling, LLM-based PR info extraction, and JSON persistence of run results.
     │   │   └── scenario_runs/      # NEW: Directory for scenario run outputs (implicitly created by run.py)
     │   └── setup_github.py         # NEW: Script to setup GitHub branches for scenarios.
     ├── smoke/                      # ADDED
