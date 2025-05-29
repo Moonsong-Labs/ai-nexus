@@ -54,6 +54,21 @@ class AgentGraph(ABC):
             )
 
     @property
+    def name(self) -> str:
+        """Returns the agent's name."""
+        return self._name
+
+    @property
+    def checkpointer(self) -> Checkpointer:
+        """Returns the agent's checkpointer."""
+        return self._checkpointer
+
+    @property
+    def store(self) -> Optional[BaseStore]:
+        """Returns the agent's store."""
+        return self._store
+
+    @property
     def agent_config(self) -> AgentConfiguration:
         """Returns the agent's configuration object.
 

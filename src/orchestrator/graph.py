@@ -18,6 +18,7 @@ from architect.configuration import (
     Configuration as ArchitectConfiguration,
 )
 from architect.graph import ArchitectGraph
+from code_reviewer.graph import CodeReviewerGraph, local_code_reviewer_config
 from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
 from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.components.github_mocks import maybe_mock_github
@@ -27,6 +28,7 @@ from common.graph import AgentGraph
 from orchestrator import stubs, tools
 from orchestrator.configuration import (
     ArchitectAgentConfig,
+    CodeReviewerAgentConfig,
     Configuration,
     RequirementsAgentConfig,
     SubAgentConfig,
@@ -215,11 +217,21 @@ class OrchestratorGraph(AgentGraph):
                 github_tools=github_tools,
             )
         )
-        code_reviewer_graph = stubs.CodeReviewerStub(
-            agent_config=self._agent_config,
-            checkpointer=self._checkpointer,
-            store=self._store,
-            stub_messages=self._agent_config.reviewer_agent.stub_messages,
+        code_reviewer_graph = (
+            stubs.CodeReviewerStub(
+                agent_config=self._agent_config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+                stub_messages=self._agent_config.reviewer_agent.stub_messages,
+            )
+            if self._agent_config.reviewer_agent.use_stub
+            else CodeReviewerGraph(
+                agent_config=self._agent_config.reviewer_agent.config,
+                checkpointer=self._checkpointer,
+                store=self._store,
+                github_tools=github_tools,
+                config=local_code_reviewer_config(),
+            )
         )
 
         all_tools = [
@@ -233,7 +245,9 @@ class OrchestratorGraph(AgentGraph):
             tools.create_tester_tool(self._agent_config, tester_graph),
             tools.create_code_reviewer_tool(self._agent_config, code_reviewer_graph),
             tools.memorize,
-            tools.get_next_task,
+            tools.create_read_task_planning_tool(
+                self._agent_config.task_manager_agent.use_stub
+            ),
             common.tools.summarize,
         ]
         tool_node = ToolNode(all_tools, name="tools")
@@ -273,6 +287,9 @@ graph = OrchestratorGraph(
         tester_agent=TesterAgentConfig(use_stub=False, config=TesterConfiguration()),
         coder_new_pr_agent=SubAgentConfig(use_stub=False, config=AgentConfiguration()),
         coder_change_request_agent=SubAgentConfig(
+            use_stub=False, config=AgentConfiguration()
+        ),
+        reviewer_agent=CodeReviewerAgentConfig(
             use_stub=False, config=AgentConfiguration()
         ),
     )

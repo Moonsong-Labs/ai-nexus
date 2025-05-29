@@ -37,7 +37,7 @@ def create_memorize_tool(agent_config: Configuration) -> BaseTool:
             The memory to overwrite.
         """
         mem_id = memory_id or uuid.uuid4()
-        user_id = agent_config.user_id
+        user_id = config["configurable"]["user_id"]
         await store.aput(
             ("memories", user_id),
             key=str(mem_id),
