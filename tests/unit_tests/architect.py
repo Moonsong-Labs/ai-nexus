@@ -5,7 +5,8 @@ from collections import Counter
 
 import pytest
 from langchain_core.messages import (  # Import message types
-    HumanMessage, ToolMessage
+    HumanMessage,
+    ToolMessage,
 )
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
@@ -105,7 +106,9 @@ async def test_architect_create_files(pytestconfig):
             limit=10,
         )
         # Get arguments with which AI called tool
-        memories_args = get_tool_args_with_names(messages=messages, tool_name="memorize")
+        memories_args = get_tool_args_with_names(
+            messages=messages, tool_name="memorize"
+        )
 
         assert len(memories_args) == len(stored_memories)
 
