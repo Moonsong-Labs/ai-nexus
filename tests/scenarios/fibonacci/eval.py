@@ -1,42 +1,120 @@
 import json
 import os
+import subprocess
 import sys
-from typing import Optional
 
 from common.logging import get_logger
 from common.utils import github as github_utils
-
-from .run import ScenarioRun
+from scenarios.fibonacci.run import ScenarioRun
 
 logger = get_logger(__name__)
 
 
-def eval(run: ScenarioRun) -> Optional[str]:
-    """
-    Evaluate a scenario run by cloning the repository.
+def is_git_repo(path: str) -> bool:
+    """Check if a directory is a git repository."""
+    try:
+        subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=path,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
-    Args:
-        run: The scenario run to evaluate
 
-    Returns:
-        Optional[str]: Path to the cloned repository if successful, None otherwise
-    """
+def eval(run: ScenarioRun):
+    """Evaluate a scenario run by cloning the repository and making some checks."""
+
     repo_path = f"/tmp/ai-nexus/{run['run_id']}"
     os.makedirs(repo_path, exist_ok=True)
 
-    github_client = github_utils.get_client_from_app_credentials()
-    repo = github_client.get_repo(os.getenv("GITHUB_REPOSITORY"))
+    if not is_git_repo(repo_path):
+        env = os.environ.copy()
+        env["GIT_ASKPASS"] = "echo"
+        env["GIT_TERMINAL_PROMPT"] = "0"
 
+        github_integration = github_utils.app_get_integration()
+        github_installation = github_utils.app_get_installation(github_integration)
+        github_token = github_integration.get_access_token(github_installation.id).token
+
+        try:
+            # Clone using HTTPS with installation token
+            subprocess.run(
+                [
+                    "git",
+                    "clone",
+                    f"https://x-access-token:{github_token}@github.com/{os.getenv('GITHUB_REPOSITORY')}.git",
+                    repo_path,
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+
+            # Checkout the specific branch
+            subprocess.run(
+                [
+                    "git",
+                    "checkout",
+                    run["branch"],
+                ],
+                cwd=repo_path,
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            logger.debug(f"Successfully cloned repository to: {repo_path}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to clone repository: {e.stderr}")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to clone repository: {str(e)}")
+            return None
+    else:
+        logger.debug(f"Git repository already exists at {repo_path}")
+
+    # Check for Cargo.toml
+    cargo_toml_path = os.path.join(repo_path, "Cargo.toml")
+    assert os.path.exists(cargo_toml_path), "Cargo.toml not found in repository"
+
+    # Run cargo check
     try:
-        # Get the branch
-        branch = repo.get_branch(run["branch"])
+        cmd = ["cargo", "check"]
+        # if os.getenv("DEV_USE_FIREJAIL"):
+        #     cmd = [
+        #         "firejail",
+        #         "--quiet",
+        #         "--noprofile",
+        #         "--private",
+        #         "--private-tmp",
+        #         "--net=none",
+        #     ] + cmd
 
-        # Clone the repository
-        repo.clone_to(repo_path, branch=branch.name)
-        return repo_path
-    except Exception as e:
-        logger.error(f"Failed to clone repository: {str(e)}")
+        result = subprocess.run(
+            cmd,
+            cwd=repo_path,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        logger.debug("Cargo check output:")
+        logger.debug(result.stdout)
+        if result.stderr:
+            logger.debug("Cargo check warnings/errors:")
+            logger.debug(result.stderr)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Cargo check failed: {e.stderr}")
         return None
+    except Exception as e:
+        logger.error(f"Failed to run cargo check: {str(e)}")
+        return None
+
+    logger.info("SUCCESS")
 
 
 def main():
@@ -62,12 +140,7 @@ def main():
         logger.error(f"Failed to load run data: {str(e)}")
         sys.exit(1)
 
-    result = eval(run)
-    if result:
-        logger.info(f"Successfully cloned repository to: {result}")
-    else:
-        logger.error("Failed to clone repository")
-        sys.exit(1)
+    eval(run)
 
 
 if __name__ == "__main__":

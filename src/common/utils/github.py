@@ -10,9 +10,8 @@ from common.logging import get_logger
 logger = get_logger(__name__)
 
 
-def get_client_from_app_credentials() -> Github:
-    """Get an authenticated github client provided corresponding app credentials are provided as environment variables."""
-    logger.debug("Getting github client")
+def app_get_integration() -> GithubIntegration:
+    """Get the installation of the github app given the proper environment variables."""
     github_repo_name = os.getenv("GITHUB_REPOSITORY")
     github_app_id = os.getenv("GITHUB_APP_ID")
     github_app_private_key = os.getenv("GITHUB_APP_PRIVATE_KEY")
@@ -40,24 +39,31 @@ def get_client_from_app_credentials() -> Github:
         github_app_private_key,
     )
 
-    gi = GithubIntegration(auth=auth)
-    installations = list(gi.get_installations())
+    return GithubIntegration(auth=auth)
+
+
+def app_get_installation(integration: GithubIntegration):
+    """Get installation given a github integration with an authenticated app."""
+    installations = list(integration.get_installations())
     if not installations:
         raise ValueError(
-            f"Please make sure to install the created github app with id "
-            f"{github_app_id} on the repo: {github_repo_name}"
-            "More instructions can be found at "
-            "https://docs.github.com/en/apps/using-"
-            "github-apps/installing-your-own-github-app"
+            "Installation not found. Please make sure to install the created github app on the given repository."
         )
     try:
         # Get first installation
-        # TODO: Check if we have to handle multiple installations?
+        # TODO: Check if we have to handle multiple installations
         installation = installations[0]
+        return installation
     except IndexError as e:
         raise ValueError(
             f"Please make sure to give correct github parameters Error message: {e}"
         )
 
-    github_client = installation.get_github_for_installation()
-    return github_client
+
+def app_get_client_from_credentials() -> Github:
+    """Get an authenticated github client provided corresponding app credentials are provided as environment variables."""
+    logger.debug("Getting github client")
+    integration = app_get_integration()
+    installation = app_get_installation(integration)
+    client = installation.get_github_for_installation()
+    return client

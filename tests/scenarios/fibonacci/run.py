@@ -67,7 +67,7 @@ def run():
                 use_stub=True,
                 stub_messages=MessageWheel(
                     [
-                        "Architecture should follow cargo structure for a lib. lib should export a Fibonacci iterator.",
+                        "Architecture should follow cargo structure for a lib. with a Cargo.toml file, and src/lib.rs exporting a `Fibonacci` structs that implements the Iterator."
                     ]
                 ),
             ),
@@ -78,7 +78,7 @@ def run():
                     [
                         """
                     There's only one task for the coder:
-                     1) Create skeleton for a cargo package that exports a Fibonacci Iterator in Rust.
+                     1) Create a cargo package it should have a Cargo.toml and a src/lib.rs that exports a Fibonacci struct that implements a Fibonacci Iterator in Rust.
                     """
                     ]
                 ),
@@ -126,7 +126,7 @@ def run():
         result = await orchestrator.compiled_graph.ainvoke(
             State(
                 messages=HumanMessage(
-                    content="I want to build a library that implements a Fibonacci iterator in Rust"
+                    content="I want to build a library that implements a Fibonacci iterator in Rust. It should have a Cargo.toml and a src/lib.rs file that exports a Fibonacci struct that implements a Fibonacci Iterator."
                 )
             ),
             config=config,

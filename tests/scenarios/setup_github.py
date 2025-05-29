@@ -38,7 +38,7 @@ def create_base_branches(repo: Repository, base_branches: List[str]) -> None:
 
 def main():
     print("Getting github client")
-    github_client = github_utils.get_client_from_app_credentials()
+    github_client = github_utils.app_get_client_from_credentials()
     github_repo_name = os.getenv("GITHUB_REPOSITORY")
     try:
         repo = github_client.get_repo(github_repo_name)
