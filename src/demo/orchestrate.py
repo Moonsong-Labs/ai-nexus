@@ -115,7 +115,7 @@ if __name__ == "__main__":
                         use_human_ai=use_human_ai,
                         human_ai_product="""
 The product is **Hobby** project called 'NotAWebsite'.\n
-Its's a website that is a todo list using pure html and css.\n
+It's a website that is a todo list using pure html and css.\n
 The **vision** is "learning and having fun"\n
 For the **functional requirements**, it just need to have a todo list.\n
 """,
