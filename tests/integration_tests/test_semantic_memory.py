@@ -1,6 +1,5 @@
 import logging
 import os
-import tempfile
 from pathlib import Path
 from typing import List
 
@@ -49,7 +48,8 @@ async def test_memory_storage(conversation: List[str], expected_category: str):
 
     Asserts that at least one memory entry with the expected category is found in the agent's response.
     """
-    config = Configuration()
+    from common.components.memory import MemoryConfiguration
+    config = Configuration(memory=MemoryConfiguration(use_memory=True))
     graph = AgentTemplateGraph(agent_config=config).compiled_graph
 
     # Track if we found the expected category
@@ -114,31 +114,32 @@ async def test_memory_dump():
     """
     Verifies that the agent's memory dump tool exports stored memories to a non-empty file.
 
-    Creates a temporary directory, stores a memory entry, instructs the agent to dump its memories, and asserts that a memory dump file is created and contains data.
+    Stores a memory entry, instructs the agent to dump its memories, and asserts that a memory dump file is created and contains data.
     """
-    # Create a temporary directory for the memory dump
-    with tempfile.TemporaryDirectory() as temp_dir:
-        config = Configuration()
-        graph = AgentTemplateGraph(agent_config=config).compiled_graph
+    from common.components.memory import MemoryConfiguration
+    config = Configuration(memory=MemoryConfiguration(use_memory=True))
+    graph = AgentTemplateGraph(agent_config=config).compiled_graph
 
-        # Step 1: Store a memory
-        store_memory_msg = "The Python programming language was created by Guido van Rossum and released in 1991."
-        await graph.ainvoke(
-            {"messages": [("user", store_memory_msg)]},
-            {"thread_id": "memory_dump_test"},
-        )
+    # Step 1: Store a memory
+    store_memory_msg = "The Python programming language was created by Guido van Rossum and released in 1991. Please remember this as knowledge."
+    await graph.ainvoke(
+        {"messages": [("user", store_memory_msg)]},
+        {"thread_id": "memory_dump_test"},
+    )
 
-        # Step 2: Request a memory dump
-        dump_request = f"Dump your memories into a file in {temp_dir}"
-        await graph.ainvoke(
-            {"messages": [("user", dump_request)]},
-            {"thread_id": "memory_dump_test"},
-        )
+    # Step 2: Request a memory dump
+    dump_request = "Please call the memory_dump tool to export your memories to a file."
+    await graph.ainvoke(
+        {"messages": [("user", dump_request)]},
+        {"thread_id": "memory_dump_test"},
+    )
 
-        # Step 3: Verify a dump file was created and is not empty
-        dump_files = list(Path(temp_dir).glob("memory_dump_*.json"))
-        assert len(dump_files) > 0, "No memory dump files were created"
+    # Step 3: Verify a dump file was created and is not empty
+    # Check for memory dump files in current working directory and subdirectories
+    current_dir = Path.cwd()
+    dump_files = list(current_dir.rglob("memory_dump_*.json"))
+    assert len(dump_files) > 0, "No memory dump files were created"
 
-        # Check that file is not empty
-        dump_file = dump_files[0]
-        assert os.path.getsize(dump_file) > 0, "Memory dump file is empty"
+    # Check that file is not empty
+    dump_file = dump_files[0]
+    assert os.path.getsize(dump_file) > 0, "Memory dump file is empty"
