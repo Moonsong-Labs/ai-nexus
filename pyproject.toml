@@ -93,3 +93,6 @@ convention = "google"
 
 [tool.mypy]
 ignore_errors = false
+
+[tool.codespell]
+skip = "node_modules"
