@@ -49,6 +49,7 @@ async def test_memory_storage(conversation: List[str], expected_category: str):
     Asserts that at least one memory entry with the expected category is found in the agent's response.
     """
     from common.components.memory import MemoryConfiguration
+
     config = Configuration(memory=MemoryConfiguration(use_memory=True))
     graph = AgentTemplateGraph(agent_config=config).compiled_graph
 
@@ -117,6 +118,7 @@ async def test_memory_dump():
     Stores a memory entry, instructs the agent to dump its memories, and asserts that a memory dump file is created and contains data.
     """
     from common.components.memory import MemoryConfiguration
+
     config = Configuration(memory=MemoryConfiguration(use_memory=True))
     graph = AgentTemplateGraph(agent_config=config).compiled_graph
 
