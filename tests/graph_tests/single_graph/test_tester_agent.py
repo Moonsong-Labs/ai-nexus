@@ -15,7 +15,7 @@ from tester.configuration import Configuration
 from tester.graph import TesterAgentGraph as Graph
 
 
-@pytest.skip("currently failing")
+@pytest.mark.skip("currently failing")
 @pytest.mark.asyncio
 async def test_tester_agent_calls_needed_tools():
     """
