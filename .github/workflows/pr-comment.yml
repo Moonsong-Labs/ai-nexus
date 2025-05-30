@@ -4,12 +4,12 @@ on:
     types: [created, edited]
 jobs:
   execute_on_pr:
-  if: ${{ github.event.issue.pull_request }}
-  runs-on: [ubuntu-latest]
-  steps:
-    - name: run integration tests
-      if: github.event.comment.body == '/run integration-tests'
-      run: make test-integration
-    - name: run evaluations
-      if: github.event.comment.body == '/run evaluations'
-      run: make 
+    if: ${{ github.event.issue.pull_request }}
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: run integration tests
+        if: github.event.comment.body == '/run integration-tests'
+        run: make test-integration
+      - name: run evaluations
+        if: github.event.comment.body == '/run evaluations'
+        run: make 
