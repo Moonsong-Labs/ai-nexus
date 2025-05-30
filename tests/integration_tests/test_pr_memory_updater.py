@@ -1,21 +1,66 @@
+import uuid
+from functools import partial
+
 import pytest
 from datasets.pr_memory_updater_dataset import (
     PR_MEMORY_UPDATER_DATASET_NAME as DATASET_NAME,
 )
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.store.memory import InMemoryStore
 from langsmith import Client
 from testing import get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
-from pr_memory_updater.tools import invoke_project_memory_from_pr
-
-# from requirement_gatherer.graph import RequirementsGraph
+from pr_memory_updater.graph import PRMemoryUpdaterGraph
+from pr_memory_updater.tools import checkout_and_edit
 
 ## Setup basic logging for the test
 logger = get_logger(__name__)
 
 # Create a LLMJudge
 llm_judge = LLMJudge()
+
+
+async def eval_target(graph, inputs: dict) -> dict:
+    config = {
+        "configurable": {
+            "thread_id": str(uuid.uuid4()),
+            "user_id": "test_user",
+        }
+    }
+
+    # TODO: use PR details JSON as part of dataset input?
+    repo = inputs["repository"]
+    pr = inputs["pr_num"]
+
+    async def invoke_memory_updater(dir):
+        messages = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"Update the project memory. The repo is {repo} and the PR is number {pr}. Working directory is: {dir}",
+                }
+            ]
+        }
+
+        try:
+            await graph.ainvoke(messages, config)
+        except Exception as e:
+            logger.error(f"Failed to invoke agent: {str(e)}")
+            raise
+
+    try:
+        result = await checkout_and_edit(repo, pr, thunk=invoke_memory_updater)
+        return {"output": result}
+    except Exception as e:
+        logger.error(
+            f"Error while updating project {repo} memory for PR #{pr}: {str(e)}"
+        )
+        return {
+            "output": f"Error while updating project memory: {str(e)}",
+            "error": True,
+        }
 
 
 @pytest.mark.asyncio
@@ -37,39 +82,21 @@ async def test_pr_memory_updater(pytestconfig):
         pytest.fail(f"Dataset {DATASET_NAME} not found in LangSmith!")
 
     logger.info(f"evaluating dataset: {DATASET_NAME}")
-    # memory_saver = MemorySaver()  # Checkpointer for the graph
-    # memory_store = InMemoryStore()
 
-    # # Compile the graph - needs checkpointer for stateful execution during evaluation
-    # graph = RequirementsGraph(
-    #     checkpointer=memory_saver, store=memory_store
-    # ).compiled_graph
+    memory_saver = MemorySaver()  # Checkpointer for the graph
+    memory_store = InMemoryStore()
 
-    # target = create_async_graph_caller(graph)
-
-    async def target(inputs: dict) -> dict:
-        # TODO: use PR details JSON as part of dataset input?
-        repo = inputs["repository"]
-        pr = inputs["pr_num"]
-        try:
-            result = invoke_project_memory_from_pr(repo, pr)
-            return {"output": result}
-        except Exception as e:
-            logger.error(
-                f"Error while updating project {repo} memory for PR #{pr}: {str(e)}"
-            )
-            return {
-                "output": f"Error while updating project memory: {str(e)}",
-                "error": True,
-            }
+    # Compile the graph - needs checkpointer for stateful execution during evaluation
+    graph = PRMemoryUpdaterGraph(
+        checkpointer=memory_saver, store=memory_store
+    ).compiled_graph
 
     # Define the function to be evaluated for each dataset example
     results = await client.aevaluate(
-        target,
+        partial(eval_target, graph),
         data=DATASET_NAME,  # The whole dataset is used
         evaluators=[llm_judge.create_correctness_evaluator()],
-        # Using `script` until we migrate to graph-based agent
-        experiment_prefix="pr-memory-updater-script-gemini-2.5-correctness-eval",
+        experiment_prefix="pr-memory-updater-graph-gemini-2.5-flash-correctness-eval",
         num_repetitions=1,
         max_concurrency=4,
     )
