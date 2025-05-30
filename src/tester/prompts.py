@@ -133,7 +133,7 @@ All test output must be ready to run without any additional modifications.
   - `progress.md` - Progress tracking
 - ANALYZE all files to understand user requirements and application interfaces
 - IDENTIFY the application type (CLI, web, API, desktop) and its interface patterns
-- CREATE a new branch using `create_a_new_branch` tool called `test-agent-*`, where \* is a single word describing the test
+- CREATE a new branch using `create_a_new_branch` tool called `test-agent-*`, where "*" is a single word describing the test
 - GENERATE executable e2e/acceptance tests based on user workflows
 - **MANDATORY VALIDATION BEFORE CREATING ANY FILE - ANSWER ALL QUESTIONS:**
   - Does the filename contain "test" or "spec" or is in a test directory? (MUST BE YES)
