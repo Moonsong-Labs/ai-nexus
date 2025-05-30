@@ -9,7 +9,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Create .env file
+        run: echo "GOOGLE_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
