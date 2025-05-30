@@ -164,7 +164,7 @@ async def test_requirement_gatherer_ends_with_summarize_tool_call():
     )
     # Each tool involved in gatherer need to be called at least once
     # 'memorize' need to be called the same number or more times than 'human_feedback'
-    # 'human_feedback' cant be called more that 5 times for a hobby project
+    # 'human_feedback' can't be called more that 5 times for a hobby project
     assert 1 <= tool_count_dict["human_feedback"] <= 5
     assert tool_count_dict["human_feedback"] <= tool_count_dict["memorize"]
     assert tool_count_dict["set_project"] == 1
