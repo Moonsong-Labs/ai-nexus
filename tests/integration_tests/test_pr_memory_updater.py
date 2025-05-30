@@ -3,7 +3,7 @@ from functools import partial
 
 import pytest
 from datasets.pr_memory_updater_dataset import (
-        PR_MEMORY_UPDATER_DATASET_NAME as DATASET_NAME,
+    PR_MEMORY_UPDATER_DATASET_NAME as DATASET_NAME,
 )
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.memory import InMemoryStore
@@ -21,43 +21,47 @@ logger = get_logger(__name__)
 # Create a LLMJudge
 llm_judge = LLMJudge()
 
+
 async def eval_target(graph, inputs: dict) -> dict:
-        config = {
-            "configurable": {
-                "thread_id": str(uuid.uuid4()),
-                "user_id": "test_user",
-            }
+    config = {
+        "configurable": {
+            "thread_id": str(uuid.uuid4()),
+            "user_id": "test_user",
+        }
+    }
+
+    # TODO: use PR details JSON as part of dataset input?
+    repo = inputs["repository"]
+    pr = inputs["pr_num"]
+
+    async def invoke_memory_updater(dir):
+        messages = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"Update the project memory. The repo is {repo} and the PR is number {pr}. Working directory is: {dir}",
+                }
+            ]
         }
 
-        # TODO: use PR details JSON as part of dataset input?
-        repo = inputs["repository"]
-        pr = inputs["pr_num"]
-
-        async def invoke_memory_updater(dir):
-            messages = {
-                "messages": [{
-                    "role": "user",
-                    "content": f"Update the project memory. The repo is {repo} and the PR is number {pr}. Working directory is: {dir}"
-                }]
-            }
-
-            try:
-                await graph.ainvoke(messages, config)
-            except Exception as e:
-                logger.error(f"Failed to invoke agent: {str(e)}")
-                raise
-
         try:
-            result = await checkout_and_edit(repo, pr, thunk=invoke_memory_updater)
-            return {"output": result}
+            await graph.ainvoke(messages, config)
         except Exception as e:
-            logger.error(
-                f"Error while updating project {repo} memory for PR #{pr}: {str(e)}"
-            )
-            return {
-                "output": f"Error while updating project memory: {str(e)}",
-                "error": True,
-            }
+            logger.error(f"Failed to invoke agent: {str(e)}")
+            raise
+
+    try:
+        result = await checkout_and_edit(repo, pr, thunk=invoke_memory_updater)
+        return {"output": result}
+    except Exception as e:
+        logger.error(
+            f"Error while updating project {repo} memory for PR #{pr}: {str(e)}"
+        )
+        return {
+            "output": f"Error while updating project memory: {str(e)}",
+            "error": True,
+        }
+
 
 @pytest.mark.asyncio
 async def test_pr_memory_updater(pytestconfig):

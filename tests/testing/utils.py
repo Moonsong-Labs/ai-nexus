@@ -3,7 +3,7 @@ import math
 from langchain_core.messages import AIMessage, AnyMessage
 
 
-def get_tool_args_with_names(messages: list[AnyMessage], tool_name: str) -> list[dict]:        
+def get_tool_args_with_names(messages: list[AnyMessage], tool_name: str) -> list[dict]:
     tool_args_list = [
         tool_call["args"]
         for message in messages
@@ -13,6 +13,7 @@ def get_tool_args_with_names(messages: list[AnyMessage], tool_name: str) -> list
     ]
 
     return tool_args_list
+
 
 def get_list_diff(list1, list2):
     """
