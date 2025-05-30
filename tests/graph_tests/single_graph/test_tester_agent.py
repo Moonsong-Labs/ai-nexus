@@ -18,10 +18,6 @@ from tester.graph import TesterAgentGraph as Graph
 @pytest.mark.skip("currently failing")
 @pytest.mark.asyncio
 async def test_tester_agent_calls_needed_tools():
-    """
-    Tests that the TesterAgentGraph produces a ToolMessage with name 'summarize'
-    as the second to last message.
-    """
     memory_saver = MemorySaver()
     memory_store = InMemoryStore()
     agent_config = Configuration(

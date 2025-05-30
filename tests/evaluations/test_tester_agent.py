@@ -1,10 +1,12 @@
 import pytest
 from langgraph.checkpoint.memory import MemorySaver
 from langsmith import Client
+from common.components.github_mocks import MockGithubApi
+from common.components.github_tools import get_github_tools
 from testing import create_async_graph_caller, get_logger
 from testing.evaluators import LLMJudge
 
-from tester.graph import TesterAgentGraph
+from tester.graph import TesterAgentGraph as Graph
 
 # Setup basic logging for the test
 logger = get_logger(__name__)
@@ -79,7 +81,10 @@ async def test_tester_agent_correctness():
 
     logger.info(f"evaluating dataset: {LANGSMITH_DATASET_NAME}")
 
-    graph_compiled = TesterAgentGraph(checkpointer=MemorySaver()).compiled_graph
+    mock_github_tools = get_github_tools(MockGithubApi())
+    graph_compiled = Graph(
+        github_tools=mock_github_tools, checkpointer=MemorySaver()
+    ).compiled_graph
 
     results = await client.aevaluate(
         create_async_graph_caller(graph_compiled),
