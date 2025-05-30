@@ -82,18 +82,13 @@ def eval(run: ScenarioRun):
     cargo_toml_path = os.path.join(repo_path, "Cargo.toml")
     assert os.path.exists(cargo_toml_path), "Cargo.toml not found in repository"
 
+    # Copy test files
+    test_dir = os.path.join(repo_path, "tests")
+    os.makedirs(test_dir, exist_ok=True)
+
     # Run cargo check
     try:
         cmd = ["cargo", "check"]
-        # if os.getenv("DEV_USE_FIREJAIL"):
-        #     cmd = [
-        #         "firejail",
-        #         "--quiet",
-        #         "--noprofile",
-        #         "--private",
-        #         "--private-tmp",
-        #         "--net=none",
-        #     ] + cmd
 
         result = subprocess.run(
             cmd,
@@ -112,6 +107,35 @@ def eval(run: ScenarioRun):
         return None
     except Exception as e:
         logger.error(f"Failed to run cargo check: {str(e)}")
+        return None
+
+    logger.debug(f"Copying test files from {os.path.dirname(__file__)} to {test_dir}")
+    source_test_dir = os.path.join(os.path.dirname(__file__), "tests")
+    for file in os.listdir(source_test_dir):
+        source_file = os.path.join(source_test_dir, file)
+        dest_file = os.path.join(test_dir, file)
+        with open(source_file, "r") as src, open(dest_file, "w") as dst:
+            dst.write(src.read())
+
+    # Run cargo test
+    try:
+        result = subprocess.run(
+            ["cargo", "test"],
+            cwd=repo_path,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        logger.debug("Cargo test output:")
+        logger.debug(result.stdout)
+        if result.stderr:
+            logger.debug("Cargo test warnings/errors:")
+            logger.debug(result.stderr)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Cargo test failed: {e.stderr}")
+        return None
+    except Exception as e:
+        logger.error(f"Failed to run cargo test: {str(e)}")
         return None
 
     logger.info("SUCCESS")
