@@ -45,20 +45,13 @@ test_watch:
 test-task-manager:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_task_manager.py
 
-test_coder:
+test-coder:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_coder.py
 
 test-pr-memory-updater:
 	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_pr_memory_updater.py
 
-test_unit:
-	uv run pytest tests/unit_tests
-test_integration:
-	uv run --env-file .env -- pytest -rs $(INTEGRATION_TEST_FILE)
-
-test: test_unit test_integration
-
-extended_tests:
+extended-tests:
 	uv run --env-file .env -- python -m pytest --only-extended $(TEST_FILE)
 
 set-requirement-dataset:
@@ -70,6 +63,40 @@ set-task-manager-dataset:
 set-pr-memory-updater-dataset:
 	uv run --env-file .env -- python tests/datasets/pr_memory_updater_dataset.py
 
+############
+# TESTING 
+############
+test: test-unit
+
+test-unit:
+	uv run pytest tests/unit_tests
+
+test-graphs:
+	uv run --env-file .env pytest tests/graph_tests
+test-graphs-%:
+	uv run --env-file .env pytest tests/graph_tests/$*
+
+test-integration:
+	uv run --env-file .env -- pytest -rs $(INTEGRATION_TEST_FILE)
+
+
+###########################
+# EVALUATION & SCENARIOS
+###########################
+
+evaluation:
+	uv run --env-file .env python ./scripts/pick_evaluation.py
+
+# Run the demo orchestration script
+demo-%:
+	@if [ "$*" = "ai" ]; then \
+		uv run --env-file .env -- python ./src/demo/orchestrate.py exec ai; \
+	elif [ "$*" = "human" ]; then \
+		uv run --env-file .env -- python ./src/demo/orchestrate.py exec human; \
+	else \
+		echo "Unknown mode: $*, (need: human|ai)"; \
+	fi
+
 ######################
 # LINTING AND FORMATTING
 ######################
@@ -79,7 +106,7 @@ PYTHON_FILES=src/
 MYPY_CACHE=.mypy_cache
 lint: PYTHON_FILES=src 
 fmt: PYTHON_FILES=.
-lint_diff format_diff: PYTHON_FILES=$(shell git diff --name-only --diff-filter=d main | grep -E '\.py$$|\.ipynb$$')
+lint_diff: PYTHON_FILES=$(shell git diff --name-only --diff-filter=d main | grep -E '\.py$$|\.ipynb$$')
 lint_package: PYTHON_FILES=src
 lint_tests: PYTHON_FILES=tests
 lint_tests: MYPY_CACHE=.mypy_cache_test
@@ -88,20 +115,18 @@ lint lint_diff lint_package lint_tests:
 	uv tool run ruff check .
 	[ "$(PYTHON_FILES)" = "" ] || uv tool run ruff format $(PYTHON_FILES) --diff
 	[ "$(PYTHON_FILES)" = "" ] || uv tool run ruff check --select I $(PYTHON_FILES)
-#	[ "$(PYTHON_FILES)" = "" ] || uv tool run mypy --strict $(PYTHON_FILES)
-#	[ "$(PYTHON_FILES)" = "" ] || mkdir -p $(MYPY_CACHE) && uv tool run mypy --strict $(PYTHON_FILES) --cache-dir $(MYPY_CACHE)
 
-fmt format_diff:
+fmt:
 	uv tool run ruff format $(PYTHON_FILES)
 	uv tool run ruff check --select I --fix $(PYTHON_FILES)
 
-spell_check:
+spell-check:
 	uv tool run codespell --toml pyproject.toml
 
-spell_fix:
+spell-fix:
 	uv tool run codespell --toml pyproject.toml -w
 
-check: lint spell_check
+check: lint spell-check
 
 ######################
 # HELP
@@ -117,15 +142,4 @@ help:
 	@echo 'test_watch                   - run unit tests in watch mode'
 	@echo 'ci-build-check               - run build check for CI'
 	@echo 'demo                         - run demo orchestration script'
-
-# Run the demo orchestration script
-demo-%:
-	@if [ "$*" = "ai" ]; then \
-		uv run --env-file .env -- python ./src/demo/orchestrate.py exec ai; \
-	elif [ "$*" = "human" ]; then \
-		uv run --env-file .env -- python ./src/demo/orchestrate.py exec human; \
-	else \
-		echo "Unknown mode: $*, (need: human|ai)"; \
-	fi
-
 
