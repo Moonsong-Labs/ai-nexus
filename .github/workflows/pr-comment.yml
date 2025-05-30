@@ -7,9 +7,17 @@ jobs:
     if: ${{ github.event.issue.pull_request }}
     runs-on: [ubuntu-latest]
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install dependencies
+        run: make deps
       - name: run integration tests
-        if: github.event.comment.body == '/run integration-tests'
+        if: contains(github.event.comment.body, '/run integration-tests')
         run: make test-integration
       - name: run evaluations
-        if: github.event.comment.body == '/run evaluations'
-        run: make 
+        if: contains(github.event.comment.body, '/run evaluations')
+        run: make evaluations
