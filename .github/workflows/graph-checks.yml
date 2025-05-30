@@ -3,9 +3,10 @@
 name: Graph Checks
 
 on:
-  workflow_dispatch:
-  labels:
+  pull_request:
+    branches: [main]
     types: [labeled]
+  workflow_dispatch:
 
 # If another push to the same PR or branch happens while this workflow is still running,
 # cancel the earlier run in favor of the next run.
