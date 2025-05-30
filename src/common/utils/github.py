@@ -1,7 +1,6 @@
 """Utility functions for interacting with GitHub."""
 
 import os
-import sys
 
 from github import Auth, Github, GithubIntegration
 
@@ -17,10 +16,9 @@ def app_get_integration() -> GithubIntegration:
     github_app_private_key = os.getenv("GITHUB_APP_PRIVATE_KEY")
 
     if not github_app_id or not github_app_private_key or not github_repo_name:
-        logger.error(
-            "Error: GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY and GITHUB_REPOSITORY environment variables must be set"
+        raise ValueError(
+            "GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY and GITHUB_REPOSITORY environment variables must be set"
         )
-        sys.exit(1)
 
     try:
         # interpret the key as a file path
@@ -30,9 +28,6 @@ def app_get_integration() -> GithubIntegration:
     except FileNotFoundError:
         # Treat as direct key content
         pass
-    except Exception as e:
-        logger.error(f"Error reading private key file: {str(e)}", file=sys.stderr)
-        sys.exit(0)
 
     auth = Auth.AppAuth(
         github_app_id,
