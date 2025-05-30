@@ -205,8 +205,6 @@ async def test_tool_call_coder_with_full_task() -> None:
 
     last_message = result["messages"][-1]
     last_tool_call = last_message.tool_calls[0]
-    print(f"Tool call content type: {type(last_tool_call['args']['content'])}")
-    print(f"Task content type: {type(task_content)}")
 
     assert last_tool_call["name"] == "coder_new_pr"
     tool_content = str(last_tool_call["args"]["content"])
