@@ -17,18 +17,23 @@ concurrency:
 jobs:
   graph-tests:
     name: Graph Tests
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'graph-tests' }}
+    # if: ${{ github.event_name == 'workflow_dispatch' || github.event.label.name == 'graph-tests' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-      - name: Install uv
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-      - name: Create .env file
-        run: echo "GOOGLE_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
-      - name: Install dependencies
-        run: make deps
-      - name: Run tests
-        run: make test-graphs
+          echo "$GITHUB_CONTEXT"
+      # - uses: actions/checkout@v4
+      #   with:
+      #     ref: ${{ github.head_ref }}
+      # - name: Install uv
+      #   run: |
+      #     curl -LsSf https://astral.sh/uv/install.sh | sh
+      # - name: Create .env file
+      #   run: echo "GOOGLE_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
+      # - name: Install dependencies
+      #   run: make deps
+      # - name: Run tests
+      #   run: make test-graphs
