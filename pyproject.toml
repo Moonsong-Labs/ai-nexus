@@ -95,5 +95,4 @@ convention = "google"
 ignore_errors = false
 
 [tool.codespell]
-path = "src/"
 skip = "node_modules"
