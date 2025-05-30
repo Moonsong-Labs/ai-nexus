@@ -3,6 +3,7 @@ from collections import Counter
 
 import pytest
 from langchain_core.messages import ToolMessage
+from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.memory import InMemoryStore
 from testing.utils import get_tool_args_with_names
@@ -20,23 +21,28 @@ async def test_requirement_gatherer_ends_with_summarize_tool_call():
 
     memory_saver = MemorySaver()
     memory_store = InMemoryStore()
-    agent_config = GathererConfig(use_human_ai=True)
+    agent_config = GathererConfig(
+        use_human_ai=True,
+        user_id="test_user",
+        model="google_genai:gemini-2.0-flash",
+    )
 
     graph = RequirementsGraph(
         checkpointer=memory_saver, store=memory_store, agent_config=agent_config
-    ).compiled_graph
+    )
 
     test_input = {"messages": [{"role": "human", "content": "Start!"}]}
-    config = {
-        "configurable": {
-            "thread_id": str(uuid.uuid4()),
-            "user_id": "test_user",
-            "model": "google_genai:gemini-2.0-flash-lite",
-        },
-        "recursion_limit": 100,
-    }
+    config = graph.create_runnable_config(
+        RunnableConfig(
+            configurable={
+                "thread_id": str(uuid.uuid4()),
+            },
+            recursion_limit=100,
+        )
+    )
+    print(config)
 
-    result = await graph.ainvoke(test_input, config=config)
+    result = await graph.compiled_graph.ainvoke(test_input, config=config)
 
     assert result is not None
     assert "messages" in result

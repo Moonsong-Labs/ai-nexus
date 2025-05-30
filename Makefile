@@ -4,13 +4,12 @@
 all: help
 
 sync:
-	uv sync
+	uv sync --extra dev
 
 clean:
 	rm -rf .venv
 
 deps: sync
-	uv pip install -e .[dev]
 
 run: deps
 	uv run --env-file .env -- langgraph dev --allow-blocking --debug-port 2025
