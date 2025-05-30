@@ -87,6 +87,9 @@ test-integration:
 evaluation:
 	uv run --env-file .env python ./scripts/pick_evaluation.py
 
+evaluations:
+	uv run --env-file .env pytest ./tests/evaluations
+
 # Run the demo orchestration script
 demo-%:
 	@if [ "$*" = "ai" ]; then \

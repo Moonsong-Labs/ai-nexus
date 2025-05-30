@@ -1,0 +1,15 @@
+name: PR comment actions
+on:
+  issue_comment:                                     
+    types: [created, edited]
+jobs:
+job01:
+if: ${{ github.event.issue.pull_request }}
+runs-on: [ubuntu-latest]
+steps:
+  - name: run integration tests
+    if: github.event.comment.body == '/run integration-tests'
+    run: make test-integration
+  - name: run evaluations
+    if: github.event.comment.body == '/run evaluations'
+    run: make 
