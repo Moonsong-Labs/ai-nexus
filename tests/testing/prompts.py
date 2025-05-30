@@ -20,12 +20,12 @@ Your task is to assign a score from 0.0 to 1.0 based on the following rubric:
 
 <Instructions>
   - Carefully read the input and output
-  - Check for factual accuracy and completenessP
+  - Check for factual accuracy and completeness
   - Focus on correctness of information rather than style or verbosity
 </Instructions>
 
 <Reminder>
-  The goal is to evaluate factual correctness and complPpypPPeteness of the response.
+  The goal is to evaluate factual correctness and completeness of the response.
 </Reminder>
 
 <input>
