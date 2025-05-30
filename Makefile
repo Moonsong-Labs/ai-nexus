@@ -91,11 +91,14 @@ evaluations:
 	uv run --env-file .env pytest ./tests/evaluations
 
 # Run the demo orchestration script
+demo:
+	uv run --env-file .env -- python ./src/demo/orchestrate_live.py ai
+
 demo-%:
 	@if [ "$*" = "ai" ]; then \
-		uv run --env-file .env -- python ./src/demo/orchestrate.py exec ai; \
+		uv run --env-file .env -- python ./src/demo/orchestrate_live.py ai; \
 	elif [ "$*" = "human" ]; then \
-		uv run --env-file .env -- python ./src/demo/orchestrate.py exec human; \
+		uv run --env-file .env -- python ./src/demo/orchestrate_live.py human; \
 	else \
 		echo "Unknown mode: $*, (need: human|ai)"; \
 	fi
