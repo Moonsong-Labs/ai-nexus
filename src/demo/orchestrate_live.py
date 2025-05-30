@@ -81,18 +81,18 @@ class LiveMessageDisplay:
         }
     
     def create_layout(self) -> Layout:
-        """Create the live display layout with fixed sizes."""
+        """Create the live display layout with responsive sizing."""
         layout = Layout()
         
         layout.split_column(
             Layout(name="header", size=3),
-            Layout(name="body", size=20),  # Fixed height for body
-            Layout(name="footer", size=6)   # Reduced footer size
+            Layout(name="body", ratio=1),  # Responsive body takes remaining space
+            Layout(name="footer", size=4)   # Compact footer
         )
         
         layout["body"].split_row(
-            Layout(name="messages", ratio=3, minimum_size=40),  # Minimum width for messages
-            Layout(name="stats", ratio=1, minimum_size=20)     # Minimum width for stats
+            Layout(name="messages", ratio=3, minimum_size=40),  # 75% of width for messages
+            Layout(name="stats", ratio=1, minimum_size=25)     # 25% of width for stats
         )
         
         return layout
@@ -117,158 +117,88 @@ class LiveMessageDisplay:
         )
     
     def render_messages(self) -> Panel:
-        """Render the messages section with scrollbar and fixed dimensions."""
-        from rich.console import Group
-        from rich.text import Text
-        from rich.table import Table
-        from rich.columns import Columns
-        
-        # Fixed viewport dimensions
-        viewport_height = 12  # Lines available for content (16 - 4 for borders/padding)
-        viewport_width = 55   # Characters available for content
-        
-        # Prepare all message lines
-        all_lines = []
+        """Render the messages section with responsive scrolling."""
+        # Create message content without fixed dimensions
+        content_lines = []
         
         if not self.messages:
-            all_lines = ["Waiting for messages..."]
+            content_lines.append("Waiting for messages...")
         else:
-            for msg_data in self.messages:
+            # Show last 10 messages to prevent excessive scrolling
+            recent_messages = list(self.messages)[-10:]
+            
+            for msg_data in recent_messages:
                 agent = msg_data["agent"]
                 content = msg_data["content"]
                 timestamp = msg_data["timestamp"]
                 
                 icon = self.agent_icons.get(agent, "📨")
-                color = self.agent_colors.get(agent, "white")
                 time_str = datetime.fromtimestamp(timestamp).strftime("%H:%M:%S")
                 
-                # Create message header line
-                header_line = f"{icon} {agent.replace('_', ' ').title()} [{time_str}]"
-                all_lines.append(header_line)
+                # Create message header
+                header = f"{icon} {agent.replace('_', ' ').title()} [{time_str}]"
+                content_lines.append(header)
                 
-                # Wrap content to exact width
-                words = content.split()
-                current_line = []
-                current_length = 0
+                # Add indented content (let Rich handle wrapping)
+                if content.strip():
+                    content_lines.append(f"  {content.strip()}")
                 
-                for word in words:
-                    if current_length + len(word) + 1 <= viewport_width:
-                        current_line.append(word)
-                        current_length += len(word) + 1
-                    else:
-                        if current_line:
-                            all_lines.append("  " + " ".join(current_line))
-                        current_line = [word]
-                        current_length = len(word) + 2  # +2 for indentation
-                
-                if current_line:
-                    all_lines.append("  " + " ".join(current_line))
-                
-                # Add separator line
-                all_lines.append("")
+                # Add separator
+                content_lines.append("")
         
-        # Calculate scroll position (show last viewport_height lines)
-        total_lines = len(all_lines)
-        start_idx = max(0, total_lines - viewport_height)
-        visible_lines = all_lines[start_idx:start_idx + viewport_height]
-        
-        # Pad to exact height to prevent border flickering
-        while len(visible_lines) < viewport_height:
-            visible_lines.append("")
-        
-        # Create scroll bar
-        scroll_bar = []
-        if total_lines > viewport_height:
-            scroll_ratio = start_idx / max(1, total_lines - viewport_height)
-            for i in range(viewport_height):
-                line_ratio = i / viewport_height
-                if abs(line_ratio - scroll_ratio) < 0.1:
-                    scroll_bar.append("█")
-                elif total_lines > viewport_height:
-                    scroll_bar.append("│")
-                else:
-                    scroll_bar.append(" ")
-        else:
-            scroll_bar = [" "] * viewport_height
-        
-        # Create content with fixed width
-        content_lines = []
-        for i, line in enumerate(visible_lines):
-            # Ensure each line is exactly the right width
-            if len(line) > viewport_width:
-                line = line[:viewport_width-3] + "..."
-            else:
-                line = line.ljust(viewport_width)
-            
-            # Add scroll bar
-            content_lines.append(f"{line} {scroll_bar[i] if i < len(scroll_bar) else ' '}")
-        
-        # Create fixed content
+        # Create content text
         content_text = Text("\n".join(content_lines))
         
-        # Show scroll info in title
-        if total_lines > viewport_height:
-            showing_start = start_idx + 1
-            showing_end = min(start_idx + viewport_height, total_lines)
-            title = f"📨 Messages ({showing_start}-{showing_end} of {total_lines})"
+        # Calculate title
+        total_messages = len(self.messages)
+        if total_messages > 10:
+            title = f"📨 Messages (showing last 10 of {total_messages})"
         else:
-            title = f"📨 Messages ({total_lines} total)"
+            title = f"📨 Messages ({total_messages} total)"
         
         return Panel(
             content_text,
             title=title,
             border_style="cyan",
             box=box.ROUNDED,
-            padding=(1, 1),
-            height=16,  # Absolutely fixed height
-            width=65    # Absolutely fixed width
+            padding=(1, 1)
+            # Removed fixed height and width for responsive sizing
         )
     
     def render_stats(self) -> Panel:
-        """Render the statistics section with fixed dimensions."""
+        """Render the statistics section with responsive sizing."""
         from rich.table import Table
         
         table = Table(box=box.SIMPLE, show_header=True, header_style="bold cyan")
-        table.add_column("Agent", style="white", width=14)
-        table.add_column("Count", style="yellow", justify="right", width=5)
-        table.add_column("Active", style="green", justify="center", width=6)
+        table.add_column("Agent", style="white", no_wrap=True)
+        table.add_column("Count", style="yellow", justify="right")
+        table.add_column("Active", style="green", justify="center")
         
-        # Limit to exactly 10 rows to prevent overflow
-        sorted_agents = sorted(self.agent_stats.items(), key=lambda x: x[1], reverse=True)[:10]
+        # Show all agents or limit if too many
+        sorted_agents = sorted(self.agent_stats.items(), key=lambda x: x[1], reverse=True)
         
-        rows_added = 0
         for agent, count in sorted_agents:
-            if rows_added >= 10:
-                break
-                
             icon = self.agent_icons.get(agent, "📨")
             is_active = "✓" if agent == self.current_agent else ""
             agent_name = agent.replace('_', ' ').title()
-            
-            # Truncate long agent names to fit exactly
-            if len(agent_name) > 11:
-                agent_name = agent_name[:10] + "."
             
             table.add_row(
                 f"{icon} {agent_name}",
                 str(count),
                 is_active
             )
-            rows_added += 1
         
-        # Fill remaining rows with empty content to maintain exact height
-        while rows_added < 10:
-            table.add_row("", "", "")
-            rows_added += 1
+        # If no agents yet, show placeholder
+        if not sorted_agents:
+            table.add_row("No activity yet", "", "")
         
         return Panel(
             table,
             title="📊 Agent Activity",
             border_style="green",
             box=box.ROUNDED,
-            padding=(1, 1),
-            height=16,  # Fixed height matching messages panel
-            width=35    # Fixed width to prevent expansion
+            padding=(1, 1)
+            # Removed fixed height and width for responsive sizing
         )
     
     def render_footer(self) -> Panel:
@@ -293,8 +223,8 @@ class LiveMessageDisplay:
             title="⚡ Status",
             border_style="yellow",
             box=box.ROUNDED,
-            padding=(0, 1),  # Reduced padding
-            height=4  # Fixed compact height
+            padding=(0, 1)
+            # Removed fixed height for responsive sizing
         )
     
     def update_display(self, layout: Layout):
