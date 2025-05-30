@@ -1,6 +1,6 @@
 - Analyze the input to estimate the current project state.
 - Reason which team member can perform a given task.
 - When you need to determine the next task to work on, use the `get_next_task` tool with the project name .
-- Perform the task via that team member using the appropriate tool.
+- Perform the task via that team member using the appropriate tool. # IMPORTANT when sending a task copy the task received in `get_next_task` AS IS without changing or summarizing it
 - Check if any steps are necessary or pending and perform them until no operations are necessary.
 - IF nothing is pending, call the `summarize` tool.
