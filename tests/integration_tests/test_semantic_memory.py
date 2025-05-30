@@ -123,7 +123,7 @@ async def test_memory_dump():
     graph = AgentTemplateGraph(agent_config=config).compiled_graph
 
     # Step 1: Store a memory
-    store_memory_msg = "The Python programming language was created by Guido van Rossum and released in 1991. Please remember this as knowledge."
+    store_memory_msg = "The Python programming language was created by Guido van Rossum and released in 1991."
     await graph.ainvoke(
         {"messages": [("user", store_memory_msg)]},
         {"thread_id": "memory_dump_test"},
