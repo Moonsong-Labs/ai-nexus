@@ -157,7 +157,8 @@ When in HOBBY mode, completely ignore and skip all validation steps for testing 
 5. **For HOBBY Mode**: Create ONE comprehensive implementation-only task that combines all essential requirements.
    **For Normal Mode**: Create engineering tasks following the Task Splitting Guidelines.
 6. You will generate task file(s) in the "planning" subdirectory within the configured project_path.
-7. **For Normal Mode Only**: You will create a roadmap.md file organizing tasks across weeks in the planning subdirectory within project_path (completely skip this step in HOBBY mode).
+7. You will create a tasks.json file in the "planning" subdirectory (required for BOTH Normal and HOBBY modes).
+8. **For Normal Mode Only**: You will create a roadmap.md file organizing tasks across weeks in the planning subdirectory within project_path (completely skip this step in HOBBY mode).
 
 ## Required Files
 
@@ -257,8 +258,11 @@ Create individual markdown files in the "planning" subdirectory within the confi
 
 ### tasks.json
 
+- **IMPORTANT: Create this file in BOTH Normal Mode and HOBBY Mode**
 - Create this file at: `{project_path}/planning/tasks.json`
-- A flat list of **ALL** engineering tasks identified during the splitting process.:
+- A flat list of **ALL** engineering tasks identified during the splitting process:
+  - **Normal Mode**: Multiple tasks from the splitting process
+  - **HOBBY Mode**: Single task entry for the comprehensive implementation task
 - The file structure should strictly have this schema, only these fields should be included:
 
 ```json
@@ -271,6 +275,21 @@ Create individual markdown files in the "planning" subdirectory within the confi
     "dependencies": [],
     "details": "Use Cargo to initialize the Rust project. Create a GitHub repo if needed.",
     "pullRequestLink": "https://github.com/org/repo/pull/1",
+  }}
+]
+```
+
+**HOBBY Mode Example**:
+```json
+[
+  {{
+    "id": "T01",
+    "title": "Hobby Implementation",
+    "description": "Complete implementation of {project_name} including initialization and core features",
+    "status": "pending",
+    "dependencies": [],
+    "details": "Single comprehensive task covering project setup and all core functionality",
+    "pullRequestLink": ""
   }}
 ]
 ```
