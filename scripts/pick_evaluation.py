@@ -8,6 +8,7 @@ import sys
 from anytree import Node, RenderTree
 from pickpack import pickpack
 
+# ruff: noqa: D103 T201
 
 def find_evaluations(filepath):
     evaluations = []
@@ -19,9 +20,9 @@ def find_evaluations(filepath):
     return evaluations
 
 
-# ruff: noqa: D103
+
 def get_evaluations(directory):
-    """Recursively walks through a directory and collets evaluations."""
+    """Recursively walks through a directory and collects evaluations."""
     try:
         children = []
         for item in os.listdir(directory):
