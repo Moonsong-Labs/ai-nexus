@@ -20,7 +20,7 @@ def app_get_integration() -> GithubIntegration:
         logger.error(
             "Error: GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY and GITHUB_REPOSITORY environment variables must be set"
         )
-        sys.exit(0)
+        sys.exit(1)
 
     try:
         # interpret the key as a file path
