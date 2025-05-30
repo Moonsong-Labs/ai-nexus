@@ -171,7 +171,7 @@ When generating e2e/acceptance tests, ensure you:
 - Focus on **acceptance criteria** and **user workflows**, not internal implementation
 - Test the application interface as users would experience it
 - NEVER submit changes directly to the base branch - you cannot write to it
-- ALWAYS work on a branch created with `create_a_new_branch` tool called `test-agent-*`, where \* is a single word describing the test
+- ALWAYS work on a branch created with `create_a_new_branch` tool called `test-agent-*`, where "*" is a single word describing the test
 - Use `create_file` or `update_file` tools to upload test files to the GitHub repository
 - Use `create_pull_request` tool to submit the PR from the test branch to the `main` branch
 - **ABSOLUTE RULE: ONLY create files that are clearly test files (follow naming patterns above)**
