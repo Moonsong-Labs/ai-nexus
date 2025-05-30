@@ -117,37 +117,40 @@ class LiveMessageDisplay:
         )
     
     def render_messages(self) -> Panel:
-        """Render the messages section with responsive scrolling."""
+        """Render the messages section with responsive scrolling and tool call highlighting."""
         # Create message content without fixed dimensions
-        content_lines = []
+        content_text = Text()
         
         if not self.messages:
-            content_lines.append("Waiting for messages...")
+            content_text.append("Waiting for messages...", style="dim white")
         else:
             # Show last 10 messages to prevent excessive scrolling
             recent_messages = list(self.messages)[-10:]
             
-            for msg_data in recent_messages:
+            for i, msg_data in enumerate(recent_messages):
                 agent = msg_data["agent"]
                 content = msg_data["content"]
                 timestamp = msg_data["timestamp"]
+                msg_type = msg_data.get("type", "message")
+                
+                if i > 0:  # Add separator between messages
+                    content_text.append("\n")
                 
                 icon = self.agent_icons.get(agent, "📨")
                 time_str = datetime.fromtimestamp(timestamp).strftime("%H:%M:%S")
                 
-                # Create message header
-                header = f"{icon} {agent.replace('_', ' ').title()} [{time_str}]"
-                content_lines.append(header)
-                
-                # Add indented content (let Rich handle wrapping)
-                if content.strip():
-                    content_lines.append(f"  {content.strip()}")
-                
-                # Add separator
-                content_lines.append("")
-        
-        # Create content text
-        content_text = Text("\n".join(content_lines))
+                # Create message header with appropriate styling
+                if msg_type == "tool_call":
+                    # Tool calls in dark green
+                    content_text.append(f"🔧 Tool Call [{time_str}]\n", style="bold dark_green")
+                    if content.strip():
+                        content_text.append(f"  {content.strip()}\n", style="dark_green")
+                else:
+                    # Regular messages with agent colors
+                    agent_color = self.agent_colors.get(agent, "white")
+                    content_text.append(f"{icon} {agent.replace('_', ' ').title()} [{time_str}]\n", style=agent_color)
+                    if content.strip():
+                        content_text.append(f"  {content.strip()}\n", style="white")
         
         # Calculate title
         total_messages = len(self.messages)
@@ -234,12 +237,13 @@ class LiveMessageDisplay:
         layout["stats"].update(self.render_stats())
         layout["footer"].update(self.render_footer())
     
-    def add_message(self, agent: str, content: str):
+    def add_message(self, agent: str, content: str, msg_type: str = "message"):
         """Add a new message to the display."""
         self.messages.append({
             "agent": agent,
             "content": content.strip(),
-            "timestamp": time.time()
+            "timestamp": time.time(),
+            "type": msg_type
         })
         
         # Update stats
@@ -248,6 +252,18 @@ class LiveMessageDisplay:
         self.agent_stats[agent] += 1
         
         self.current_agent = agent
+    
+    def add_tool_call(self, tool_name: str, tool_args: dict):
+        """Add a tool call message with special formatting."""
+        # Format tool arguments for display
+        args_display = []
+        for key, value in tool_args.items():
+            if isinstance(value, str) and len(value) > 50:
+                value = value[:47] + "..."
+            args_display.append(f"{key}: {value}")
+        
+        content = f"{tool_name}({', '.join(args_display)})"
+        self.add_message("tool", content, msg_type="tool_call")
     
     def process_messages_live(self, messages: list[dict]):
         """Process messages with live updates."""
@@ -349,21 +365,21 @@ if __name__ == "__main__":
                 use_stub=False,  # Set to True to use stub
             ),
             task_manager_agent=TaskManagerAgentConfig(
-                use_stub=False,  # Set to True to use stub
+                use_stub=True,  # Set to True to use stub
                 config=TaskManagerConfiguration(),
             ),
             tester_agent=TesterAgentConfig(
-                use_stub=False,  # Set to True to use stub
+                use_stub=True,  # Set to True to use stub
                 config=TesterConfiguration(),
             ),
             coder_new_pr_agent=SubAgentConfig(
-                use_stub=False,  # Set to True to use stub
+                use_stub=True,  # Set to True to use stub
             ),
             coder_change_request_agent=SubAgentConfig(
                 use_stub=True,  # This one is set as stub
             ),
             reviewer_agent=CodeReviewerAgentConfig(
-                use_stub=False,  # Set to True to use stub
+                use_stub=True,  # Set to True to use stub
             ),
         ),
         checkpointer=InMemorySaver(),
@@ -430,25 +446,51 @@ if __name__ == "__main__":
                         if agent_name in display.agent_colors:
                             display.current_agent = agent_name
                         
-                        # Add message content
+                        # Add message content and handle tool calls
                         content = ""
-                        if hasattr(last_message, "content"):
-                            content = last_message.content
-                        elif hasattr(last_message, "tool_calls") and last_message.tool_calls:
-                            # Handle tool calls
+                        
+                        # Check for tool calls in various possible formats
+                        tool_calls_found = False
+                        if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+                            # Handle LangChain tool calls
                             for tool_call in last_message.tool_calls:
                                 tool_name = tool_call.get("name", "")
-                                if tool_name in ["requirements", "architect", "task_manager", 
-                                               "coder_new_pr", "coder_change_request", 
-                                               "tester", "code_reviewer"]:
-                                    tool_args = tool_call.get("args", {})
-                                    if "content" in tool_args:
-                                        display.add_message(tool_name, f"Calling: {tool_args['content']}")
-                                        display.update_display(layout)
+                                tool_args = tool_call.get("args", {})
+                                display.add_tool_call(tool_name, tool_args)
+                                display.update_display(layout)
+                                time.sleep(0.3)
+                                tool_calls_found = True
                         
-                        if content:
+                        # Check for content that mentions tool usage
+                        if hasattr(last_message, "content"):
+                            content = last_message.content
+                            # Look for tool patterns in content
+                            if content and "tool(s):" in content.lower():
+                                # Extract tool name from "tool(s): tool_name" pattern
+                                lines = content.split('\n')
+                                for line in lines:
+                                    if "tool(s):" in line.lower():
+                                        tool_name = line.split(':')[-1].strip()
+                                        if tool_name:
+                                            display.add_tool_call(tool_name, {})
+                                            display.update_display(layout)
+                                            time.sleep(0.3)
+                                            tool_calls_found = True
+                                        break
+                        
+                        # Add regular content if it's not just tool calls
+                        if content and not tool_calls_found:
                             display.add_message(agent_name, content)
                             display.update_display(layout)
+                        elif content and tool_calls_found and not content.strip().startswith("tool(s):"):
+                            # Add non-tool content even if tool calls were found
+                            clean_content = content
+                            # Remove tool lines from content
+                            lines = [line for line in content.split('\n') if not line.lower().startswith('tool(s):')]
+                            clean_content = '\n'.join(lines).strip()
+                            if clean_content:
+                                display.add_message(agent_name, clean_content)
+                                display.update_display(layout)
 
         # Handle any interrupts after streaming
         while True:
