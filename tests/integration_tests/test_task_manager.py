@@ -5,20 +5,20 @@ import uuid
 from typing import Awaitable, Callable
 
 import pytest
-from tests.datasets.task_manager_dataset import (
-    TASK_MANAGER_DATASET_NAME as LANGSMITH_DATASET_NAME,
-)
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langsmith import Client
-from tests.testing import get_logger
-from tests.testing.evaluators import LLMJudge
-from tests.testing.formatter import Verbosity, print_evaluation
 
 from common.state import Project
 from task_manager import prompts
 from task_manager.configuration import TASK_MANAGER_MODEL
 from task_manager.graph import TaskManagerGraph
+from tests.datasets.task_manager_dataset import (
+    TASK_MANAGER_DATASET_NAME as LANGSMITH_DATASET_NAME,
+)
+from tests.testing import get_logger
+from tests.testing.evaluators import LLMJudge
+from tests.testing.formatter import Verbosity, print_evaluation
 
 # Setup basic logging for the test
 logger = get_logger(__name__)
@@ -87,14 +87,16 @@ def create_task_manager_graph_caller(
         )
         state["project"] = project
 
-        config = graph.create_runnable_config({
-            "configurable": {
-                "thread_id": str(uuid.uuid4()),
-                "user_id": "test_user",
-                "model": TASK_MANAGER_MODEL,
-                "task_manager_system_prompt": prompts.SYSTEM_PROMPT,
+        config = graph.create_runnable_config(
+            {
+                "configurable": {
+                    "thread_id": str(uuid.uuid4()),
+                    "user_id": "test_user",
+                    "model": TASK_MANAGER_MODEL,
+                    "task_manager_system_prompt": prompts.SYSTEM_PROMPT,
+                }
             }
-        })
+        )
 
         try:
             result = await graph.compiled_graph.ainvoke(state, config=config)
@@ -145,6 +147,7 @@ async def test_task_manager_langsmith(pytestconfig):
     # Assert that results were produced.
     assert results is not None, "evaluation did not return results"
 
+
 @pytest.mark.asyncio
 async def test_task_manager_hobby_mode():
     """
@@ -179,18 +182,20 @@ async def test_task_manager_hobby_mode():
 
     state = {"messages": messages, "project": project}
 
-    config = graph.create_runnable_config({
-        "configurable": {
-            "thread_id": str(uuid.uuid4()),
-            "user_id": "test_user",
-            "model": TASK_MANAGER_MODEL,
-            "task_manager_system_prompt": prompts.SYSTEM_PROMPT,
-        },
-        "recursion_limit": 100,
-    })
+    config = graph.create_runnable_config(
+        {
+            "configurable": {
+                "thread_id": str(uuid.uuid4()),
+                "user_id": "test_user",
+                "model": TASK_MANAGER_MODEL,
+                "task_manager_system_prompt": prompts.SYSTEM_PROMPT,
+            },
+            "recursion_limit": 100,
+        }
+    )
 
     # Invoke the graph
-    result = await graph.compiled_graph.ainvoke(state, config=config)
+    await graph.compiled_graph.ainvoke(state, config=config)
 
     # Check if planning folder was created
     assert os.path.exists(planning_dir), "Planning folder was not created"
@@ -222,9 +227,10 @@ async def test_task_manager_hobby_mode():
 
     # Read and verify tasks.json content
     import json
+
     with open(tasks_json_path, "r") as f:
         tasks_data = json.load(f)
-    
+
     # Should contain exactly 1 task
     assert len(tasks_data) == 1, (
         f"Expected exactly 1 task in tasks.json for HOBBY mode, but found {len(tasks_data)}"
@@ -268,18 +274,20 @@ async def test_task_manager_full_mode():
 
     state = {"messages": messages, "project": project}
 
-    config = graph.create_runnable_config({
-        "configurable": {
-            "thread_id": str(uuid.uuid4()),
-            "user_id": "test_user",
-            "model": TASK_MANAGER_MODEL,
-            "task_manager_system_prompt": prompts.SYSTEM_PROMPT,
-        },
-        "recursion_limit": 100,
-    })
+    config = graph.create_runnable_config(
+        {
+            "configurable": {
+                "thread_id": str(uuid.uuid4()),
+                "user_id": "test_user",
+                "model": TASK_MANAGER_MODEL,
+                "task_manager_system_prompt": prompts.SYSTEM_PROMPT,
+            },
+            "recursion_limit": 100,
+        }
+    )
 
     # Invoke the graph
-    result = await graph.compiled_graph.ainvoke(state, config=config)
+    await graph.compiled_graph.ainvoke(state, config=config)
 
     # Check if planning folder was created
     assert os.path.exists(planning_dir), "Planning folder was not created"
@@ -303,16 +311,14 @@ async def test_task_manager_full_mode():
         f"Expected multiple task files in normal mode, but found only {len(task_files)}: {task_files}"
     )
 
-    # Read and verify tasks.json content
-    import json
     with open(tasks_json_path, "r") as f:
         tasks_data = json.load(f)
-    
+
     # Should contain multiple tasks
     assert len(tasks_data) > 1, (
         f"Expected multiple tasks in tasks.json for normal mode, but found only {len(tasks_data)}"
     )
-    
+
     # Verify task structure
     for task in tasks_data:
         assert "id" in task, f"Task missing 'id' field: {task}"
@@ -320,18 +326,20 @@ async def test_task_manager_full_mode():
         assert "description" in task, f"Task missing 'description' field: {task}"
         assert "status" in task, f"Task missing 'status' field: {task}"
         assert "dependencies" in task, f"Task missing 'dependencies' field: {task}"
-        assert task["status"] == "pending", f"Expected status 'pending', got '{task['status']}'"
-    
+        assert task["status"] == "pending", (
+            f"Expected status 'pending', got '{task['status']}'"
+        )
+
     # Verify that task files don't contain "hobby" in the name
     for task_file in task_files:
         assert "hobby" not in task_file.lower(), (
             f"Task file should not contain 'hobby' in normal mode, but got: {task_file}"
         )
-    
+
     # Verify roadmap.md exists and has content
     roadmap_path = os.path.join(planning_dir, "roadmap.md")
     assert os.path.exists(roadmap_path), "roadmap.md file should exist"
-    
+
     # Check that roadmap.md is not empty
     assert os.path.getsize(roadmap_path) > 0, "roadmap.md should not be empty"
 
