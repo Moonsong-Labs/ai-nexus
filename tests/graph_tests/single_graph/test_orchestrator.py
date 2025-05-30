@@ -3,6 +3,7 @@ import uuid
 import pytest
 from agentevals.trajectory.llm import create_trajectory_llm_as_judge
 from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
 from termcolor import colored
 
 from orchestrator.graph import OrchestratorGraph
@@ -34,7 +35,7 @@ Grade this actual trajectory:
 
 
 @pytest.mark.asyncio
-async def test_orchestrator(pytestconfig):
+async def test_orchestrator():
     reference_outputs = [
         {"role": "human", "content": "I want to build a project"},
         {
@@ -118,15 +119,18 @@ async def test_orchestrator(pytestconfig):
         {"role": "assistant", "content": "The project is done."},
     ]
 
-    graph = OrchestratorGraph().compiled_graph
-    result = await graph.ainvoke(
+    graph = OrchestratorGraph()
+    config = graph.create_runnable_config(
+        RunnableConfig(
+            configurable={"thread_id": str(uuid.uuid4())},
+            recursion_limit=100,
+        )
+    )
+    result = await graph.compiled_graph.ainvoke(
         State(
             messages=[HumanMessage(content="I want to build a website to sell plants")]
         ),
-        config={
-            "configurable": {"thread_id": str(uuid.uuid4())},
-            "recursion_limit": 100,
-        },
+        config=config,
     )
 
     evaluator = create_trajectory_llm_as_judge(

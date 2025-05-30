@@ -10,6 +10,7 @@ from pickpack import pickpack
 
 # ruff: noqa: D103 T201
 
+
 def find_evaluations(filepath):
     evaluations = []
     with open(filepath) as f:
@@ -18,7 +19,6 @@ def find_evaluations(filepath):
             if match:
                 evaluations.append(match.group(1))
     return evaluations
-
 
 
 def get_evaluations(directory):
