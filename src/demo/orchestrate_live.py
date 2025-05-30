@@ -237,19 +237,22 @@ class LiveMessageDisplay:
         layout["stats"].update(self.render_stats())
         layout["footer"].update(self.render_footer())
     
-    def add_message(self, agent: str, content: str, msg_type: str = "message"):
+    def add_message(self, agent: str, content: str, msg_type: str = "message", is_stub: bool = False):
         """Add a new message to the display."""
+        # Add stub suffix to agent name if it's a stub
+        display_agent = f"{agent} (stub)" if is_stub else agent
+        
         self.messages.append({
-            "agent": agent,
+            "agent": display_agent,
             "content": content.strip(),
             "timestamp": time.time(),
             "type": msg_type
         })
         
-        # Update stats
-        if agent not in self.agent_stats:
-            self.agent_stats[agent] = 0
-        self.agent_stats[agent] += 1
+        # Update stats using display name
+        if display_agent not in self.agent_stats:
+            self.agent_stats[display_agent] = 0
+        self.agent_stats[display_agent] += 1
         
         self.current_agent = agent
     
@@ -354,34 +357,55 @@ if __name__ == "__main__":
     display = LiveMessageDisplay()
     use_human_ai = human_or_ai == "ai"
     
+    # Helper function to check if an agent is a stub
+    def is_agent_stub(agent_name: str, config: OrchestratorConfiguration) -> bool:
+        """Check if the given agent is configured as a stub."""
+        if agent_name == "requirements":
+            return config.requirements_agent.use_stub
+        elif agent_name == "architect":
+            return config.architect_agent.use_stub
+        elif agent_name == "task_manager":
+            return config.task_manager_agent.use_stub
+        elif agent_name == "tester":
+            return config.tester_agent.use_stub
+        elif agent_name == "coder_new_pr":
+            return config.coder_new_pr_agent.use_stub
+        elif agent_name == "coder_change_request":
+            return config.coder_change_request_agent.use_stub
+        elif agent_name == "code_reviewer":
+            return config.reviewer_agent.use_stub
+        return False
+
     # Configuration section - THIS IS WHERE YOU SET WHICH AGENTS ARE STUBS!
-    orchestrator = OrchestratorGraph(
-        agent_config=OrchestratorConfiguration(
-            requirements_agent=RequirementsAgentConfig(
-                use_stub=False,  # Set to True to use stub
-                config=RequirementsConfiguration(use_human_ai=use_human_ai),
-            ),
-            architect_agent=ArchitectAgentConfig(
-                use_stub=False,  # Set to True to use stub
-            ),
-            task_manager_agent=TaskManagerAgentConfig(
-                use_stub=True,  # Set to True to use stub
-                config=TaskManagerConfiguration(),
-            ),
-            tester_agent=TesterAgentConfig(
-                use_stub=True,  # Set to True to use stub
-                config=TesterConfiguration(),
-            ),
-            coder_new_pr_agent=SubAgentConfig(
-                use_stub=True,  # Set to True to use stub
-            ),
-            coder_change_request_agent=SubAgentConfig(
-                use_stub=True,  # This one is set as stub
-            ),
-            reviewer_agent=CodeReviewerAgentConfig(
-                use_stub=True,  # Set to True to use stub
-            ),
+    orchestrator_config = OrchestratorConfiguration(
+        requirements_agent=RequirementsAgentConfig(
+            use_stub=False,  # Set to True to use stub
+            config=RequirementsConfiguration(use_human_ai=use_human_ai),
         ),
+        architect_agent=ArchitectAgentConfig(
+            use_stub=False,  # Set to True to use stub
+        ),
+        task_manager_agent=TaskManagerAgentConfig(
+            use_stub=True,  # Set to True to use stub
+            config=TaskManagerConfiguration(),
+        ),
+        tester_agent=TesterAgentConfig(
+            use_stub=True,  # Set to True to use stub
+            config=TesterConfiguration(),
+        ),
+        coder_new_pr_agent=SubAgentConfig(
+            use_stub=True,  # Set to True to use stub
+        ),
+        coder_change_request_agent=SubAgentConfig(
+            use_stub=True,  # This one is set as stub
+        ),
+        reviewer_agent=CodeReviewerAgentConfig(
+            use_stub=True,  # Set to True to use stub
+        ),
+    )
+    
+    orchestrator = OrchestratorGraph(
+        agent_config=orchestrator_config,
         checkpointer=InMemorySaver(),
         store=InMemoryStore(),
     )
@@ -480,7 +504,8 @@ if __name__ == "__main__":
                         
                         # Add regular content if it's not just tool calls
                         if content and not tool_calls_found:
-                            display.add_message(agent_name, content)
+                            is_stub = is_agent_stub(agent_name, orchestrator_config)
+                            display.add_message(agent_name, content, is_stub=is_stub)
                             display.update_display(layout)
                         elif content and tool_calls_found and not content.strip().startswith("tool(s):"):
                             # Add non-tool content even if tool calls were found
@@ -489,7 +514,8 @@ if __name__ == "__main__":
                             lines = [line for line in content.split('\n') if not line.lower().startswith('tool(s):')]
                             clean_content = '\n'.join(lines).strip()
                             if clean_content:
-                                display.add_message(agent_name, clean_content)
+                                is_stub = is_agent_stub(agent_name, orchestrator_config)
+                                display.add_message(agent_name, clean_content, is_stub=is_stub)
                                 display.update_display(layout)
 
         # Handle any interrupts after streaming
@@ -500,7 +526,8 @@ if __name__ == "__main__":
                 
                 # Temporarily exit live display for input
                 display.current_agent = "requirements"
-                display.add_message("requirements", interrupt.value['query'])
+                is_stub = is_agent_stub("requirements", orchestrator_config)
+                display.add_message("requirements", interrupt.value['query'], is_stub=is_stub)
                 display.update_display(layout)
                 
                 # Show interrupt panel below the live display
@@ -518,7 +545,7 @@ if __name__ == "__main__":
                 # For now, we'll need to pause the live display
                 response = input("\n\nYour Answer: ")
                 
-                display.add_message("human", response)
+                display.add_message("human", response, is_stub=False)
                 display.update_display(layout)
                 
                 # Resume with the response using astream
@@ -535,7 +562,8 @@ if __name__ == "__main__":
                                 agent_name = node_name.lower().replace(" ", "_").replace("_agent", "")
                                 
                                 if hasattr(last_message, "content") and last_message.content:
-                                    display.add_message(agent_name, last_message.content)
+                                    is_stub = is_agent_stub(agent_name, orchestrator_config)
+                                    display.add_message(agent_name, last_message.content, is_stub=is_stub)
                                     display.update_display(layout)
             else:
                 break
@@ -564,7 +592,7 @@ if __name__ == "__main__":
     console.print("")
     
     # Initialize display
-    display.add_message("system", "Starting AI Nexus Orchestrator...")
+    display.add_message("system", "Starting AI Nexus Orchestrator...", is_stub=False)
     display.update_display(layout)
     
     # Run with live display
@@ -572,7 +600,7 @@ if __name__ == "__main__":
         display.update_display(layout)
         
         # Add a startup message
-        display.add_message("system", "Initializing orchestrator graph...")
+        display.add_message("system", "Initializing orchestrator graph...", is_stub=False)
         display.update_display(layout)
         time.sleep(1)
         
@@ -581,12 +609,12 @@ if __name__ == "__main__":
             result = asyncio.run(_exec(langsmith_extra={"run_id": run_id}))
             
             # Show completion
-            display.add_message("system", "Orchestration completed successfully!")
+            display.add_message("system", "Orchestration completed successfully!", is_stub=False)
             display.current_agent = None
             display.update_display(layout)
             time.sleep(3)
         except Exception as e:
-            display.add_message("system", f"Error: {str(e)}")
+            display.add_message("system", f"Error: {str(e)}", is_stub=False)
             display.update_display(layout)
             time.sleep(3)
     
