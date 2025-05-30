@@ -40,7 +40,7 @@ jobs:
       - name: Install codespell
         uses: codespell-project/actions-codespell@v2
       - name: Check code spelling
-        uses: make spell_check
+        run: make spell_check
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
