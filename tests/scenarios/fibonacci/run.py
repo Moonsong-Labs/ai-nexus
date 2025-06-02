@@ -28,6 +28,9 @@ from orchestrator.configuration import Configuration as OrchestratorConfiguratio
 from orchestrator.graph import OrchestratorGraph
 from orchestrator.state import State
 from orchestrator.stubs import MessageWheel
+from requirement_gatherer.configuration import (
+    Configuration as RequirementsConfiguration,
+)
 from scenarios.fibonacci import BASE_BRANCH
 
 dotenv.load_dotenv()
@@ -58,7 +61,14 @@ def run():
         agent_config=OrchestratorConfiguration(
             github_base_branch=BASE_BRANCH,
             requirements_agent=RequirementsAgentConfig(
-                use_stub=True,
+                use_stub=False,
+                config=RequirementsConfiguration(
+                    use_human_ai=True,
+                    human_ai_product="""
+                    This is a hobby project. A Rust cargo package that exports a Fibonacci struct that implements the Iterator trait.
+                    This struct can be imported by its package users and used to create an iterator with the elements of the Fibonacci sequence.
+                    """,
+                ),
                 stub_messages=MessageWheel(
                     [
                         "I have gathered the requirements for the project. This should be a simple cargo package the implements a Fibonacci iterator and exports it.",
@@ -66,7 +76,7 @@ def run():
                 ),
             ),
             architect_agent=ArchitectAgentConfig(
-                use_stub=True,
+                use_stub=False,
                 stub_messages=MessageWheel(
                     [
                         "Architecture should follow cargo structure for a lib. with a Cargo.toml file, and src/lib.rs exporting a `Fibonacci` structs that implements the Iterator."
@@ -74,7 +84,7 @@ def run():
                 ),
             ),
             task_manager_agent=TaskManagerAgentConfig(
-                use_stub=True,
+                use_stub=False,
                 config=TaskManagerConfiguration(),
                 stub_messages=MessageWheel(
                     [
@@ -86,10 +96,10 @@ def run():
                 ),
             ),
             coder_new_pr_agent=SubAgentConfig(
-                use_stub=True,
+                use_stub=False,
             ),
             coder_change_request_agent=SubAgentConfig(
-                use_stub=True,
+                use_stub=False,
             ),
             reviewer_agent=CodeReviewerAgentConfig(
                 use_stub=True,
