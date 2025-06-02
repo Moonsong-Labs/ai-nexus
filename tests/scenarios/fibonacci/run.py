@@ -17,10 +17,12 @@ from termcolor import colored
 from common.logging import get_logger
 from orchestrator.configuration import (
     ArchitectAgentConfig,
+    CodeReviewerAgentConfig,
     RequirementsAgentConfig,
     SubAgentConfig,
     TaskManagerAgentConfig,
     TaskManagerConfiguration,
+    TesterAgentConfig,
 )
 from orchestrator.configuration import Configuration as OrchestratorConfiguration
 from orchestrator.graph import OrchestratorGraph
@@ -84,12 +86,12 @@ def run():
                 ),
             ),
             coder_new_pr_agent=SubAgentConfig(
-                use_stub=False,
+                use_stub=True,
             ),
             coder_change_request_agent=SubAgentConfig(
-                use_stub=False,
+                use_stub=True,
             ),
-            reviewer_agent=SubAgentConfig(
+            reviewer_agent=CodeReviewerAgentConfig(
                 use_stub=True,
                 stub_messages=MessageWheel(
                     [
@@ -97,8 +99,8 @@ def run():
                     ]
                 ),
             ),
-            tester_agent=SubAgentConfig(
-                use_stub=True,
+            tester_agent=TesterAgentConfig(
+                use_stub=False,
                 stub_messages=MessageWheel(
                     [
                         "I have tested the code and found no issues.",
@@ -123,6 +125,7 @@ def run():
                 },
             )
         )
+
         result = await orchestrator.compiled_graph.ainvoke(
             State(
                 messages=HumanMessage(
