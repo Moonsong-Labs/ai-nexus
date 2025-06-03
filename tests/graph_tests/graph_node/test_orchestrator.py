@@ -96,7 +96,7 @@ async def test_tool_call_architect() -> None:
     assert ["architect"] == actual_tool_calls
 
 
-def normalize_whitespace(text: str) -> str:
+def _normalize_whitespace(text: str) -> str:
     """Normalize text by removing extra whitespace and normalizing line endings."""
     if not isinstance(text, str):
         print(f"Expected string but got {type(text)}: {text}")
@@ -209,4 +209,134 @@ async def test_tool_call_coder_with_full_task() -> None:
     assert last_tool_call["name"] == "coder_new_pr"
     tool_content = str(last_tool_call["args"]["content"])
     task_content_str = str(task_content)
-    assert normalize_whitespace(tool_content) == normalize_whitespace(task_content_str)
+    assert _normalize_whitespace(tool_content) == _normalize_whitespace(
+        task_content_str
+    )
+
+
+@pytest.mark.asyncio
+async def test_does_not_call_tester_with_coder_details() -> None:
+    orchestrator = OrchestratorGraph(
+        checkpointer=InMemorySaver(),
+        store=InMemoryStore(),
+    )
+
+    result = await orchestrator.compiled_graph.nodes["orchestrator"].ainvoke(
+        State(
+            messages=decode_base_messages(
+                [
+                    {
+                        "content": "I want to build a website",
+                        "role": "human",
+                    },
+                    {
+                        "content": "I'll delegate this task to the Requirements Gatherer.",
+                        "role": "ai",
+                        "tool_calls": [
+                            {
+                                "name": "requirements",
+                                "args": {"content": "website"},
+                                "id": "1",
+                            }
+                        ],
+                    },
+                    {
+                        "content": "MyWebsite is a personal blog intended for sharing personal experiences with friends and family.",
+                        "role": "tool",
+                        "name": "requirements",
+                        "tool_call_id": "1",
+                        "status": "success",
+                    },
+                    {
+                        "content": "Okay, now that we have the requirements, let's move on to the architectural design.",
+                        "role": "ai",
+                        "tool_calls": [
+                            {
+                                "name": "architect",
+                                "args": {
+                                    "content": "Personal blog intended for sharing personal experiences with friends and family"
+                                },
+                                "id": "2",
+                            }
+                        ],
+                    },
+                    {
+                        "content": "Crate a static site using Next.js",
+                        "role": "tool",
+                        "name": "architect",
+                        "tool_call_id": "2",
+                        "status": "success",
+                    },
+                    {
+                        "content": "",
+                        "role": "ai",
+                        "tool_calls": [
+                            {
+                                "name": "task_manager",
+                                "args": {
+                                    "content": "Personal blog intended for sharing personal experiences with friends and family. Static site using Next.js"
+                                },
+                                "id": "3",
+                            }
+                        ],
+                    },
+                    {
+                        "content": "Create Next.js project with a blog page",
+                        "role": "tool",
+                        "name": "task_manager",
+                        "tool_call_id": "3",
+                        "status": "success",
+                    },
+                    {
+                        "content": "",
+                        "role": "ai",
+                        "tool_calls": [
+                            {
+                                "name": "read_task_planning",
+                                "args": {},
+                                "id": "4",
+                            }
+                        ],
+                    },
+                    {
+                        "content": "Create Next.js project with a blog page",
+                        "role": "tool",
+                        "name": "read_task_planning",
+                        "tool_call_id": "4",
+                        "status": "success",
+                    },
+                    {
+                        "content": "Create Next.js project with a blog page",
+                        "role": "ai",
+                        "tool_calls": [
+                            {
+                                "name": "coder_new_pr",
+                                "args": {
+                                    "content": "Create Next.js project with a blog page"
+                                },
+                                "id": "5",
+                            }
+                        ],
+                    },
+                    {
+                        "content": "Created site on PR number 999 on a branch `code-agent-website`",
+                        "role": "tool",
+                        "name": "coder_new_pr",
+                        "tool_call_id": "5",
+                        "status": "success",
+                    },
+                ]
+            ),
+        ),
+        orchestrator.create_runnable_config({"configurable": {"thread_id": "1"}}),
+        store=orchestrator.store,
+    )
+
+    last_message = result["messages"][-1]
+    last_tool_call = last_message.tool_calls[0]
+
+    assert last_tool_call["name"] == "tester"
+    tool_content = str(last_tool_call["args"]["content"])
+    assert "PR" not in tool_content
+    assert "999" not in tool_content
+    assert "code-agent-website" not in tool_content

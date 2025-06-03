@@ -29,11 +29,12 @@
 - This agent uses the existing requirements, design, and a PR, and updates code in it.
 - MUST delegate to it when existing code needs to be updated or worked on.
 
-
 ## Tester
 - MUST use `tester` tool with the content set to `content`.
 - This agent uses the existing requirements to come up with test scenarios and validates these scenarios against the written code.
-- MUST delegate to it when any code needs to be validated and tested.
+- MUST delegate to it when needing to create e2e tests for product/architecture requirements.
+- MUST send details about product/architecture. 
+- NEVER send coding implementation details such as what PRs or branches where created or features coded.
 
 ## Code Reviewer
 - MUST use `code_reviewer` tool with the content set to `content`.
