@@ -5,8 +5,7 @@ A project usually involves the following stages:
 3. Create tasks
 4. Pick a task
 5. Code and implement according to task description.
-6. Test the code.
-7. If successful, proceed to the next step. If failure, update code and test the code again. 
+6. Write e2e tests given requirements and architecture.
 8. Review the code. 
 9. If successful, proceed to the next step. If failure, update code and test the code again.
 
@@ -18,15 +17,13 @@ graph TD;
     RQ --> AR[Architecture Design];
     AR --> TM[Tasks creation];
     TM --> GT[Get task];
-    GT --> CI[Code Initial Design]
-    CI --> TS[Test Code];
-    TS --> TR[Test Results];
-    TR --> |SUCCESS| RW[Review Code];
-    TR --> |FAIL| CU[Code Update];
-    CU --> TS;
-    RW --> RR[Code Review Results];
+    GT --> CI[Code & Implement];
+    CI --> TS[Write e2e tests based on requirements];
+    TS --> RW[Review Code];
+    RW --> RR[Review Results];
     RR --> |SUCCESS| STOP;
-    RR --> |FAIL| CU[Code Update];
+    RR --> |FAIL| CU[Update Code];
+    CU --> CI;
 ```
 
 A step may request to update memory, if yes then update the memory via team member. MUST only update memory when explicitly asked to memorize, remember etc.
