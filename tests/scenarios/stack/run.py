@@ -17,10 +17,12 @@ from termcolor import colored
 from common.logging import get_logger
 from orchestrator.configuration import (
     ArchitectAgentConfig,
+    CodeReviewerAgentConfig,
     RequirementsAgentConfig,
     SubAgentConfig,
     TaskManagerAgentConfig,
     TaskManagerConfiguration,
+    TesterAgentConfig,
 )
 from orchestrator.configuration import Configuration as OrchestratorConfiguration
 from orchestrator.graph import OrchestratorGraph
@@ -89,7 +91,7 @@ def run():
             coder_change_request_agent=SubAgentConfig(
                 use_stub=False,
             ),
-            reviewer_agent=SubAgentConfig(
+            reviewer_agent=CodeReviewerAgentConfig(
                 use_stub=True,
                 stub_messages=MessageWheel(
                     [
@@ -97,7 +99,7 @@ def run():
                     ]
                 ),
             ),
-            tester_agent=SubAgentConfig(
+            tester_agent=TesterAgentConfig(
                 use_stub=True,
                 stub_messages=MessageWheel(
                     [

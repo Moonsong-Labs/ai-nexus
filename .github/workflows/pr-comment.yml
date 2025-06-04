@@ -17,9 +17,9 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
       - name: Install dependencies
         run: make deps
-      - name: run integration tests
-        if: contains(github.event.comment.body, '/run integration-tests')
-        run: make test-integration
+      - name: run graph tests
+        if: contains(github.event.comment.body, '/run graph-tests')
+        run: make test-graphs
       - name: run evaluations
         if: contains(github.event.comment.body, '/run evaluations')
         run: make evaluations

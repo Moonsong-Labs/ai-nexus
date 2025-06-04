@@ -1,58 +1,21 @@
-.PHONY: all clean check deps sync run fmt lint spell_check spell_fix test test_unit test_integration test_watch help extended_tests ci-build-check demo
+.PHONY: all clean check deps sync run fmt lint spell_check spell_fix test test_unit test_graphs test_watch help extended_tests ci-build-check demo
 
 # Default target executed when no arguments are given to make.
 all: help
 
 sync:
-	uv sync
+	uv sync --extra dev
 
 clean:
 	rm -rf .venv
 
 deps: sync
-	uv pip install -e .[dev]
 
 run: deps
 	uv run --env-file .env -- langgraph dev --allow-blocking --debug-port 2025
 
 ci-build-check: deps
 	@timeout 30s uv run --env-file .env -- langgraph dev --no-browser --no-reload; status=$$?; [ $$status -eq 0 ] || [ $$status -eq 124 ]
-
-# Define a variable for the test file path.
-UNIT_TEST_FILE ?= tests/unit_tests/
-INTEGRATION_TEST_FILE ?= tests/integration_tests/
-
-test-grumpy:
-	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_grumpy_agent.py
-test-code-reviewer:
-	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_code_reviewer_agent.py
-
-test-requirement-gatherer:
-	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_requirement_gatherer.py
-
-test-memory-graph:
-	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_graph.py
-
-test-tester:
-	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_tester_agent.py
-
-test-architect:
-	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_architect_agent.py
-
-test_watch:
-	uv run --env-file .env -- python -m ptw --snapshot-update --now . -- -vv tests/unit_tests
-
-test-task-manager:
-	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_task_manager.py
-
-test-coder:
-	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_coder.py
-
-test-pr-memory-updater:
-	uv run -- pytest -rs $(INTEGRATION_TEST_FILE)test_pr_memory_updater.py
-
-extended-tests:
-	uv run --env-file .env -- python -m pytest --only-extended $(TEST_FILE)
 
 set-requirement-dataset:
 	uv run --env-file .env -- python tests/datasets/requirement_gatherer_dataset.py
@@ -72,13 +35,13 @@ test-unit:
 	uv run pytest tests/unit_tests
 
 test-graphs:
-	uv run --env-file .env pytest tests/graph_tests
+	uv run --env-file .env pytest -rs tests/graph_tests
+
 test-graphs-%:
-	uv run --env-file .env pytest tests/graph_tests/$*
+	uv run --env-file .env pytest -rs tests/graph_tests/$*
 
-test-integration:
-	uv run --env-file .env -- pytest -rs $(INTEGRATION_TEST_FILE)
-
+test_watch:
+	uv run --env-file .env -- python -m ptw --snapshot-update --now . -- -vv tests/unit_tests
 
 ###########################
 # EVALUATION & SCENARIOS
