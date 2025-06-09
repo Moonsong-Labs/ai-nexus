@@ -89,8 +89,6 @@ async function runTest(): Promise<void> {
 
     let testPassed = false;
 
-    await page.screenshot({ path: SCREENSHOT_FILE });
-
     await page.waitForSelector("span ::-p-text('orchestrator')", {
       timeout: 10_000,
     });
