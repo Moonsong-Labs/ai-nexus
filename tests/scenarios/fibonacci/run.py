@@ -102,7 +102,7 @@ def run():
                 use_stub=False,
             ),
             reviewer_agent=CodeReviewerAgentConfig(
-                use_stub=True,
+                use_stub=False,
                 stub_messages=MessageWheel(
                     [
                         "Everything looks correct.",
