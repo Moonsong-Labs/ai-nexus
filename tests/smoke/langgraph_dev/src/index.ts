@@ -89,9 +89,12 @@ async function runTest(): Promise<void> {
 
     let testPassed = false;
 
-    await page.waitForSelector("span ::-p-text('orchestrator')", {
+    await page.waitForSelector("div ::-p-text('agent_template')", {
       timeout: 10_000,
     });
+    await page.screenshot({ path: SCREENSHOT_FILE });
+    await page.click("text=agent_template");
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     await page.screenshot({ path: SCREENSHOT_FILE });
     await page.click("text=orchestrator");
