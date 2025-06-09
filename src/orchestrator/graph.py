@@ -12,6 +12,8 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+import common.components
+import common.components.github_tools
 import common.tools
 from architect.configuration import (
     Configuration as ArchitectConfiguration,
@@ -24,7 +26,7 @@ from code_reviewer.graph import (
 from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
 from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.components.github_mocks import maybe_mock_github
-from common.components.github_tools import get_github_tools
+from common.components.github_tools import get_github_tools, GetIssueBody
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from common.logging import get_logger
@@ -237,6 +239,7 @@ class OrchestratorGraph(AgentGraph):
             )
         )
 
+
         all_tools = [
             tools.create_requirements_tool(self._agent_config, requirements_graph),
             tools.create_architect_tool(self._agent_config, architect_graph),
@@ -252,7 +255,7 @@ class OrchestratorGraph(AgentGraph):
                 self._agent_config.task_manager_agent.use_stub
             ),
             common.tools.summarize,
-        ]
+        ] + [tool for tool in github_tools if tool.name == "get_issue_body"]
         tool_node = ToolNode(all_tools, name="tools")
         llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
         orchestrator = _create_orchestrator(self._agent_config, llm)
