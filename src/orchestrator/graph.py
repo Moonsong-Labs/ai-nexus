@@ -18,7 +18,10 @@ from architect.configuration import (
     Configuration as ArchitectConfiguration,
 )
 from architect.graph import ArchitectGraph
-from code_reviewer.graph import CodeReviewerGraph, local_code_reviewer_config
+from code_reviewer.graph import (
+    CodeReviewerGraph,
+    github_code_reviewer_config,
+)
 from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
 from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.components.github_mocks import maybe_mock_github
@@ -230,7 +233,7 @@ class OrchestratorGraph(AgentGraph):
                 checkpointer=self._checkpointer,
                 store=self._store,
                 github_tools=github_tools,
-                config=local_code_reviewer_config(),
+                config=github_code_reviewer_config(),
             )
         )
 
