@@ -37,16 +37,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
-      - name: Check README spelling
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Install codespell
         uses: codespell-project/actions-codespell@v2
-        with:
-          ignore_words_file: .codespellignore
-          path: README.md
       - name: Check code spelling
-        uses: codespell-project/actions-codespell@v2
-        with:
-          ignore_words_file: .codespellignore
-          path: src/
+        run: make spell-check
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -60,39 +57,7 @@ jobs:
       - name: Install dependencies
         run: make deps
       - name: Run tests
-        run: make test_unit
-        env:
-          GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-  coder-tests:
-    name: Coder Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-      - name: Install dependencies
-        run: make deps
-      - name: Run tests
-        run: make test_coder
-        env:
-          GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-  # integration-tests:
-  #   name: Integration Tests
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         ref: ${{ github.head_ref }}
-  #     - name: Install uv
-  #       run: |
-  #         curl -LsSf https://astral.sh/uv/install.sh | sh
-  #     - name: Install dependencies
-  #       run: make deps
-  #     - name: Run integration tests
-  #       run: make test_integration
+        run: make test-unit
   smoke-test:
     name: Smoke test
     runs-on: ubuntu-latest
