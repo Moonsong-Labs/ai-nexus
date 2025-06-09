@@ -9,9 +9,8 @@ from langgraph.store.memory import InMemoryStore
 from code_reviewer.graph import CodeReviewerGraph, local_code_reviewer_config
 from code_reviewer.state import State
 
-
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="This triggers a bug that kills the aio event loop") # TODO
+@pytest.mark.asyncio(loop_scope="session")
 async def test_tool_call_none() -> None:
     code_reviewer = CodeReviewerGraph(
         checkpointer=InMemorySaver(),
@@ -33,6 +32,7 @@ async def test_tool_call_none() -> None:
     assert [] == actual_tool_calls
     
 @pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_reads_dir() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         code_reviewer = CodeReviewerGraph(
