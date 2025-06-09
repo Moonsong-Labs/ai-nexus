@@ -9,6 +9,7 @@ from langgraph.store.memory import InMemoryStore
 from code_reviewer.graph import CodeReviewerGraph, local_code_reviewer_config
 from code_reviewer.state import State
 
+
 @pytest.mark.asyncio
 @pytest.mark.asyncio(loop_scope="session")
 async def test_tool_call_none() -> None:
