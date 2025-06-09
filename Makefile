@@ -63,6 +63,10 @@ demo-%:
 		echo "Unknown mode: $*, (need: human|ai)"; \
 	fi
 
+scenario-%:
+	@echo "Running scenario: $*"
+	uv run --env-file .env -- python ./tests/scenarios/$*/run.py
+
 ######################
 # LINTING AND FORMATTING
 ######################
