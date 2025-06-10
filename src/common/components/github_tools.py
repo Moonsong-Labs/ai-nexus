@@ -432,9 +432,9 @@ def mock_github_tools(mock_api: MockGithubApi):
 
     # Verify all tools from GITHUB_TOOLS are included
     tool_names = {tool.name for tool in tools}
-    assert tool_names == set(
-        GITHUB_TOOLS
-    ), f"Tool mismatch. Expected {set(GITHUB_TOOLS)}, got {tool_names}"
+    assert tool_names == set(GITHUB_TOOLS), (
+        f"Tool mismatch. Expected {set(GITHUB_TOOLS)}, got {tool_names}"
+    )
 
     return tools
 
