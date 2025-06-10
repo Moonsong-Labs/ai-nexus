@@ -38,6 +38,7 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
 from common.components.github_mocks import MockGithubApi
+from common.components.github_wraps import wrap_github_tools
 
 logger = logging.getLogger(__name__)
 
@@ -290,9 +291,7 @@ def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
         tool.name = tool.name.lower().replace(" ", "_").replace("'", "")
         return tool
 
-    all_github_tools = [
-        make_gemini_compatible(tool) for tool in github_toolkit.get_tools()
-    ] + [
+    all_github_tools = [make_gemini_compatible(tool) for tool in github_toolkit.get_tools()] + [
         GetLatestPRWorkflowRun(github_api_wrapper=github_api_wrapper),
         CreatePullRequestReviewComment(github_api_wrapper=github_api_wrapper),
         CreateIssueComment(github_api_wrapper=github_api_wrapper),
@@ -321,8 +320,7 @@ def _convert_args_schema_to_string(func, args_schema: Type[BaseModel]):
 
     return wrapper
 
-
-def mock_github_tools(mock_api: MockGithubApi):
+def mock_github_tools(mock_api: MockGithubApi) -> List[BaseTool]:
     """Create mocked GitHub tools.
 
     Args:
@@ -432,19 +430,23 @@ def mock_github_tools(mock_api: MockGithubApi):
 
     # Verify all tools from GITHUB_TOOLS are included
     tool_names = {tool.name for tool in tools}
-    assert tool_names == set(GITHUB_TOOLS), (
-        f"Tool mismatch. Expected {set(GITHUB_TOOLS)}, got {tool_names}"
-    )
+    assert tool_names == set(
+        GITHUB_TOOLS
+    ), f"Tool mismatch. Expected {set(GITHUB_TOOLS)}, got {tool_names}"
 
     return tools
 
 
-def get_github_tools(source: Union[GitHubAPIWrapper, MockGithubApi]) -> list[BaseTool]:
+def get_github_tools(source: Union[GitHubAPIWrapper, MockGithubApi]) -> List[BaseTool]:
     """Get the GitHub tools.
 
     Args:
         source: Either a GitHubAPIWrapper or MockGithubApi instance
     """
+    tools = []
     if isinstance(source, GitHubAPIWrapper):
-        return github_tools(source)
-    return mock_github_tools(source)
+        tools = github_tools(source)
+    else:
+        tools = mock_github_tools(source)
+
+    return wrap_github_tools(tools)
