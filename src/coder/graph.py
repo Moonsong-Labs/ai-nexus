@@ -30,7 +30,9 @@ class CoderInstanceConfig:
     github_tools: List[str]
 
     def graph_builder(self, github_toolset: list[Tool], model: str):
-        builder = _graph_builder(self.filter_tools(github_toolset), self.system_prompt, model)
+        builder = _graph_builder(
+            self.filter_tools(github_toolset), self.system_prompt, model
+        )
         builder.name = self.name
         return builder
 
@@ -122,7 +124,11 @@ class CoderNewPRGraph(AgentGraph):
 
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
-        model = self._agent_config.model if self._agent_config else "google_genai:gemini-2.0-flash"
+        model = (
+            self._agent_config.model
+            if self._agent_config
+            else "google_genai:gemini-2.0-flash"
+        )
         return coder_new_pr_config().graph_builder(self._github_tools, model)
 
 
@@ -155,7 +161,11 @@ class CoderChangeRequestGraph(AgentGraph):
 
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
-        model = self._agent_config.model if self._agent_config else "google_genai:gemini-2.0-flash"
+        model = (
+            self._agent_config.model
+            if self._agent_config
+            else "google_genai:gemini-2.0-flash"
+        )
         return coder_change_request_config().graph_builder(self._github_tools, model)
 
 
@@ -182,7 +192,9 @@ def _graph_builder(github_toolset: list[Tool], system_prompt: str, model: str):
 
     tool_node = ToolNode(tools=github_toolset)
 
-    builder.add_node("call_model", _create_call_model(github_toolset, system_prompt, model))
+    builder.add_node(
+        "call_model", _create_call_model(github_toolset, system_prompt, model)
+    )
     builder.add_node("tools", tool_node)
 
     builder.add_edge("__start__", "call_model")

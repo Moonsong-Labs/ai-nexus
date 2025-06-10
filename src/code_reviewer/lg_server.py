@@ -19,9 +19,13 @@ graph_with_github_tools = (
     github_code_reviewer_config().graph_builder(github_tools, default_model).compile()
 )
 graph_no_github_tools = (
-    non_github_code_reviewer_config().graph_builder(github_tools, default_model).compile()
+    non_github_code_reviewer_config()
+    .graph_builder(github_tools, default_model)
+    .compile()
 )
-graph_local = local_code_reviewer_config().graph_builder(github_tools, default_model).compile()
+graph_local = (
+    local_code_reviewer_config().graph_builder(github_tools, default_model).compile()
+)
 
 __all__ = [
     "graph_with_github_tools",

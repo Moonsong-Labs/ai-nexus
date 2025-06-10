@@ -129,7 +129,12 @@ class CodeReviewerGraph(AgentGraph):
         self._config = config
 
     def create_builder(self) -> StateGraph:
-        model = self._agent_config.model if self._agent_config else "google_genai:gemini-2.0-flash"
+        """Create a graph builder with the configured model."""
+        model = (
+            self._agent_config.model
+            if self._agent_config
+            else "google_genai:gemini-2.0-flash"
+        )
         return self._config.graph_builder(self._github_tools, model)
 
 
@@ -173,4 +178,6 @@ def _graph_builder(github_toolset: list[Tool], system_prompt: str, model: str):
 __all__ = [
     "non_github_code_reviewer_config",
     "github_code_reviewer_config",
+    "local_code_reviewer_config",
+    "CodeReviewerGraph",
 ]
