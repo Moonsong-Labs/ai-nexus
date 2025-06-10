@@ -61,6 +61,7 @@ GITHUB_TOOLS = [
     "get_pull_request_head_branch",
     "get_pull_request_diff",
     "create_pull_request_review",
+    "get_issue_body",
     "create_issue_comment",
 ]
 
@@ -320,6 +321,7 @@ def github_tools(github_api_wrapper: GitHubAPIWrapper) -> list[BaseTool]:
         GetLatestPRWorkflowRun(github_api_wrapper=github_api_wrapper),
         CreatePullRequestReviewComment(github_api_wrapper=github_api_wrapper),
         CreateIssueComment(github_api_wrapper=github_api_wrapper),
+        GetIssueBody(github_api_wrapper=github_api_wrapper),
         GetPullRequestHeadBranch(github_api_wrapper=github_api_wrapper),
         GetPullRequestDiff(github_api_wrapper=github_api_wrapper),
     ]
