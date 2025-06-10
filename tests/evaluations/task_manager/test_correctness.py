@@ -1,11 +1,12 @@
-import pytest
-import uuid
-import sys
 import os
+import sys
+import uuid
+
+import pytest
 
 # Add tests and src directories to path for imports
 tests_dir = os.path.dirname(os.path.dirname(__file__))
-src_dir = os.path.join(os.path.dirname(tests_dir), 'src')
+src_dir = os.path.join(os.path.dirname(tests_dir), "src")
 if tests_dir not in sys.path:
     sys.path.insert(0, tests_dir)
 if src_dir not in sys.path:
@@ -21,7 +22,8 @@ from testing.formatter import Verbosity, print_evaluation
 
 from task_manager.configuration import Configuration as TaskManagerConfig
 from task_manager.graph import TaskManagerGraph
-from .conftest import TEST_CASES, run_basic_test_case, check_response_quality
+
+from .conftest import TEST_CASES, check_response_quality, run_basic_test_case
 
 # Setup basic logging for the test
 logger = get_logger(__name__)
@@ -82,6 +84,7 @@ def create_async_graph_caller_for_task_manager(graph):
     """
     Create a task manager graph caller that properly handles the dataset format.
     """
+
     async def call_model(inputs: dict):
         config = {
             "configurable": {
@@ -96,6 +99,7 @@ def create_async_graph_caller_for_task_manager(graph):
 
     return call_model
 
+
 # TEST_CASES now imported from conftest.py
 
 
@@ -103,34 +107,31 @@ def create_async_graph_caller_for_task_manager(graph):
 async def test_task_manager_basic_responses(task_manager_graph, test_project):
     """
     Simple local test for task manager responses without external dependencies.
-    
+
     This test verifies that the task manager provides reasonable responses
     to basic questions about requirements and project setup.
     """
     # Run tests for each case
     for i, test_case in enumerate(TEST_CASES):
         found_keywords = await run_basic_test_case(
-            task_manager_graph, 
-            test_project, 
-            test_case, 
-            i
+            task_manager_graph, test_project, test_case, i
         )
         print(f"✓ Test case {i} passed - Found keywords: {found_keywords}")
 
 
-@pytest.mark.asyncio 
+@pytest.mark.asyncio
 async def test_task_manager_response_quality(task_manager_graph, test_project):
     """
     Test that task manager responses meet basic quality criteria.
     """
     response, found_indicators = await check_response_quality(
-        task_manager_graph,
-        test_project,
-        "What do you need from me to start working?"
+        task_manager_graph, test_project, "What do you need from me to start working?"
     )
-    
-    print(f"✓ Quality test passed - Response length: {len(response)}, "
-          f"Helpful indicators: {found_indicators}")
+
+    print(
+        f"✓ Quality test passed - Response length: {len(response)}, "
+        f"Helpful indicators: {found_indicators}"
+    )
 
 
 @pytest.mark.asyncio
@@ -143,17 +144,13 @@ async def test_task_manager_langsmith(pytestconfig):
     client = Client()
 
     if not client.has_dataset(dataset_name=TASK_MANAGER_DATASET_NAME):
-        logger.error(
-            "Dataset %s not found in LangSmith!", TASK_MANAGER_DATASET_NAME
-        )
+        logger.error("Dataset %s not found in LangSmith!", TASK_MANAGER_DATASET_NAME)
         # Print existing datasets for debugging
         datasets = client.list_datasets()
         logger.error("Existing datasets: %s", datasets)
         for dataset in datasets:
             logger.error("Dataset ID: %s, Name: %s", dataset.id, dataset.name)
-        pytest.fail(
-            f"Dataset {TASK_MANAGER_DATASET_NAME} not found in LangSmith!"
-        )
+        pytest.fail(f"Dataset {TASK_MANAGER_DATASET_NAME} not found in LangSmith!")
 
     logger.info(f"evaluating dataset: {TASK_MANAGER_DATASET_NAME}")
     memory_saver = MemorySaver()  # Checkpointer for the graph
