@@ -1,14 +1,14 @@
 """Define the shared values."""
 
-import logging
 from dataclasses import dataclass, field
 
 from langchain_core.messages import AnyMessage
 from langgraph.graph import add_messages
 from typing_extensions import Annotated
 
-logger = logging.getLogger(__name__)
+from common.logging import get_logger
 
+logger = get_logger(__name__)
 
 @dataclass(kw_only=True)
 class State:

@@ -1,4 +1,3 @@
-import logging
 import traceback
 import uuid  # Add import for unique thread IDs
 
@@ -17,13 +16,10 @@ from openevals.llm import create_llm_as_judge
 from openevals.prompts import CORRECTNESS_PROMPT
 
 from code_reviewer.graph import non_github_code_reviewer_config
+from common.logging import get_logger
 
-# Setup basic logging for the test
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-
+logger = get_logger(__name__)
+#
 # Define the LangSmith dataset ID
 LANGSMITH_DATASET_NAME = "code-reviewer-testing"
 

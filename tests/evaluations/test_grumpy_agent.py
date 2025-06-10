@@ -1,10 +1,11 @@
 import pytest
 from langgraph.checkpoint.memory import MemorySaver
 from langsmith import Client
-from testing import create_async_graph_caller, get_logger
+from testing import create_async_graph_caller
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
+from common.logging import get_logger
 from grumpy.graph import builder_no_memory as graph_builder
 
 # Setup basic logging for the test

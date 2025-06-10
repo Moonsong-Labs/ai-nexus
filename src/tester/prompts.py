@@ -1,8 +1,8 @@
 """Define default prompts."""
 
-import logging
+from common.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 SYSTEM_PROMPT = """
 # Test Agent

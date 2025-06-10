@@ -1,7 +1,6 @@
 """Graphs that extract memories on a schedule."""
 
 import asyncio
-import logging
 from datetime import datetime
 
 from langchain.chat_models import init_chat_model
@@ -9,11 +8,11 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, StateGraph
 from langgraph.store.base import BaseStore
 
+from common.logging import get_logger
 from grumpy import configuration, tools, utils
 from grumpy.state import State
 
-logger = logging.getLogger(__name__)
-
+logger = get_logger(__name__)
 # Initialize the language model to be used for memory extraction
 llm = init_chat_model()
 

@@ -8,7 +8,6 @@ from common.logging import get_logger
 
 logger = get_logger(__name__)
 
-
 def app_get_integration() -> GithubIntegration:
     """Get the installation of the github app given the proper environment variables."""
     github_repo_name = os.getenv("GITHUB_REPOSITORY")

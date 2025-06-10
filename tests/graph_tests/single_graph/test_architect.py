@@ -11,12 +11,12 @@ from langchain_core.messages import (  # Import message types
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.memory import InMemoryStore
-from testing import get_logger
 from testing.utils import get_tool_args_with_names
 
 from architect.configuration import Configuration as ArchitectConfiguration
 from architect.graph import ArchitectGraph
 from architect.state import State
+from common.logging import get_logger
 from common.state import Project
 
 # Setup basic logging for the test
@@ -24,7 +24,6 @@ logger = get_logger(__name__)
 
 # Test directory for file operations
 TEST_DIR = "./projects/test-site"
-
 
 @pytest.mark.asyncio
 async def test_architect_create_files():

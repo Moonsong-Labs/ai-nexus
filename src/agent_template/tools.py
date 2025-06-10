@@ -1,14 +1,14 @@
 """Generic utility tools for the agent."""
 
-import logging
 import os
 from pathlib import Path
 from typing import Optional
 
 from langchain_core.tools import Tool
 
-logger = logging.getLogger(__name__)
+from common.logging import get_logger
 
+logger = get_logger(__name__)
 
 def create_file_dump_tool() -> Tool:
     """Create a tool that dumps any arbitrary text to a file.

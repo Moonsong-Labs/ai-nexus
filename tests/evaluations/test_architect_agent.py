@@ -10,11 +10,11 @@ from langchain_core.messages import (  # Import message types
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.memory import InMemoryStore
 from langsmith import Client
-from testing import get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
 from architect.graph import ArchitectGraph
+from common.logging import get_logger
 
 # Setup basic logging for the test
 logger = get_logger(__name__)

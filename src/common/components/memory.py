@@ -6,7 +6,6 @@ and managing memory storage with proper namespacing for different users.
 """
 
 import json
-import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime
@@ -20,7 +19,9 @@ from langgraph.store.memory import InMemoryStore
 from langmem import create_manage_memory_tool, create_search_memory_tool
 from pydantic import BaseModel, Field
 
-logger = logging.getLogger(__name__)
+from common.logging import get_logger
+
+logger = get_logger(__name__)
 
 REPO_ROOT = Path(
     os.path.dirname(

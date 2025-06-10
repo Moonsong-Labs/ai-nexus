@@ -1,13 +1,13 @@
 """Mock Github API for testing."""
 
-import logging
 import os
 from typing import Union
 
 from langchain_community.utilities.github import GitHubAPIWrapper
 
-logger = logging.getLogger(__name__)
+from common.logging import get_logger
 
+logger = get_logger(__name__)
 
 class MockGithubApi:
     """Mock Github API that keeps changes in memory."""

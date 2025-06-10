@@ -1,6 +1,5 @@
 """Common agent graph."""
 
-import logging
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -12,9 +11,9 @@ from langgraph.types import Checkpointer
 
 from common.components.memory import SemanticMemory
 from common.configuration import AgentConfiguration
+from common.logging import get_logger
 
-logger = logging.getLogger(__name__)
-
+logger = get_logger(__name__)
 
 class AgentGraph(ABC):
     """Agent graph."""
