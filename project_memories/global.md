@@ -360,6 +360,7 @@ AI Nexus employs a few architectural patterns for its agents:
 *   **`README.md` (UPDATED):**
     *   Updated "Local Demo" instructions to use the new `make demo-ai` and `make demo-human` commands.
 *   **CI/CD (GitHub Actions - `.github/workflows/`):**
+    *   **UPDATED**: All jobs within `checks.yml`, `compile-check.yml`, and `graph-checks.yml` now use a refined `actions/checkout` configuration (`ref: ${{ github.event.pull_request.head.ref || github.ref }}` and `repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}`) to correctly checkout the code for pull requests originating from forks, ensuring CI runs on the correct branch and repository.
     *   `checks.yml` (UPDATED):
         *   Includes jobs for linting, type checking, unit tests, and integration tests.
         *   **New `smoke-test` job**:
@@ -370,7 +371,8 @@ AI Nexus employs a few architectural patterns for its agents:
             *   Navigates to `tests/smoke/langgraph_dev`, installs Node.js dependencies (`npm i`), and runs the smoke test (`npm test`).
             *   Uploads `tests/smoke/langgraph_dev/langgraph-test-result.png` as an artifact with a 10-day retention period if the test runs (regardless of pass/fail).
         *   **UPDATED**: The `test_unit` job now includes `GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }}` in its environment variables.
-    *   `compile-check.yml`: Ensures the LangGraph graphs can be compiled.
+    *   `compile-check.yml` (UPDATED): Ensures the LangGraph graphs can be compiled.
+    *   `graph-checks.yml` (UPDATED): Ensures the LangGraph graphs can be compiled and their structure is valid.
     *   `run_common_tests.yml` (NEW): A new workflow to run common unit tests on `push` to `main`, `pull_request` to `main`, and `workflow_dispatch`.
     *   `update_project_memory.yml`: (As previously described)
 *   **Project Maintenance Scripts (UPDATED):**
@@ -417,6 +419,7 @@ ai-nexus/
 │   └── workflows/
 │       ├── checks.yml            # UPDATED: Added smoke-test job; test_unit job now includes GOOGLE_API_KEY env var.
 │       ├── compile-check.yml
+│       ├── graph-checks.yml      # UPDATED: The `actions/checkout` step has been updated to support pull requests from forks.
 │       ├── run_common_tests.yml  # NEW: Workflow to run common unit tests
 │       └── update_project_memory.yml
 ├── Makefile                      # UPDATED: Changed demo target to demo-% (e.g., demo-ai, demo-human).
