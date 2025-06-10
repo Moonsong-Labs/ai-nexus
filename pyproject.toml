@@ -42,7 +42,6 @@ packages = [
     "agent_template",
     "code_reviewer",
     "orchestrator",
-    "grumpy",
     "architect",
     "coder",
     "tester",
