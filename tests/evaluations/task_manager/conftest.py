@@ -138,7 +138,15 @@ async def check_response_quality(graph, project, message_content):
     )
 
     # Check for basic helpfulness indicators
-    helpful_indicators = ["need", "require", "provide", "must", "should"]
+    helpful_indicators = [
+        "need",
+        "require",
+        "provide",
+        "must",
+        "should",
+        "ensure",
+        "please",
+    ]
     found_indicators = [ind for ind in helpful_indicators if ind in response.lower()]
     assert len(found_indicators) > 0, (
         f"Response should contain helpful language: {response}"

@@ -12,18 +12,22 @@ if tests_dir not in sys.path:
 if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
 
-from datasets.task_manager_dataset import TASK_MANAGER_DATASET_NAME
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.store.memory import InMemoryStore
-from langsmith import Client
-from testing import get_logger
-from testing.evaluators import LLMJudge
-from testing.formatter import Verbosity, print_evaluation
+from datasets.task_manager_dataset import TASK_MANAGER_DATASET_NAME  # noqa: E402
+from langgraph.checkpoint.memory import MemorySaver  # noqa: E402
+from langgraph.store.memory import InMemoryStore  # noqa: E402
+from langsmith import Client  # noqa: E402
+from testing import get_logger  # noqa: E402
+from testing.evaluators import LLMJudge  # noqa: E402
+from testing.formatter import Verbosity, print_evaluation  # noqa: E402
 
-from task_manager.configuration import Configuration as TaskManagerConfig
-from task_manager.graph import TaskManagerGraph
+from task_manager.configuration import Configuration as TaskManagerConfig  # noqa: E402
+from task_manager.graph import TaskManagerGraph  # noqa: E402
 
-from .conftest import TEST_CASES, check_response_quality, run_basic_test_case
+from .conftest import (  # noqa: E402
+    TEST_CASES,
+    check_response_quality,
+    run_basic_test_case,
+)
 
 # Setup basic logging for the test
 logger = get_logger(__name__)

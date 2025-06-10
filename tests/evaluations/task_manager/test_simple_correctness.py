@@ -15,7 +15,11 @@ src_dir = os.path.join(
 if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
 
-from .conftest import TEST_CASES, check_response_quality, run_basic_test_case
+from .conftest import (  # noqa: E402
+    TEST_CASES,
+    check_response_quality,
+    run_basic_test_case,
+)
 
 
 @pytest.mark.asyncio
