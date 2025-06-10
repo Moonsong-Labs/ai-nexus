@@ -18,7 +18,7 @@ from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 
-llm = init_chat_model("google_genai:gemini-2.0-flash")
+# Model will be initialized with configuration in _create_call_model
 
 
 @dataclass
@@ -29,8 +29,8 @@ class CoderInstanceConfig:
     system_prompt: str
     github_tools: List[str]
 
-    def graph_builder(self, github_toolset: list[Tool]):
-        builder = _graph_builder(self.filter_tools(github_toolset), self.system_prompt)
+    def graph_builder(self, github_toolset: list[Tool], model: str):
+        builder = _graph_builder(self.filter_tools(github_toolset), self.system_prompt, model)
         builder.name = self.name
         return builder
 
@@ -122,7 +122,8 @@ class CoderNewPRGraph(AgentGraph):
 
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
-        return coder_new_pr_config().graph_builder(self._github_tools)
+        model = self._agent_config.model if self._agent_config else "google_genai:gemini-2.0-flash"
+        return coder_new_pr_config().graph_builder(self._github_tools, model)
 
 
 class CoderChangeRequestGraph(AgentGraph):
@@ -154,15 +155,17 @@ class CoderChangeRequestGraph(AgentGraph):
 
     def create_builder(self) -> StateGraph:
         """Create a graph builder."""
-        return coder_change_request_config().graph_builder(self._github_tools)
+        model = self._agent_config.model if self._agent_config else "google_genai:gemini-2.0-flash"
+        return coder_change_request_config().graph_builder(self._github_tools, model)
 
 
-def _create_call_model(github_tools: list[Tool], system_prompt: str):
+def _create_call_model(github_tools: list[Tool], system_prompt: str, model: str):
     @prechain(skip_on_summary_and_tool_errors())
     async def call_model(
         state: State,
         config: RunnableConfig,
     ) -> dict:
+        llm = init_chat_model(model)
         system_msg = SystemMessage(content=system_prompt)
         messages = [system_msg] + state.messages
         messages_after_invoke = await llm.bind_tools(github_tools).ainvoke(
@@ -173,13 +176,13 @@ def _create_call_model(github_tools: list[Tool], system_prompt: str):
     return call_model
 
 
-def _graph_builder(github_toolset: list[Tool], system_prompt: str):
+def _graph_builder(github_toolset: list[Tool], system_prompt: str, model: str):
     """Return coder graph builder."""
     builder = StateGraph(State)
 
     tool_node = ToolNode(tools=github_toolset)
 
-    builder.add_node("call_model", _create_call_model(github_toolset, system_prompt))
+    builder.add_node("call_model", _create_call_model(github_toolset, system_prompt, model))
     builder.add_node("tools", tool_node)
 
     builder.add_edge("__start__", "call_model")
