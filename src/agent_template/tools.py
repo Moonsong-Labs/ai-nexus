@@ -10,6 +10,7 @@ from common.logging import get_logger
 
 logger = get_logger(__name__)
 
+
 def create_file_dump_tool() -> Tool:
     """Create a tool that dumps any arbitrary text to a file.
 

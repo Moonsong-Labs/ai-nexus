@@ -1,6 +1,5 @@
 """Coder graph for LangGraph Server."""
 
-
 from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
 from common.components.github_mocks import maybe_mock_github
 from common.components.github_tools import get_github_tools

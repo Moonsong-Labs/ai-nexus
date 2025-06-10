@@ -9,6 +9,7 @@ from common.logging import get_logger
 
 logger = get_logger(__name__)
 
+
 class MockGithubApi:
     """Mock Github API that keeps changes in memory."""
 

@@ -21,6 +21,7 @@ from pr_memory_updater.state import State
 
 logger = get_logger(__name__)
 
+
 def _create_call_model(
     agent_config: Configuration,
     llm: Runnable[LanguageModelInput, BaseMessage],

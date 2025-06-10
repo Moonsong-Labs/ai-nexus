@@ -26,6 +26,7 @@ from requirement_gatherer.state import State
 
 logger = get_logger(__name__)
 
+
 def _create_call_model(
     agent_config: Configuration,
     llm_with_tools: Runnable[LanguageModelInput, BaseMessage],

@@ -10,6 +10,7 @@ from common.logging import get_logger
 
 logger = get_logger(__name__)
 
+
 @dataclass(kw_only=True)
 class State:
     """Main graph state."""

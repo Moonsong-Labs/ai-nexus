@@ -27,6 +27,7 @@ from tester.state import State
 
 logger = get_logger(__name__)
 
+
 def get_tester_github_tools():
     """Get the list of GitHub tools needed for the test agent."""
     return [
