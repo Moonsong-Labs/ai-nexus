@@ -1,6 +1,8 @@
+from .cp import BASE_BRANCH as CP_BASE_BRANCH
 from .fibonacci import BASE_BRANCH as FIBONACCI_BASE_BRANCH
 
 BASE_BRANCHES = [
     "main",
     FIBONACCI_BASE_BRANCH,
+    CP_BASE_BRANCH,
 ]
