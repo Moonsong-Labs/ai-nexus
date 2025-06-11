@@ -4,11 +4,11 @@ import subprocess
 import sys
 import warnings
 
-warnings.filterwarnings("ignore", category=SyntaxWarning)
-
 from common.logging import get_logger
 from common.utils import github as github_utils
-from scenarios.fibonacci.run import ScenarioRun
+from scenarios.cp.run import ScenarioRun
+
+warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 logger = get_logger(__name__)
 
