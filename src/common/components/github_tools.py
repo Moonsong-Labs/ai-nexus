@@ -76,8 +76,11 @@ This tool is a wrapper for the GitHub API, useful when you want to comment on a 
 class IssueComment(BaseModel):
     """Schema for creating an issue comment."""
 
-    issue_number: int = Field(0, description="The issue number as an integer, e.g. `12`")
+    issue_number: int = Field(
+        0, description="The issue number as an integer, e.g. `12`"
+    )
     body: str = Field(1, description="Text of the review comment.")
+
 
 class CreateIssueComment(BaseTool):
     """Create an Issue or Pull Request Comment."""
@@ -97,14 +100,19 @@ class CreateIssueComment(BaseTool):
         pull_request.create_issue_comment(body)
         return "comment created successfully"
 
+
 GET_ISSUE_BODY_PROMPT = """
 This tool is a wrapper for the GitHub API, useful when you want to get the body (description) of a Issue. **VERY IMPORTANT**: The issue number must be specified as an integer, not a float.
 """
 
+
 class GetIssueBody(BaseModel):
     """Schema for getting an issue body."""
 
-    issue_number: int = Field(0, description="The issue number as an integer, e.g. `12`")
+    issue_number: int = Field(
+        0, description="The issue number as an integer, e.g. `12`"
+    )
+
 
 class GetIssueBody(BaseTool):
     """Get the body (description) of an issue."""
@@ -441,9 +449,7 @@ def mock_github_tools(mock_api: MockGithubApi):
             args_schema=CreatePRReview,
         ),
         RunnableLambda(
-            _convert_args_schema_to_string(
-                mock_api.get_issue_body, CreatePRReview
-            )
+            _convert_args_schema_to_string(mock_api.get_issue_body, CreatePRReview)
         ).as_tool(
             name="get_issue_body",
             description=GET_ISSUE_BODY_PROMPT,

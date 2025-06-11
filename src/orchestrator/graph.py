@@ -239,7 +239,6 @@ class OrchestratorGraph(AgentGraph):
             )
         )
 
-
         all_tools = [
             tools.create_requirements_tool(self._agent_config, requirements_graph),
             tools.create_architect_tool(self._agent_config, architect_graph),
