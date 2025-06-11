@@ -101,7 +101,7 @@ GET_ISSUE_BODY_PROMPT = """
 This tool is a wrapper for the GitHub API, useful when you want to get the body (description) of a Issue. **VERY IMPORTANT**: The issue number must be specified as an integer, not a float.
 """
 
-class IssueBody(BaseModel):
+class GetIssueBody(BaseModel):
     """Schema for getting an issue body."""
 
     issue_number: int = Field(0, description="The issue number as an integer, e.g. `12`")
@@ -111,7 +111,7 @@ class GetIssueBody(BaseTool):
 
     name: str = "get_issue_body"
     description: str = GET_ISSUE_BODY_PROMPT
-    args_schema: Type[BaseModel] = IssueBody
+    args_schema: Type[BaseModel] = GetIssueBody
     github_api_wrapper: GitHubAPIWrapper
 
     def _run(self, issue_number: int):
@@ -439,6 +439,15 @@ def mock_github_tools(mock_api: MockGithubApi):
             name="create_pull_request_review",
             description=CREATE_PULL_REQUEST_REVIEW_PROMPT,
             args_schema=CreatePRReview,
+        ),
+        RunnableLambda(
+            _convert_args_schema_to_string(
+                mock_api.get_issue_body, CreatePRReview
+            )
+        ).as_tool(
+            name="get_issue_body",
+            description=GET_ISSUE_BODY_PROMPT,
+            args_schema=GetIssueBody,
         ),
         RunnableLambda(
             _convert_args_schema_to_string(mock_api.create_issue_comment, IssueComment)
