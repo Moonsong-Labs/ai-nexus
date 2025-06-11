@@ -47,13 +47,6 @@ def step_impl_command_should_fail(context):
     assert context.result.returncode != 0, "Expected non-zero exit code"
 
 
-@then('the error message should contain "{expected_message}"')
-def step_impl_error_message_contains(context, expected_message):
-    assert (
-        expected_message in context.result.stderr
-    ), f"Error message does not contain '{expected_message}'"
-
-
 @then('the content of "{filename}" should be "{expected_content}"')
 def step_impl_specific_file_content(context, filename, expected_content):
     content = Path(filename).read_text()

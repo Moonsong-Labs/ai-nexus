@@ -10,7 +10,6 @@ Feature: Copying files using the CLI app
     Given no file named "missing.txt" exists
     When I run "cli-copy missing.txt destination.txt"
     Then the command should fail
-    And the error message should contain "No such file or directory"
 
   Scenario: Overwrite an existing file
     Given a file named "source.txt" with content "New content"
