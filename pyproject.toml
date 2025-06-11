@@ -17,6 +17,11 @@ dependencies = [
     "langmem~=0.0.25",
     "termcolor~=3.1.0",
     "agentevals~=0.0.7",
+    "fastapi~=0.115.0",
+    "uvicorn[standard]~=0.26.0",
+    "httpx~=0.25.0",
+    "PyJWT~=2.9.0",
+    "pydantic-settings~=2.4.0",
 ]
 optional-dependencies.dev = [
     "mypy~=1.11.1",
@@ -49,6 +54,7 @@ packages = [
     "task_manager",
     "scenarios",
     "pr_memory_updater",
+    "event_listener",
 ]
 [tool.setuptools.package-dir]
 "common" = "src/common"
@@ -69,6 +75,7 @@ packages = [
 "pr_memory_updater" = "src/pr_memory_updater"
 "langgraph.templates.task_manager" = "src/task_manager"
 "scenarios" = "tests/scenarios"
+"event_listener" = "src/event_listener"
 
 
 [tool.ruff]
