@@ -7,11 +7,11 @@ import pytest
 
 from agent_template.configuration import Configuration
 from agent_template.graph import AgentTemplateGraph
+from common.logging import get_logger
 
 # Get the logger
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 logger.setLevel(logging.DEBUG)
-
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
