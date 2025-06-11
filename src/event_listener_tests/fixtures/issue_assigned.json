@@ -1,0 +1,63 @@
+{
+  "action": "assigned",
+  "issue": {
+    "id": 987654321,
+    "number": 123,
+    "title": "Fix authentication bug in login flow",
+    "body": "Users are reporting that they can't log in with their GitHub accounts. The OAuth flow seems to be broken.\n\n## Steps to reproduce\n1. Go to login page\n2. Click 'Login with GitHub'\n3. Authorize the app\n4. Get redirected to error page\n\n## Expected behavior\nUser should be logged in successfully\n\n## Actual behavior\nError: 'Invalid state parameter'\n\n## Environment\n- Browser: Chrome 120\n- OS: macOS\n- App version: 1.2.3",
+    "html_url": "https://github.com/test-org/test-repo/issues/123",
+    "state": "open",
+    "user": {
+      "login": "bug-reporter",
+      "id": 123456,
+      "type": "User",
+      "html_url": "https://github.com/bug-reporter"
+    },
+    "assignee": {
+      "login": "ai-nexus[bot]",
+      "id": 987654321,
+      "type": "Bot",
+      "html_url": "https://github.com/apps/ai-nexus"
+    },
+    "assignees": [
+      {
+        "login": "ai-nexus[bot]",
+        "id": 987654321,
+        "type": "Bot",
+        "html_url": "https://github.com/apps/ai-nexus"
+      }
+    ],
+    "labels": [
+      {
+        "id": 111111,
+        "name": "bug",
+        "color": "d73a4a"
+      },
+      {
+        "id": 222222,
+        "name": "priority:high",
+        "color": "ff6b6b"
+      }
+    ],
+    "created_at": "2024-01-10T09:00:00Z",
+    "updated_at": "2024-01-10T10:30:00Z"
+  },
+  "repository": {
+    "id": 456789012,
+    "name": "test-repo",
+    "full_name": "test-org/test-repo",
+    "private": false,
+    "owner": {
+      "login": "test-org",
+      "id": 111111,
+      "type": "Organization"
+    },
+    "html_url": "https://github.com/test-org/test-repo",
+    "default_branch": "main"
+  },
+  "sender": {
+    "login": "project-manager",
+    "id": 555555,
+    "type": "User"
+  }
+}
