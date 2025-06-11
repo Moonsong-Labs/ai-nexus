@@ -62,7 +62,7 @@ requires-dist = [
     { name = "langchain-core", specifier = "~=0.3.8" },
     { name = "langchain-google-genai", specifier = "~=2.1.4" },
     { name = "langgraph", specifier = "~=0.4.0" },
-    { name = "langgraph-cli", extras = ["inmem"], marker = "extra == 'dev'", specifier = "~=0.2.7" },
+    { name = "langgraph-cli", extras = ["inmem"], marker = "extra == 'dev'", specifier = "~=0.3.1" },
     { name = "langgraph-sdk", specifier = "~=0.1.32" },
     { name = "langmem", specifier = "~=0.0.25" },
     { name = "mypy", marker = "extra == 'dev'", specifier = "~=1.11.1" },
@@ -965,20 +965,21 @@ wheels = [
 
 [[package]]
 name = "langgraph-cli"
-version = "0.2.8"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
+    { name = "langgraph-sdk" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/85/b2/6cbdea914fa0f9d125884aab3af4fb4405785bf65a9a378cd0869f39d9d6/langgraph_cli-0.2.8.tar.gz", hash = "sha256:9091aa12bf826572446cb5564604a8a6f750c9dcaa0cd9fb1067128a53ac2282", size = 31460, upload-time = "2025-05-02T00:09:25.667Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/01/a5/ca0680f39e50b6ea8fd42714f082739729f211d71d221c0e585647db9b5a/langgraph_cli-0.3.1.tar.gz", hash = "sha256:4b6a74dd10792ea230d0293cc4faaae92f9f7ed889acb17378f711e9d79a2e14", size = 722122, upload-time = "2025-06-09T15:59:55.729Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/62/25/949a500a3075f6387250095dc8a5793a479ae1d3ebf0b8f28483f2110413/langgraph_cli-0.2.8-py3-none-any.whl", hash = "sha256:b0f28bdafba6c98154c84f2aa439bb6653ef4fcb5e941dcd591ffe1662277473", size = 34394, upload-time = "2025-05-02T00:09:24.362Z" },
+    { url = "https://files.pythonhosted.org/packages/6b/31/a1430b411775e24595233c7769d7ce07919e500d7306375c35ab2c9e1ca9/langgraph_cli-0.3.1-py3-none-any.whl", hash = "sha256:46f60132f60b2711455ca03e2f87e6bd953149ffedbb14bacc325d7ffaf11a99", size = 35669, upload-time = "2025-06-09T15:59:54.378Z" },
 ]
 
 [package.optional-dependencies]
 inmem = [
-    { name = "langgraph-api", marker = "python_full_version < '4.0'" },
-    { name = "langgraph-runtime-inmem", marker = "python_full_version < '4.0'" },
+    { name = "langgraph-api" },
+    { name = "langgraph-runtime-inmem" },
     { name = "python-dotenv" },
 ]
 
