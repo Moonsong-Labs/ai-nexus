@@ -1,0 +1,11 @@
+{
+  "dockerfile_lines": [],
+  "graphs": {
+    "agent_template": "./src/agent_template/graph.py:graph",
+    "orchestrator": "./src/orchestrator/graph.py:graph",
+    "requirement_gatherer": "./src/requirement_gatherer/graph.py:graph"
+  },
+  "env": ".env",
+  "python_version": "3.12",
+  "dependencies": ["."]
+}

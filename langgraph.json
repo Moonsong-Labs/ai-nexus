@@ -3,7 +3,6 @@
   "graphs": {
     "agent_template": "./src/agent_template/graph.py:graph",
     "orchestrator": "./src/orchestrator/graph.py:graph",
-    "grumpy": "./src/grumpy/graph.py:graph",
     "coder_new_pr": "./src/coder/lg_server.py:graph_new_pr",
     "coder_change_request": "./src/coder/lg_server.py:graph_change_request",
     "tester": "./src/tester/lg_server.py:graph",
