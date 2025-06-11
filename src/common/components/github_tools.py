@@ -1,7 +1,6 @@
 """Tools for the code agent."""
 
 import asyncio
-import logging
 import tempfile
 import zipfile
 from os import listdir
@@ -39,8 +38,9 @@ from pydantic import BaseModel, Field
 
 from common.components.github_mocks import MockGithubApi
 from common.components.github_wraps import wrap_github_tools
+from common.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 GITHUB_TOOLS = [
     "set_active_branch",

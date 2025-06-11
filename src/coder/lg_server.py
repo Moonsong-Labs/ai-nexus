@@ -1,13 +1,11 @@
 """Coder graph for LangGraph Server."""
 
-import logging
-
 from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
 from common.components.github_mocks import maybe_mock_github
 from common.components.github_tools import get_github_tools
+from common.logging import get_logger
 
-logger = logging.getLogger(__name__)
-
+logger = get_logger(__name__)
 
 # Use the function to get the appropriate GitHub source
 github_source = maybe_mock_github()

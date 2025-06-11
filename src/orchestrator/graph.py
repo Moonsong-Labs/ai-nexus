@@ -1,6 +1,5 @@
 """Graphs that orchestrates a software project."""
 
-import logging
 from datetime import datetime
 from typing import Any, Coroutine, Optional
 
@@ -18,13 +17,17 @@ from architect.configuration import (
     Configuration as ArchitectConfiguration,
 )
 from architect.graph import ArchitectGraph
-from code_reviewer.graph import CodeReviewerGraph, local_code_reviewer_config
+from code_reviewer.graph import (
+    CodeReviewerGraph,
+    github_code_reviewer_config,
+)
 from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
 from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.components.github_mocks import maybe_mock_github
 from common.components.github_tools import get_github_tools
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
+from common.logging import get_logger
 from orchestrator import stubs, tools
 from orchestrator.configuration import (
     ArchitectAgentConfig,
@@ -47,7 +50,7 @@ from task_manager.graph import TaskManagerGraph
 from tester.configuration import Configuration as TesterConfiguration
 from tester.graph import TesterAgentGraph
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def _create_orchestrator(
@@ -230,7 +233,7 @@ class OrchestratorGraph(AgentGraph):
                 checkpointer=self._checkpointer,
                 store=self._store,
                 github_tools=github_tools,
-                config=local_code_reviewer_config(),
+                config=github_code_reviewer_config(),
             )
         )
 

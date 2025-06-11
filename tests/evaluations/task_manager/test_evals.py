@@ -6,6 +6,7 @@ from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langsmith import Client
 
+from common.logging import get_logger
 from common.state import Project
 from task_manager import prompts
 from task_manager.configuration import TASK_MANAGER_MODEL
@@ -13,7 +14,6 @@ from task_manager.graph import TaskManagerGraph
 from tests.datasets.task_manager_dataset import (
     TASK_MANAGER_DATASET_NAME as LANGSMITH_DATASET_NAME,
 )
-from tests.testing import get_logger
 from tests.testing.evaluators import LLMJudge
 from tests.testing.formatter import Verbosity, print_evaluation
 
