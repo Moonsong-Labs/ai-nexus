@@ -13,6 +13,7 @@ from common.logging import get_logger
 logger = get_logger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "conversation,expected_category",

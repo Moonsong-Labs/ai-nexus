@@ -79,13 +79,15 @@ def config(save_run) -> ScenarioConfig:
                     ]
                 ),
             ),
-        )
+        ),
     )
 
-def run(save_run = False) -> ScenarioRun:
+
+def run(save_run=False) -> ScenarioRun:
     """Run Stack scenario"""
     runner = ScenarioRunner(config=config(save_run))
     return asyncio.run(runner.run())
+
 
 if __name__ == "__main__":
     run(True)

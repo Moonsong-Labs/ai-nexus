@@ -14,6 +14,7 @@ from scenarios import BASE_BRANCHES
 
 logger = get_logger(__name__)
 
+
 def create_branches(repo: Repository, branches: List[str]):
     """Create base branches if they don't exist."""
     logger.info(f"Repository: {repo.full_name}")
@@ -32,6 +33,7 @@ def create_branches(repo: Repository, branches: List[str]):
                 logger.info(f"Created branch '{branch}' from '{default_branch}'")
             except Exception as e:
                 raise Exception(f"Failed to create branch '{branch}': {str(e)}")
+
 
 def cleanup_branches(repo: Repository, base_branches: List[str]) -> None:
     """Delete branches that are not in base_branches."""
@@ -54,7 +56,6 @@ def cleanup_branches(repo: Repository, base_branches: List[str]) -> None:
                 logger.error(f"Failed to delete branch '{branch}': {str(e)}")
 
 
-
 def init_github():
     client = github_utils.app_get_client_from_credentials()
     repo_name = os.getenv("GITHUB_REPOSITORY")
@@ -66,6 +67,7 @@ def init_github():
         sys.exit(1)
 
     return repo
+
 
 if __name__ == "__main__":
     repo = init_github()
