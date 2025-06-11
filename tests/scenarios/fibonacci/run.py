@@ -17,11 +17,12 @@ from orchestrator.stubs import MessageWheel
 from requirement_gatherer.configuration import (
     Configuration as RequirementsConfiguration,
 )
-from scenarios.common import ScenarioConfig, ScenarioRun, ScenarioRunner
+from scenarios.runner import ScenarioConfig, ScenarioRun, ScenarioRunner
 from scenarios.fibonacci import BASE_BRANCH
 
 dotenv.load_dotenv()
 logger = get_logger(__name__)
+
 
 def config(save_run) -> ScenarioConfig:
     """Create configuration for Fibonacci scenario"""
