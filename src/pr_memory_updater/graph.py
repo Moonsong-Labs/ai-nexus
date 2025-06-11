@@ -1,6 +1,5 @@
 """Graph implementation for PR Memory Updater agent using AgentGraph."""
 
-import logging
 from typing import Any, Callable, Coroutine, Dict, Optional
 
 from langchain.chat_models import init_chat_model
@@ -16,10 +15,11 @@ import pr_memory_updater.prompts as prompts
 import pr_memory_updater.tools as AgentTools
 from common.components.memory import MemoryConfiguration
 from common.graph import AgentGraph
+from common.logging import get_logger
 from pr_memory_updater.configuration import Configuration
 from pr_memory_updater.state import State
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def _create_call_model(

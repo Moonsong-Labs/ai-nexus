@@ -8,10 +8,10 @@ from datasets.pr_memory_updater_dataset import (
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.memory import InMemoryStore
 from langsmith import Client
-from testing import get_logger
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
+from common.logging import get_logger
 from pr_memory_updater.graph import PRMemoryUpdaterGraph
 from pr_memory_updater.tools import checkout_and_edit
 

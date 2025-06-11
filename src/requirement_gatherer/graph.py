@@ -1,6 +1,5 @@
 """Graphs that extract memories on a schedule."""
 
-import logging
 from datetime import datetime
 from typing import Any, Coroutine, Optional
 
@@ -20,11 +19,12 @@ from langgraph.types import Checkpointer
 import common.tools
 from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.graph import AgentGraph
+from common.logging import get_logger
 from requirement_gatherer import tools
 from requirement_gatherer.configuration import Configuration
 from requirement_gatherer.state import State
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def _create_call_model(
