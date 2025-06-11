@@ -14,7 +14,7 @@ from orchestrator.configuration import (
 )
 from orchestrator.configuration import Configuration as OrchestratorConfiguration
 from orchestrator.stubs import MessageWheel
-from scenarios.common import ScenarioConfig, ScenarioRun, ScenarioRunner
+from scenarios.runner import ScenarioConfig, ScenarioRun, ScenarioRunner
 from scenarios.stack import BASE_BRANCH
 
 dotenv.load_dotenv()

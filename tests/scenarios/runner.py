@@ -1,3 +1,5 @@
+"""Contains abstractions to run scenarios."""
+
 import json
 import os
 import uuid
