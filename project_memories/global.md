@@ -7,7 +7,7 @@
 **Core Mission:** To develop a system for managing and orchestrating a team of AI agents capable of designing, developing, and maintaining technical projects. An initial focus is on an agent named "Cursor" which operates with a memory that resets between sessions, necessitating a robust external "Memory Bank" system for continuity. A specific rule (`.cursor/rules/read-project-memories.mdc`) now configures Cursor to always read all files within the `project_memories/` directory for every interaction, ensuring this core project context is consistently available to it. AI Nexus aims to be a platform for developing and managing such AI agents. The system now includes robust project management capabilities, allowing the tracking and utilization of project names and paths across various agent workflows.
 
 **Key Concepts:**
-1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager (NEW)) working collaboratively. The Orchestrator agent's delegation mechanism to other agents (Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Task Manager) has been refactored. It now uses direct tool calls for each agent task instead of a generic `Delegate` tool. The Code Reviewer is consistently referred to as "Code Reviewer" (e.g., Orchestrator tool name `code_reviewer`). A `Project` object is now passed and updated across agent states to maintain consistent project context. Agent stubs now support dynamic, cycling messages for more flexible scenario testing. **UPDATED**: Agent states now consistently include an `error` field to track fatal errors, and agent workflows are designed to propagate and react to these errors, preventing infinite loops or runaway processes.
+1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Task Manager (NEW)) working collaboratively. The Orchestrator agent's delegation mechanism to other agents (Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Task Manager) has been refactored. It now uses direct tool calls for each agent task instead of a generic `Delegate` tool. The Code Reviewer is consistently referred to as "Code Reviewer" (e.g., Orchestrator tool name `code_reviewer`). A `Project` object is now passed and updated across agent states to maintain consistent project context. Agent stubs now support dynamic, cycling messages for more flexible scenario testing. **UPDATED**: Agent states now consistently include an `error` field to track fatal errors, and agent workflows are designed to propagate and react to these errors, preventing infinite loops or runaway processes.
 2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is `langmem`, providing semantic search capabilities over stored memories. `AgentGraph` can now automatically initialize and provide `SemanticMemory` and its tools to subclasses based on its configuration. The Tester agent, for instance, now includes logic to read from a `BaseStore` for contextual memories.
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow. **UPDATED**: Agent `call_model` functions are now decorated with a `prechain` mechanism that includes `skip_on_summary_and_tool_errors`, allowing for pre-execution checks to halt processing if a summary is already present or if a tool has encountered consecutive errors beyond a defined threshold.
 4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory.
@@ -303,7 +303,16 @@ AI Nexus employs a few architectural patterns for its agents:
         *   Extracts the PR number and branch name from the Coder agent's output using an LLM (`google_genai:gemini-2.0-flash`) and persists the scenario run metadata (including `run_name`, `run_id`, `pr_number`, `branch`) to a JSON file in `tests/scenarios/stack/scenario_runs/{run_id}.json`.
         *   Utilizes `InMemorySaver` and `InMemoryStore` for graph state management.
         *   Ensures LangSmith tracing is completed using `wait_for_all_tracers()`. **UPDATED**: The `reviewer_agent` is now explicitly typed as `CodeReviewerAgentConfig`. The `tester_agent` is now explicitly typed as `TesterAgentConfig`.
-*   **`tests/scenarios/__init__.py` (NEW):** Defines `BASE_BRANCHES` list for centralized management of base branch names used in testing scenarios.
+*   **NEW**: `tests/scenarios/binary_search/` (NEW SCENARIO): A new end-to-end test scenario for building a Rust binary search library.
+    *   **`tests/scenarios/binary_search/__init__.py` (NEW FILE):** Defines `BASE_BRANCH = "binary-search-base"`.
+    *   **`tests/scenarios/binary_search/run.py` (NEW FILE):**
+        *   Demonstrates an orchestrated AI workflow for creating a Rust binary search library.
+        *   Configures the Orchestrator with `github_base_branch="binary-search-base"`.
+        *   Sets `requirements_agent`, `architect_agent`, `task_manager_agent`, `coder_new_pr_agent`, `coder_change_request_agent`, and `tester_agent` to `use_stub=False`.
+        *   Sets `reviewer_agent` to `use_stub=True` with a specific `MessageWheel` message.
+        *   Includes a detailed `human_ai_product` description for the `requirements_agent` for a hobby Rust binary search project.
+        *   Utilizes `ScenarioRunner` to execute the scenario.
+*   **`tests/scenarios/__init__.py` (UPDATED):** Defines `BASE_BRANCHES` list for centralized management of base branch names used in testing scenarios. **UPDATED**: Added `BINARY_SEARCH_BASE_BRANCH` to the list.
 *   **`tests/scenarios/cleanup_github.py` (UPDATED):** Now utilizes the centralized GitHub App authentication utility (`common.utils.github.app_get_client_from_credentials()`) instead of implementing authentication logic directly.
 *   **`tests/scenarios/setup_github.py` (UPDATED):** Now utilizes the centralized GitHub App authentication utility (`common.utils.github.app_get_client_from_credentials()`) instead of implementing authentication logic directly.
 *   **`tests/integration_tests/test_architect_agent.py` (UPDATED):**
@@ -357,9 +366,11 @@ AI Nexus employs a few architectural patterns for its agents:
 
 *   **`Makefile` (UPDATED):**
     *   Changed `demo` target to `demo-%` (e.g., `make demo-ai`, `make demo-human`) for explicit mode selection when running the demo orchestration script (`src/demo/orchestrate.py`).
+    *   **NEW**: Added `scenario-%` target (e.g., `make scenario-fibonacci`, `make scenario-stack`) to run specific test scenarios using `uv run --env-file .env -- python ./tests/scenarios/$*/run.py`.
 *   **`README.md` (UPDATED):**
     *   Updated "Local Demo" instructions to use the new `make demo-ai` and `make demo-human` commands.
 *   **CI/CD (GitHub Actions - `.github/workflows/`):**
+    *   **UPDATED**: All jobs within `checks.yml`, `compile-check.yml`, and `graph-checks.yml` now use a refined `actions/checkout` configuration (`ref: ${{ github.event.pull_request.head.ref || github.ref }}` and `repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}`) to correctly checkout the code for pull requests originating from forks, ensuring CI runs on the correct branch and repository.
     *   `checks.yml` (UPDATED):
         *   Includes jobs for linting, type checking, unit tests, and integration tests.
         *   **New `smoke-test` job**:
@@ -370,7 +381,8 @@ AI Nexus employs a few architectural patterns for its agents:
             *   Navigates to `tests/smoke/langgraph_dev`, installs Node.js dependencies (`npm i`), and runs the smoke test (`npm test`).
             *   Uploads `tests/smoke/langgraph_dev/langgraph-test-result.png` as an artifact with a 10-day retention period if the test runs (regardless of pass/fail).
         *   **UPDATED**: The `test_unit` job now includes `GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }}` in its environment variables.
-    *   `compile-check.yml`: Ensures the LangGraph graphs can be compiled.
+    *   `compile-check.yml` (UPDATED): Ensures the LangGraph graphs can be compiled.
+    *   `graph-checks.yml` (UPDATED): Ensures the LangGraph graphs can be compiled and their structure is valid.
     *   `run_common_tests.yml` (NEW): A new workflow to run common unit tests on `push` to `main`, `pull_request` to `main`, and `workflow_dispatch`.
     *   `update_project_memory.yml`: (As previously described)
 *   **Project Maintenance Scripts (UPDATED):**
@@ -417,9 +429,10 @@ ai-nexus/
 │   └── workflows/
 │       ├── checks.yml            # UPDATED: Added smoke-test job; test_unit job now includes GOOGLE_API_KEY env var.
 │       ├── compile-check.yml
+│       ├── graph-checks.yml      # UPDATED: The `actions/checkout` step has been updated to support pull requests from forks.
 │       ├── run_common_tests.yml  # NEW: Workflow to run common unit tests
 │       └── update_project_memory.yml
-├── Makefile                      # UPDATED: Changed demo target to demo-% (e.g., demo-ai, demo-human).
+├── Makefile                      # UPDATED: Changed demo target to demo-% (e.g., demo-ai, demo-human). NEW: Added scenario-% target.
 ├── README.md                     # UPDATED: Local demo instructions updated.
 ├── agent_memories/
 │   └── grumpy/
@@ -566,8 +579,12 @@ ai-nexus/
     │           ├── techContext.md
     │           └── testingContext.md
     ├── scenarios/                  # NEW
-    │   ├── __init__.py             # NEW: Defines BASE_BRANCHES for scenarios.
+    │   ├── __init__.py             # UPDATED: Defines BASE_BRANCHES for scenarios. **UPDATED**: Added `BINARY_SEARCH_BASE_BRANCH` to the list.
     │   ├── cleanup_github.py       # UPDATED: Now uses `common.utils.github` for authentication.
+    │   ├── binary_search/          # NEW: Directory for binary search scenario
+    │   │   ├── __init__.py         # NEW: Defines BASE_BRANCH for binary search scenario.
+    │   │   └── run.py              # NEW: New E2E test scenario for building a Rust binary search library, including Orchestrator configuration with stubbed/real agents, detailed human_ai_product, and uses ScenarioRunner.
+    │   │   └── scenario_runs/      # NEW: Directory for scenario run outputs (implicitly created by run.py)
     │   ├── fibonacci/              # NEW: Directory for fibonacci scenario
     │   │   ├── __init__.py         # NEW: Defines BASE_BRANCH for fibonacci scenario.
     │   │   ├── eval.py             # NEW: Evaluation script for Fibonacci scenario runs.
@@ -590,7 +607,6 @@ ai-nexus/
     ├── testing/
     │   ├── __init__.py             # UPDATED: Added create_async_graph_caller_for_gatherer helper function. UPDATED: Minor formatting.
     │   ├── evaluators.py
-    │   ├── formatter.py
     │   ├── inputs.py               # NEW: New utility file for decoding message dictionaries.
     │   └── utils.py                # UPDATED: New utility file providing helper functions for testing, including `get_list_diff` and `round_to`. **UPDATED**: Added `get_tool_args_with_names` function to extract tool call arguments from messages. `get_tool_messages_count` removed.
     ├── unit_tests/

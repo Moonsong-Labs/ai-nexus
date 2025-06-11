@@ -1,5 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
 import puppeteer from "puppeteer";
+import * as fs from "fs/promises";
+import * as path from "path";
 
 const SCREENSHOT_FILE = "langgraph-test-result.png";
 
@@ -22,8 +24,11 @@ async function runTest(): Promise<void> {
       "--",
       "langgraph",
       "dev",
+      "--allow-blocking",
       "--port",
       "8080",
+      "--config",
+      "./tests/smoke/langgraph_dev/langgraph.json",
       "--no-browser",
       "--no-reload",
     ],
@@ -102,7 +107,10 @@ async function runTest(): Promise<void> {
 
     await page.screenshot({ path: SCREENSHOT_FILE });
     await page.click("text=Message");
-    await page.type("div[contenteditable=true]", "I want to build a website");
+    await page.type(
+      "div[contenteditable=true]",
+      "I want to build a personal website"
+    );
 
     await page.screenshot({ path: SCREENSHOT_FILE });
     await page.click("text=Submit");
@@ -111,9 +119,7 @@ async function runTest(): Promise<void> {
     await page.screenshot({ path: SCREENSHOT_FILE });
     try {
       // Look for the Humnan Interrupt label
-      await page.waitForSelector(
-        "span ::-p-text('Interrupt')"
-      );
+      await page.waitForSelector("span ::-p-text('Interrupt')");
 
       // Look for the Continue or Resume button
       try {
@@ -237,9 +243,25 @@ process.on("uncaughtException", async (error) => {
   process.exit(1);
 });
 
+async function cleanupLanggraphCacheDir(): Promise<void> {
+  const dirPath = path.join(__dirname, "../../../.langgraph_api");
+  try {
+    await fs.rm(dirPath, { recursive: true, force: true });
+    console.log(`Successfully cleaned up ${dirPath}`);
+  } catch (error: any) {
+    if (error.code === "ENOENT") {
+      console.log(`${dirPath} does not exist, skipping cleanup.`);
+    } else {
+      throw Error(`Error cleaning up ${dirPath}: ${error}`);
+    }
+  }
+}
+
 // Run the test
-runTest().catch(async (error) => {
-  console.error("Unhandled error:", error);
-  await ensureProcessKilled();
-  process.exit(1);
-});
+cleanupLanggraphCacheDir()
+  .then(runTest)
+  .catch(async (error) => {
+    console.error("Unhandled error:", error);
+    await ensureProcessKilled();
+    process.exit(1);
+  });

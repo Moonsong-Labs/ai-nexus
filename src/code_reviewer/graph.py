@@ -1,6 +1,5 @@
 """Graph definition for the Code Reviewer agent."""
 
-import logging
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -17,11 +16,11 @@ from code_reviewer.prompts import LOCAL_REVIEW_PROMPT, PR_REVIEW_PROMPT, SYSTEM_
 from code_reviewer.state import State
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
+from common.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
-# Initialize the language model to be used for memory extraction
-llm = init_chat_model("google_genai:gemini-2.0-flash")
+# Model will be initialized with configuration in CallModel
 
 
 @dataclass
@@ -33,9 +32,9 @@ class CodeReviewerInstanceConfig:
     github_tools_filter: List[str]
     other_tools: List[Tool]
 
-    def graph_builder(self, github_toolset: list[Tool]):
+    def graph_builder(self, github_toolset: list[Tool], model: str):
         tools = self.other_tools + self.filter_github_tools(github_toolset)
-        builder = _graph_builder(tools, self.system_prompt)
+        builder = _graph_builder(tools, self.system_prompt, model)
         builder.name = self.name
         return builder
 
@@ -130,15 +129,23 @@ class CodeReviewerGraph(AgentGraph):
         self._config = config
 
     def create_builder(self) -> StateGraph:
-        return self._config.graph_builder(self._github_tools)
+        """Create a graph builder with the configured model."""
+        model = (
+            self._agent_config.model
+            if self._agent_config
+            else "google_genai:gemini-2.0-flash"
+        )
+        return self._config.graph_builder(self._github_tools, model)
 
 
 class CallModel:
-    def __init__(self, github_tools: list[Tool], system_prompt: str):
+    def __init__(self, github_tools: list[Tool], system_prompt: str, model: str):
         self.github_tools = github_tools
         self.system_prompt = system_prompt
+        self.model = model
 
     async def __call__(self, state: State) -> dict:
+        llm = init_chat_model(self.model)
         project_path = state.project.path if state.project else "Unknown"
 
         system_prompt = self.system_prompt.format(
@@ -153,13 +160,13 @@ class CallModel:
         return {"messages": messages_after_invoke, "project": state.project}
 
 
-def _graph_builder(github_toolset: list[Tool], system_prompt: str):
+def _graph_builder(github_toolset: list[Tool], system_prompt: str, model: str):
     """Return code_reviewer graph builder."""
     builder = StateGraph(State)
 
     tool_node = ToolNode(tools=github_toolset)
 
-    builder.add_node("call_model", CallModel(github_toolset, system_prompt))
+    builder.add_node("call_model", CallModel(github_toolset, system_prompt, model))
     builder.add_node("tools", tool_node)
 
     builder.add_edge("__start__", "call_model")
@@ -171,4 +178,6 @@ def _graph_builder(github_toolset: list[Tool], system_prompt: str):
 __all__ = [
     "non_github_code_reviewer_config",
     "github_code_reviewer_config",
+    "local_code_reviewer_config",
+    "CodeReviewerGraph",
 ]
