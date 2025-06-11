@@ -12,6 +12,8 @@ from langgraph.prebuilt import ToolNode
 from langgraph.store.base import BaseStore
 from langgraph.types import Checkpointer
 
+import common.components
+import common.components.github_tools
 import common.tools
 from architect.configuration import (
     Configuration as ArchitectConfiguration,
@@ -252,7 +254,7 @@ class OrchestratorGraph(AgentGraph):
                 self._agent_config.task_manager_agent.use_stub
             ),
             common.tools.summarize,
-        ]
+        ] + [tool for tool in github_tools if tool.name == "get_issue_body"]
         tool_node = ToolNode(all_tools, name="tools")
         llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)
         orchestrator = _create_orchestrator(self._agent_config, llm)
