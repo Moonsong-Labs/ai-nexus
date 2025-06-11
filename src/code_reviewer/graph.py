@@ -1,6 +1,5 @@
 """Graph definition for the Code Reviewer agent."""
 
-import logging
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -17,8 +16,9 @@ from code_reviewer.prompts import LOCAL_REVIEW_PROMPT, PR_REVIEW_PROMPT, SYSTEM_
 from code_reviewer.state import State
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
+from common.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Model will be initialized with configuration in CallModel
 

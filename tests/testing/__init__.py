@@ -1,20 +1,8 @@
-import logging
 import uuid
 from typing import Awaitable, Callable
 
 from langchain_core.messages import ToolMessage
 from langgraph.graph.state import CompiledStateGraph
-
-
-def get_logger(name=None, *, level: int | str = logging.INFO) -> logging.Logger:
-    """Create a logger with default format."""
-    logging.basicConfig(level=level, format="%(asctime)s - %(levelname)s - %(message)s")
-    logger = logging.getLogger(name)
-
-    # setting root level does not currently work.
-    logger.setLevel(level)
-
-    return logger
 
 
 def create_async_graph_caller(
@@ -70,7 +58,6 @@ def create_async_graph_caller_for_gatherer(
 
 
 __all__ = [
-    get_logger.__name__,
     create_async_graph_caller.__name__,
     create_async_graph_caller_for_gatherer.__name__,
 ]

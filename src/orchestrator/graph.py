@@ -1,6 +1,5 @@
 """Graphs that orchestrates a software project."""
 
-import logging
 from datetime import datetime
 from typing import Any, Coroutine, Optional
 
@@ -28,6 +27,7 @@ from common.components.github_mocks import maybe_mock_github
 from common.components.github_tools import get_github_tools
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
+from common.logging import get_logger
 from orchestrator import stubs, tools
 from orchestrator.configuration import (
     ArchitectAgentConfig,
@@ -50,7 +50,7 @@ from task_manager.graph import TaskManagerGraph
 from tester.configuration import Configuration as TesterConfiguration
 from tester.graph import TesterAgentGraph
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def _create_orchestrator(

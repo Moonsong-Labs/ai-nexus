@@ -5,10 +5,11 @@ from datasets.requirement_gatherer_dataset import (
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.store.memory import InMemoryStore
 from langsmith import Client
-from testing import create_async_graph_caller_for_gatherer, get_logger
+from testing import create_async_graph_caller_for_gatherer
 from testing.evaluators import LLMJudge
 from testing.formatter import Verbosity, print_evaluation
 
+from common.logging import get_logger
 from requirement_gatherer.configuration import Configuration as GathererConfig
 from requirement_gatherer.graph import RequirementsGraph
 
