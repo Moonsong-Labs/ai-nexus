@@ -106,7 +106,7 @@ This tool is a wrapper for the GitHub API, useful when you want to get the body 
 """
 
 
-class GetIssueBody(BaseModel):
+class GetIssueBodyQuery(BaseModel):
     """Schema for getting an issue body."""
 
     issue_number: int = Field(
@@ -119,7 +119,7 @@ class GetIssueBody(BaseTool):
 
     name: str = "get_issue_body"
     description: str = GET_ISSUE_BODY_PROMPT
-    args_schema: Type[BaseModel] = GetIssueBody
+    args_schema: Type[BaseModel] = GetIssueBodyQuery
     github_api_wrapper: GitHubAPIWrapper
 
     def _run(self, issue_number: int):
@@ -453,7 +453,7 @@ def mock_github_tools(mock_api: MockGithubApi):
         ).as_tool(
             name="get_issue_body",
             description=GET_ISSUE_BODY_PROMPT,
-            args_schema=GetIssueBody,
+            args_schema=GetIssueBodyQuery,
         ),
         RunnableLambda(
             _convert_args_schema_to_string(mock_api.create_issue_comment, IssueComment)
