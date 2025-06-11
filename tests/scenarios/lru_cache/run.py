@@ -17,7 +17,7 @@ from requirement_gatherer.configuration import (
     Configuration as RequirementsConfiguration,
 )
 from scenarios.lru_cache import BASE_BRANCH
-from scenarios.common import ScenarioConfig, ScenarioRun, ScenarioRunner
+from scenarios.runner import ScenarioConfig, ScenarioRun, ScenarioRunner
 
 dotenv.load_dotenv()
 logger = get_logger(__name__)
