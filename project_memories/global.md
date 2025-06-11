@@ -303,7 +303,16 @@ AI Nexus employs a few architectural patterns for its agents:
         *   Extracts the PR number and branch name from the Coder agent's output using an LLM (`google_genai:gemini-2.0-flash`) and persists the scenario run metadata (including `run_name`, `run_id`, `pr_number`, `branch`) to a JSON file in `tests/scenarios/stack/scenario_runs/{run_id}.json`.
         *   Utilizes `InMemorySaver` and `InMemoryStore` for graph state management.
         *   Ensures LangSmith tracing is completed using `wait_for_all_tracers()`. **UPDATED**: The `reviewer_agent` is now explicitly typed as `CodeReviewerAgentConfig`. The `tester_agent` is now explicitly typed as `TesterAgentConfig`.
-*   **`tests/scenarios/__init__.py` (NEW):** Defines `BASE_BRANCHES` list for centralized management of base branch names used in testing scenarios.
+*   **NEW**: `tests/scenarios/binary_search/` (NEW SCENARIO): A new end-to-end test scenario for building a Rust binary search library.
+    *   **`tests/scenarios/binary_search/__init__.py` (NEW FILE):** Defines `BASE_BRANCH = "binary-search-base"`.
+    *   **`tests/scenarios/binary_search/run.py` (NEW FILE):**
+        *   Demonstrates an orchestrated AI workflow for creating a Rust binary search library.
+        *   Configures the Orchestrator with `github_base_branch="binary-search-base"`.
+        *   Sets `requirements_agent`, `architect_agent`, `task_manager_agent`, `coder_new_pr_agent`, `coder_change_request_agent`, and `tester_agent` to `use_stub=False`.
+        *   Sets `reviewer_agent` to `use_stub=True` with a specific `MessageWheel` message.
+        *   Includes a detailed `human_ai_product` description for the `requirements_agent` for a hobby Rust binary search project.
+        *   Utilizes `ScenarioRunner` to execute the scenario.
+*   **`tests/scenarios/__init__.py` (UPDATED):** Defines `BASE_BRANCHES` list for centralized management of base branch names used in testing scenarios. **UPDATED**: Added `BINARY_SEARCH_BASE_BRANCH` to the list.
 *   **`tests/scenarios/cleanup_github.py` (UPDATED):** Now utilizes the centralized GitHub App authentication utility (`common.utils.github.app_get_client_from_credentials()`) instead of implementing authentication logic directly.
 *   **`tests/scenarios/setup_github.py` (UPDATED):** Now utilizes the centralized GitHub App authentication utility (`common.utils.github.app_get_client_from_credentials()`) instead of implementing authentication logic directly.
 *   **`tests/integration_tests/test_architect_agent.py` (UPDATED):**
@@ -357,6 +366,7 @@ AI Nexus employs a few architectural patterns for its agents:
 
 *   **`Makefile` (UPDATED):**
     *   Changed `demo` target to `demo-%` (e.g., `make demo-ai`, `make demo-human`) for explicit mode selection when running the demo orchestration script (`src/demo/orchestrate.py`).
+    *   **NEW**: Added `scenario-%` target (e.g., `make scenario-fibonacci`, `make scenario-stack`) to run specific test scenarios using `uv run --env-file .env -- python ./tests/scenarios/$*/run.py`.
 *   **`README.md` (UPDATED):**
     *   Updated "Local Demo" instructions to use the new `make demo-ai` and `make demo-human` commands.
 *   **CI/CD (GitHub Actions - `.github/workflows/`):**
@@ -422,7 +432,7 @@ ai-nexus/
 │       ├── graph-checks.yml      # UPDATED: The `actions/checkout` step has been updated to support pull requests from forks.
 │       ├── run_common_tests.yml  # NEW: Workflow to run common unit tests
 │       └── update_project_memory.yml
-├── Makefile                      # UPDATED: Changed demo target to demo-% (e.g., demo-ai, demo-human).
+├── Makefile                      # UPDATED: Changed demo target to demo-% (e.g., demo-ai, demo-human). NEW: Added scenario-% target.
 ├── README.md                     # UPDATED: Local demo instructions updated.
 ├── agent_memories/
 │   └── grumpy/
@@ -569,8 +579,12 @@ ai-nexus/
     │           ├── techContext.md
     │           └── testingContext.md
     ├── scenarios/                  # NEW
-    │   ├── __init__.py             # NEW: Defines BASE_BRANCHES for scenarios.
+    │   ├── __init__.py             # UPDATED: Defines BASE_BRANCHES for scenarios. **UPDATED**: Added `BINARY_SEARCH_BASE_BRANCH` to the list.
     │   ├── cleanup_github.py       # UPDATED: Now uses `common.utils.github` for authentication.
+    │   ├── binary_search/          # NEW: Directory for binary search scenario
+    │   │   ├── __init__.py         # NEW: Defines BASE_BRANCH for binary search scenario.
+    │   │   └── run.py              # NEW: New E2E test scenario for building a Rust binary search library, including Orchestrator configuration with stubbed/real agents, detailed human_ai_product, and uses ScenarioRunner.
+    │   │   └── scenario_runs/      # NEW: Directory for scenario run outputs (implicitly created by run.py)
     │   ├── fibonacci/              # NEW: Directory for fibonacci scenario
     │   │   ├── __init__.py         # NEW: Defines BASE_BRANCH for fibonacci scenario.
     │   │   ├── eval.py             # NEW: Evaluation script for Fibonacci scenario runs.
@@ -593,7 +607,6 @@ ai-nexus/
     ├── testing/
     │   ├── __init__.py             # UPDATED: Added create_async_graph_caller_for_gatherer helper function. UPDATED: Minor formatting.
     │   ├── evaluators.py
-    │   ├── formatter.py
     │   ├── inputs.py               # NEW: New utility file for decoding message dictionaries.
     │   └── utils.py                # UPDATED: New utility file providing helper functions for testing, including `get_list_diff` and `round_to`. **UPDATED**: Added `get_tool_args_with_names` function to extract tool call arguments from messages. `get_tool_messages_count` removed.
     ├── unit_tests/
