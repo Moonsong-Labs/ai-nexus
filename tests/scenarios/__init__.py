@@ -1,6 +1,12 @@
+from .binary_search import BASE_BRANCH as BINARY_SEARCH_BASE_BRANCH
+from .cp import BASE_BRANCH as CP_BASE_BRANCH
 from .fibonacci import BASE_BRANCH as FIBONACCI_BASE_BRANCH
+from .stack import BASE_BRANCH as STACK_BASE_BRANCH
 
 BASE_BRANCHES = [
     "main",
     FIBONACCI_BASE_BRANCH,
+    CP_BASE_BRANCH,
+    STACK_BASE_BRANCH,
+    BINARY_SEARCH_BASE_BRANCH,
 ]

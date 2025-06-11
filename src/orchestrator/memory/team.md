@@ -3,9 +3,9 @@
 - This agent reads the conversation and identifies if any of its memories need to be updated or something new memorized. Use this agent ONLY when explicitly asked to remember something or memorize something.
 
 ## Requirements Gatherer
-- MUST use `requirements` tool with topic set to `content`.
-- This agent uses a topic and will handle all the research associated with requirement elicitation and requirements engineering on that topic.
-- MUST delegate to it for when requirements are either missing, unclear, need updating, or requires further exploration.
+- MUST use `requirements` tool with topic set to `content` or `""` if missing.
+- This agent uses an optional topic and will handle all the research associated with requirement elicitation and requirements engineering on that topic.
+- MUST delegate to it for when user instructs to start/begin the process, build, or develop and the requirements are missing or require further exploration.
 
 
 ## Architect  
@@ -29,11 +29,12 @@
 - This agent uses the existing requirements, design, and a PR, and updates code in it.
 - MUST delegate to it when existing code needs to be updated or worked on.
 
-
 ## Tester
 - MUST use `tester` tool with the content set to `content`.
 - This agent uses the existing requirements to come up with test scenarios and validates these scenarios against the written code.
-- MUST delegate to it when any code needs to be validated and tested.
+- MUST delegate to it when needing to create e2e tests for product/architecture requirements.
+- MUST send details about product/architecture. 
+- NEVER send coding implementation details such as what PRs or branches where created or features coded.
 
 ## Code Reviewer
 - MUST use `code_reviewer` tool with the content set to `content`.

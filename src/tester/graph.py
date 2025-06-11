@@ -1,6 +1,5 @@
 """Test Agent Graph Implementation."""
 
-import logging
 from datetime import datetime
 from typing import Any, Coroutine, List, Optional
 
@@ -19,14 +18,14 @@ from langgraph.types import Checkpointer
 
 from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.graph import AgentGraph
+from common.logging import get_logger
 from common.tools.list_files import list_files
 from common.tools.read_file import read_file
 from common.tools.summarize import summarize
 from tester.configuration import Configuration
-from tester.prompts import get_stage_prompt
-from tester.state import State, WorkflowStage
+from tester.state import State
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def get_tester_github_tools():
@@ -107,15 +106,8 @@ def _create_call_model(
                     logger.warning(f"Error retrieving memories: {e}")
                     formatted = ""
 
-            # Get the current workflow stage
-            current_stage = state.workflow_stage.value
-
-            # Get the stage-specific prompt
-            stage_prompt = get_stage_prompt(current_stage)
-
-            # Prepare the system prompt with workflow stage, memories, and current time
+            # Prepare the system prompt with memories, and current time
             sys_prompt = agent_config.system_prompt.format(
-                workflow_stage=stage_prompt,
                 user_info=formatted,
                 project_path=state.project.path,
                 time=datetime.now().isoformat(),
@@ -127,18 +119,7 @@ def _create_call_model(
                 config=config,
             )
 
-            # Determine if we should move to the next stage based on the response
-            next_stage = state.workflow_stage
-
-            # Check for keywords indicating stage completion
-            if current_stage == WorkflowStage.TESTING.value:
-                if (
-                    "tests are complete" in msg.content.lower()
-                    or "testing complete" in msg.content.lower()
-                ):
-                    next_stage = WorkflowStage.COMPLETE
-
-            return {"messages": [msg], "workflow_stage": next_stage}
+            return {"messages": [msg]}
         except Exception as e:
             logger.error(f"Error in call_model: {str(e)}")
             # Return a error message instead of failing completely

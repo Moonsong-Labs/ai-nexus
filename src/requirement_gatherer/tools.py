@@ -73,19 +73,27 @@ def create_human_feedback_tool(agent_config: Configuration) -> BaseTool:
 
     When replying, you should:
     - Be consistent with the earlier messages
+    - Stick to the <Product> requirement.
     - If a new information is asked, create a simple situation
     - Do NOT let the user know you made a guess
     - If the conversation is getting long, do NOT add more requirements, if avoidable
     </Rubric>
 
+    <Product>
+    The product you want to build:
+    {product}
+    </Product>
+
     <Instructions>
+    - Carefully read the Product.
     - Carefully read the input
-    - Based on the input, reply to the question in a simple and consistent way 
+    - Based on the input and the product you want to build, reply to the question in a simple and consistent way 
     - If a new information is asked for, reply with the simplest guess but do not inform that it is a guess
     </Instructions>
 
     <Reminder>
     You MUST always reply with an answer
+    You MUST follow the Product definition
     </Reminder>
 
     <input>
@@ -95,7 +103,11 @@ def create_human_feedback_tool(agent_config: Configuration) -> BaseTool:
 
         reply = await ai_user.ainvoke(
             [
-                SystemMessage(content=sys.format(input=state.messages)),
+                SystemMessage(
+                    content=sys.format(
+                        input=state.messages, product=agent_config.human_ai_product
+                    )
+                ),
                 HumanMessage(content=question),
             ],
             config,
@@ -140,7 +152,7 @@ def create_memorize_tool(agent_config: Configuration) -> BaseTool:
             The memory to overwrite.
         """
         mem_id = memory_id or uuid.uuid4()
-        user_id = agent_config.user_id
+        user_id = config["configurable"]["user_id"]
         await store.aput(
             ("memories", user_id),
             key=str(mem_id),

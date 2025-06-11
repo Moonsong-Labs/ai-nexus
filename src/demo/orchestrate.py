@@ -25,6 +25,7 @@ from termcolor import colored
 
 from orchestrator.configuration import (
     ArchitectAgentConfig,
+    CodeReviewerAgentConfig,
     RequirementsAgentConfig,
     RequirementsConfiguration,
     SubAgentConfig,
@@ -129,6 +130,9 @@ if __name__ == "__main__":
                 coder_change_request_agent=SubAgentConfig(
                     use_stub=True,
                 ),
+                reviewer_agent=CodeReviewerAgentConfig(
+                    use_stub=False,
+                ),
             ),
             checkpointer=InMemorySaver(),
             store=InMemoryStore(),
@@ -157,7 +161,11 @@ if __name__ == "__main__":
                 )
             )
             result = await orchestrator.compiled_graph.ainvoke(
-                State(messages=HumanMessage(content="I want to build a website")),
+                State(
+                    messages=HumanMessage(
+                        content="I want to build a python stack data structure"
+                    )
+                ),
                 config=config,
             )
 

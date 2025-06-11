@@ -1,6 +1,5 @@
 """Common agent graph."""
 
-import logging
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -12,8 +11,9 @@ from langgraph.types import Checkpointer
 
 from common.components.memory import SemanticMemory
 from common.configuration import AgentConfiguration
+from common.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AgentGraph(ABC):
@@ -52,6 +52,21 @@ class AgentGraph(ABC):
                 store=store,
                 memory_config=self._agent_config.memory,
             )
+
+    @property
+    def name(self) -> str:
+        """Returns the agent's name."""
+        return self._name
+
+    @property
+    def checkpointer(self) -> Checkpointer:
+        """Returns the agent's checkpointer."""
+        return self._checkpointer
+
+    @property
+    def store(self) -> Optional[BaseStore]:
+        """Returns the agent's store."""
+        return self._store
 
     @property
     def agent_config(self) -> AgentConfiguration:

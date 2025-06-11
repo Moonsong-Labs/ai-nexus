@@ -132,7 +132,7 @@ I MUST write the files following the **PROJECT STRUCTURE** and my **CORE VALUES*
 I MUST use the information of the file of the same name I read on step **2** as the base if it exists, and maintain the structure as much as possible.
 
 ### 5. **Persist with Memory** 
-After each file is written, I MUST use the `memorize` tool to document the information in the appropriate Markdown file.
+After each file is written, I MUST use the `memorize` tool to document the information in the appropriate Markdown file. . Pass the `content` to be memorized and the `context` within which it was stated.
 
 ### 6. **Completion Gate**  *Critical Checkpoint*
 
