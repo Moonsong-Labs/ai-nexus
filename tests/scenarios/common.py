@@ -91,7 +91,7 @@ class ScenarioRunner:
                 )
             else:
                 break
-            return result
+        return result
 
     async def _execute_scenario(self, orchestrator: OrchestratorGraph) -> dict:
         """Execute the scenario with standard flow"""
@@ -121,7 +121,7 @@ class ScenarioRunner:
 
     def _save_scenario(self, result):
         logger.info(result)
-        scenario_runs_dir = os.path.dirname(__file__) / Path("scenario_runs") / Path(self.config.name)
+        scenario_runs_dir = Path(os.path.dirname(__file__)) / Path("scenario_runs") / Path(self.config.name)
         os.makedirs(scenario_runs_dir, exist_ok=True)
 
         run_file = scenario_runs_dir / Path(f"{result['run_id']}.json")
