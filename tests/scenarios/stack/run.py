@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 
 
 def config(save_run) -> ScenarioConfig:
-    """Create configureation fror Stack scenario"""
+    """Create configuration fror Stack scenario"""
     return ScenarioConfig(
         name="scenarios-stack",
         save_run=save_run,
