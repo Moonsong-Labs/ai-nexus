@@ -26,7 +26,7 @@ from code_reviewer.graph import (
 from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
 from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.components.github_mocks import maybe_mock_github
-from common.components.github_tools import get_github_tools, GetIssueBody
+from common.components.github_tools import get_github_tools
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
 from common.logging import get_logger
