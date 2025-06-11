@@ -7,7 +7,7 @@
 **Core Mission:** To develop a system for managing and orchestrating a team of AI agents capable of designing, developing, and maintaining technical projects. An initial focus is on an agent named "Cursor" which operates with a memory that resets between sessions, necessitating a robust external "Memory Bank" system for continuity. A specific rule (`.cursor/rules/read-project-memories.mdc`) now configures Cursor to always read all files within the `project_memories/` directory for every interaction, ensuring this core project context is consistently available to it. AI Nexus aims to be a platform for developing and managing such AI agents. The system now includes robust project management capabilities, allowing the tracking and utilization of project names and paths across various agent workflows.
 
 **Key Concepts:**
-1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Grumpy, Task Manager (NEW)) working collaboratively. The Orchestrator agent's delegation mechanism to other agents (Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Task Manager) has been refactored. It now uses direct tool calls for each agent task instead of a generic `Delegate` tool. The Code Reviewer is consistently referred to as "Code Reviewer" (e.g., Orchestrator tool name `code_reviewer`). A `Project` object is now passed and updated across agent states to maintain consistent project context. Agent stubs now support dynamic, cycling messages for more flexible scenario testing. **UPDATED**: Agent states now consistently include an `error` field to track fatal errors, and agent workflows are designed to propagate and react to these errors, preventing infinite loops or runaway processes.
+1.  **Multi-Agent System:** The project involves a team of specialized AI agents (Orchestrator, Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Task Manager (NEW)) working collaboratively. The Orchestrator agent's delegation mechanism to other agents (Architect, Coder, Tester, Code Reviewer, Requirement Gatherer, Task Manager) has been refactored. It now uses direct tool calls for each agent task instead of a generic `Delegate` tool. The Code Reviewer is consistently referred to as "Code Reviewer" (e.g., Orchestrator tool name `code_reviewer`). A `Project` object is now passed and updated across agent states to maintain consistent project context. Agent stubs now support dynamic, cycling messages for more flexible scenario testing. **UPDATED**: Agent states now consistently include an `error` field to track fatal errors, and agent workflows are designed to propagate and react to these errors, preventing infinite loops or runaway processes.
 2.  **Externalized Memory (Semantic Memory):** Agents rely on external storage for persistent knowledge, project state, and context. This addresses context loss in AI agents. The primary mechanism is `langmem`, providing semantic search capabilities over stored memories. `AgentGraph` can now automatically initialize and provide `SemanticMemory` and its tools to subclasses based on its configuration. The Tester agent, for instance, now includes logic to read from a `BaseStore` for contextual memories.
 3.  **LangGraph Framework:** The primary framework used for building the AI agents, defining their state, and managing their execution flow. **UPDATED**: Agent `call_model` functions are now decorated with a `prechain` mechanism that includes `skip_on_summary_and_tool_errors`, allowing for pre-execution checks to halt processing if a summary is already present or if a tool has encountered consecutive errors beyond a defined threshold.
 4.  **Tool-Using Agents:** Agents are equipped with tools to perform actions, interact with systems (like GitHub), and manage their memory.
@@ -326,6 +326,7 @@ AI Nexus employs a few architectural patterns for its agents:
     *   **UPDATED**: The `normalize_whitespace` helper function has been renamed to `_normalize_whitespace`.
     *   **NEW**: Added `test_tool_call_coder_with_full_task` asynchronous test. This test verifies that the Orchestrator correctly forwards the full, unsummarized task content (obtained via `read_task_planning`) to the `coder_new_pr` tool, ensuring no modification or summarization of the task.
     *   **NEW**: A new asynchronous test `test_does_not_call_tester_with_coder_details` has been added. This test verifies that the Orchestrator does not pass coding implementation details (like PR numbers or branch names) to the `tester` tool when delegating.
+*   **NEW**: `tests/graph_tests/single_graph/test_code_reviewer.py`: New asynchronous tests verifying the Code Reviewer agent's tool invocation logic, including scenarios for no tool calls, listing files in a project directory, and reading source code files while ignoring non-code files like `README.md`.
 *   **`tests/integration_tests/test_task_manager.py` (UPDATED):**
     *   The `call_model` function and `test_task_manager_with_project_path` now explicitly add a `Project` object to the state dictionary for testing, providing explicit project context during task manager operations.
 *   **Smoke Tests (NEW - UPDATED):**
@@ -347,8 +348,8 @@ AI Nexus employs a few architectural patterns for its agents:
 *   **NEW**: `tests/testing/inputs.py`: New utility file providing `decode_base_message` and `decode_base_messages` functions to transform message dictionaries to `BaseMessage` objects.
 *   **NEW**: `tests/testing/utils.py`: A new utility file providing helper functions for testing, including `get_list_diff` for comparing lists (e.g., tool calls) and `round_to` for rounding numbers. **NEW**: Added `get_tool_args_with_names` function to extract tool call arguments from messages. The `get_tool_messages_count` function has been removed.
 *   **NEW**: `tests/unit_tests/architect.py`: New asynchronous tests verifying architecture creation workflows, including file generation for project structures. **UPDATED**: Enhanced unit tests with more detailed assertions to ensure correct tool usage (e.g., `recall`, `create_directory`, `memorize`, `create_file`, `list_files`, `summarize` tool call counts), memory storage, and file creation behavior. Specifically, it now verifies that the `memorize` tool is called with matching `content` and `context` arguments to the stored memories.
-*   **NEW**: `tests/unit_tests/common.py`: New comprehensive unit tests for `common.tools.read_file`, `common.tools.list_files`, `common.tools.create_directory`, and `common.tools.create_file`, ensuring correct functionality and error handling across various scenarios.
 *   **NEW**: `tests/unit_tests/common/test_chain.py`: New unit tests added to verify the functionality of `common.chain.prechain` and `common.chain.skip_on_summary_and_tool_errors`, specifically testing error propagation and summary-based skipping in agent workflows. **UPDATED**: `AIMessage` construction in tests now explicitly uses `tool_calls` list.
+*   **NEW**: `tests/unit_tests/common.py`: New comprehensive unit tests for `common.tools.read_file`, `common.tools.list_files`, `common.tools.create_directory`, and `common.tools.create_file`, ensuring correct functionality and error handling across various scenarios.
 *   **NEW**: `tests/unit_tests/test_orchestrator.py`: New unit tests for Orchestrator tool calls, verifying correct tool delegation based on input messages (e.g., no tool call for "Hi", `requirements` for "build a website", `architect` after requirements are gathered).
 *   (Other test files as previously described, or minor updates not impacting core logic)
 
@@ -359,6 +360,7 @@ AI Nexus employs a few architectural patterns for its agents:
 *   **`README.md` (UPDATED):**
     *   Updated "Local Demo" instructions to use the new `make demo-ai` and `make demo-human` commands.
 *   **CI/CD (GitHub Actions - `.github/workflows/`):**
+    *   **UPDATED**: All jobs within `checks.yml`, `compile-check.yml`, and `graph-checks.yml` now use a refined `actions/checkout` configuration (`ref: ${{ github.event.pull_request.head.ref || github.ref }}` and `repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}`) to correctly checkout the code for pull requests originating from forks, ensuring CI runs on the correct branch and repository.
     *   `checks.yml` (UPDATED):
         *   Includes jobs for linting, type checking, unit tests, and integration tests.
         *   **New `smoke-test` job**:
@@ -369,7 +371,8 @@ AI Nexus employs a few architectural patterns for its agents:
             *   Navigates to `tests/smoke/langgraph_dev`, installs Node.js dependencies (`npm i`), and runs the smoke test (`npm test`).
             *   Uploads `tests/smoke/langgraph_dev/langgraph-test-result.png` as an artifact with a 10-day retention period if the test runs (regardless of pass/fail).
         *   **UPDATED**: The `test_unit` job now includes `GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }}` in its environment variables.
-    *   `compile-check.yml`: Ensures the LangGraph graphs can be compiled.
+    *   `compile-check.yml` (UPDATED): Ensures the LangGraph graphs can be compiled.
+    *   `graph-checks.yml` (UPDATED): Ensures the LangGraph graphs can be compiled and their structure is valid.
     *   `run_common_tests.yml` (NEW): A new workflow to run common unit tests on `push` to `main`, `pull_request` to `main`, and `workflow_dispatch`.
     *   `update_project_memory.yml`: (As previously described)
 *   **Project Maintenance Scripts (UPDATED):**
@@ -416,6 +419,7 @@ ai-nexus/
 │   └── workflows/
 │       ├── checks.yml            # UPDATED: Added smoke-test job; test_unit job now includes GOOGLE_API_KEY env var.
 │       ├── compile-check.yml
+│       ├── graph-checks.yml      # UPDATED: The `actions/checkout` step has been updated to support pull requests from forks.
 │       ├── run_common_tests.yml  # NEW: Workflow to run common unit tests
 │       └── update_project_memory.yml
 ├── Makefile                      # UPDATED: Changed demo target to demo-% (e.g., demo-ai, demo-human).
@@ -508,7 +512,7 @@ ai-nexus/
 │   │   ├── graph.py              # UPDATED: Renamed to RequirementsGraph, uses AgentConfiguration, new AgentGraph init; helpers receive agent_config; memorize tool now created via create_memorize_tool(self._agent_config); minor conditional logic update in _create_gather_requirements; uses common.tools.summarize. Added set_project tool. UPDATED: `_create_call_model` is now decorated with `@prechain(skip_on_summary_and_tool_errors())`. `_create_gather_requirements` now checks for `AIMessage` and `state.error`.
 │   │   ├── prompts.py            # UPDATED: Prompt includes instruction for set_project tool. UPDATED: Prompt text refined (e.g., "smart and curious"), new IMPORTANT rules added (e.g., limit questions for HOBBY projects), rule numbering adjusted, Mermaid flowchart and Core File table simplified (removed stakeholders.md, constraints.md), checklist sections removed/renamed, functional requirements streamlined. NEW: `HUMAN_AI_PRODUCT` constant added.
 │   │   ├── state.py              # UPDATED: summary field added; project field added. UPDATED: `error` field added.
-│   │   └── tools.py              # UPDATED: Removed 'summarize' tool (now in common). Added set_project tool. UPDATED: `human_feedback` tool's prompt template now includes a `<Product>` section using `{product}` from `agent_config.human_ai_product`, with new rubric, instructions, and reminder lines. **FIXED**: `memorize` tool now correctly accesses `user_id` from `config["configurable"]["user_id"]`.
+│   │   └── tools.py              # UPDATED: Removed 'summarize' tool (now in common). Added set_project tool. UPDATED: `human_feedback` tool's prompt template now includes a `<Product>` section with a `{product}` placeholder, and its `ai_user.ainvoke` call now passes `agent_config.human_ai_product` to format this section, ensuring the AI's responses are guided by the specified product context. New rubric, instructions, and reminder lines have been added to reinforce adherence to the product definition. **FIXED**: `memorize` tool now correctly accesses `user_id` from `config["configurable"]["user_id"]`.
 │   ├── task_manager/
 │   │   ├── configuration.py      # UPDATED: Added use_stub, use_human_ai fields; uses prompts.SYSTEM_PROMPT.
 │   │   ├── graph.py              # UPDATED: call_model uses project_name and project_path in prompt and prints formatted messages. UPDATED: Added common.tools.summarize, common.tools.create_directory, common.tools.create_file, common.tools.list_files, common.tools.read_file to the agent's toolset. UPDATED: `call_model` now handles `use_stub` for project name/path and extracts from `state.project`. UPDATED: `_create_call_model` is now decorated with `@prechain(skip_on_summary_and_tool_errors())`.
@@ -540,8 +544,10 @@ ai-nexus/
     │       ├── __init__.py       # NEW: Placeholder file.
     │       └── test_tools.py     # NEW: New asynchronous test for orchestrator tool usage correctness.
     ├── graph_tests/
-    │   └── graph_node/
-    │       └── test_orchestrator.py # UPDATED: `normalize_whitespace` helper function renamed to `_normalize_whitespace`. **NEW**: Added `test_tool_call_coder_with_full_task` to verify Orchestrator forwards full task content to Coder. **NEW**: Added `test_does_not_call_tester_with_coder_details` to verify Orchestrator does not send coding implementation details to Tester.
+    │   ├── graph_node/
+    │   │   └── test_orchestrator.py # UPDATED: `normalize_whitespace` helper function renamed to `_normalize_whitespace`. **NEW**: Added `test_tool_call_coder_with_full_task` to verify Orchestrator forwards full task content to Coder. **NEW**: Added `test_does_not_call_tester_with_coder_details` to verify Orchestrator does not send coding implementation details to Tester.
+    │   └── single_graph/
+    │       └── test_code_reviewer.py # NEW: New asynchronous tests verifying the Code Reviewer agent's tool invocation logic, including scenarios for no tool calls, listing files in a project directory, and reading source code files while ignoring non-code files like `README.md`.
     ├── integration_tests/
     │   ├── test_architect_agent.py # UPDATED: Graph compilation now uses `ArchitectGraph(...).compiled_graph`.
     │   ├── test_coder.py
