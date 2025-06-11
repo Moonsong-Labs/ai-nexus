@@ -449,7 +449,7 @@ def mock_github_tools(mock_api: MockGithubApi):
             args_schema=CreatePRReview,
         ),
         RunnableLambda(
-            _convert_args_schema_to_string(mock_api.get_issue_body, CreatePRReview)
+            _convert_args_schema_to_string(mock_api.get_issue_body, GetIssueBody)
         ).as_tool(
             name="get_issue_body",
             description=GET_ISSUE_BODY_PROMPT,
