@@ -1,8 +1,7 @@
 """Convert GitHub webhook payloads to OrchestratorGraph State objects."""
 
 import json
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -12,8 +11,7 @@ class EventProcessor:
 
     @staticmethod
     def extract_repository_info(event: Dict[str, Any]) -> Dict[str, str]:
-        """
-        Extract repository information from event payload.
+        """Extract repository information from event payload.
 
         Args:
             event: GitHub webhook event payload
@@ -125,8 +123,7 @@ class EventProcessor:
 Please analyze this event and determine the appropriate action to take. You have access to GitHub tools to interact with the repository."""
 
     def process_event(self, event_type: str, event_data: Dict[str, Any]):
-        """
-        Process a GitHub webhook event and convert to State object.
+        """Process a GitHub webhook event and convert to State object.
 
         Args:
             event_type: GitHub event type (e.g., "pull_request", "issues")
@@ -175,8 +172,7 @@ Raw Event Data:
         return State(messages=[system_message, human_msg], project=project)
 
     def should_process_event(self, event_type: str, event_data: Dict[str, Any]) -> bool:
-        """
-        Determine if an event should be processed.
+        """Determine if an event should be processed.
 
         Args:
             event_type: GitHub event type

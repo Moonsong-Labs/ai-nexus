@@ -3,18 +3,17 @@
 import asyncio
 import json
 import logging
-import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, Optional
 
 import dotenv
 import uvicorn
-from fastapi import FastAPI, Header, HTTPException, Request, Response
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from .config import get_settings, settings
+from .config import settings
 from .github_auth import cleanup_auth, get_github_auth
 from .handlers import cleanup_handlers, get_handler_registry
 
@@ -63,8 +62,7 @@ event_semaphore = asyncio.Semaphore(settings.max_concurrent_events)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Manage application lifecycle.
+    """Manage application lifecycle.
 
     Args:
         app: FastAPI application instance
@@ -169,8 +167,7 @@ async def orchestrator_health_check():
 async def process_webhook_event(
     event_type: str, event_data: Dict[str, Any], delivery_id: str
 ) -> Dict[str, Any]:
-    """
-    Process webhook event asynchronously.
+    """Process webhook event asynchronously.
 
     Args:
         event_type: GitHub event type
@@ -208,8 +205,7 @@ async def github_webhook(
     x_github_event: str = Header(None),
     x_github_delivery: str = Header(None),
 ):
-    """
-    Receive and process GitHub webhook events.
+    """Receive and process GitHub webhook events.
 
     Args:
         request: FastAPI request object
@@ -276,8 +272,7 @@ async def github_webhook(
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """
-    Global exception handler.
+    """Global exception handler.
 
     Args:
         request: FastAPI request

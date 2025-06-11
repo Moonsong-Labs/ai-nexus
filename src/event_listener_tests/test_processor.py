@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from common.state import Project
 from event_listener.event_processor import EventProcessor, get_event_processor
 from orchestrator.state import State
 

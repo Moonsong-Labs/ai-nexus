@@ -3,8 +3,7 @@
 import asyncio
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
-from functools import lru_cache
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 import httpx
@@ -71,8 +70,7 @@ class GitHubAuth:
             self._client = None
 
     def generate_jwt(self) -> str:
-        """
-        Generate JWT token for GitHub App authentication.
+        """Generate JWT token for GitHub App authentication.
 
         Returns:
             str: JWT token valid for 10 minutes
@@ -91,8 +89,7 @@ class GitHubAuth:
     async def get_installation_token(
         self, installation_id: Optional[str] = None
     ) -> str:
-        """
-        Get or refresh installation access token.
+        """Get or refresh installation access token.
 
         Args:
             installation_id: Optional specific installation ID
@@ -133,8 +130,7 @@ class GitHubAuth:
     async def get_authenticated_client(
         self, installation_id: Optional[str] = None
     ) -> httpx.AsyncClient:
-        """
-        Get an authenticated HTTP client for GitHub API requests.
+        """Get an authenticated HTTP client for GitHub API requests.
 
         Args:
             installation_id: Optional specific installation ID
@@ -153,8 +149,7 @@ class GitHubAuth:
     async def get_rate_limit(
         self, installation_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        """
-        Get current rate limit status.
+        """Get current rate limit status.
 
         Args:
             installation_id: Optional specific installation ID
@@ -169,8 +164,7 @@ class GitHubAuth:
 
     @asynccontextmanager
     async def authenticated_request(self, installation_id: Optional[str] = None):
-        """
-        Context manager for authenticated GitHub API requests.
+        """Context manager for authenticated GitHub API requests.
 
         Usage:
             async with auth.authenticated_request() as client:

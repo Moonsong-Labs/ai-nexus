@@ -42,7 +42,7 @@ class Settings(BaseSettings):
         if not v.startswith("-----BEGIN"):
             # Try to load from file if it's a path
             if os.path.exists(v):
-                with open(v, "r") as f:
+                with open(v) as f:
                     return f.read()
             raise ValueError("Private key must be PEM formatted or a valid file path")
         return v
@@ -73,10 +73,9 @@ class Settings(BaseSettings):
         }
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
-    """
-    Get cached settings instance.
+    """Get cached settings instance.
 
     Returns:
         Settings: Configured settings object

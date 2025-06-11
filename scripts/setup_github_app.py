@@ -1,18 +1,12 @@
 #!/usr/bin/env python3
-"""
-Setup script for GitHub App configuration.
+"""Setup script for GitHub App configuration.
 
 This script helps users configure their GitHub App for the Event Listener service.
 It provides guidance on creating the app and extracting necessary configuration values.
 """
 
-import base64
-import json
-import os
-import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 
 def print_header(text: str):

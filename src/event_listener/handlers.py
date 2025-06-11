@@ -17,8 +17,7 @@ class BaseEventHandler(ABC):
     """Abstract base class for GitHub event handlers."""
 
     def __init__(self, orchestrator=None):
-        """
-        Initialize handler with orchestrator instance.
+        """Initialize handler with orchestrator instance.
 
         Args:
             orchestrator: The OrchestratorGraph instance to invoke (lazy loaded if None)
@@ -54,8 +53,7 @@ class BaseEventHandler(ABC):
 
     @abstractmethod
     async def can_handle(self, event: Dict[str, Any]) -> bool:
-        """
-        Check if this handler can process the given event.
+        """Check if this handler can process the given event.
 
         Args:
             event: GitHub webhook event data
@@ -67,8 +65,7 @@ class BaseEventHandler(ABC):
 
     @abstractmethod
     async def handle(self, event: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Process the event and invoke orchestrator.
+        """Process the event and invoke orchestrator.
 
         Args:
             event: GitHub webhook event data
@@ -79,8 +76,7 @@ class BaseEventHandler(ABC):
         pass
 
     async def invoke_orchestrator(self, state, thread_id: str) -> Dict[str, Any]:
-        """
-        Invoke the orchestrator with the given state.
+        """Invoke the orchestrator with the given state.
 
         Args:
             state: The state object to process
@@ -89,7 +85,6 @@ class BaseEventHandler(ABC):
         Returns:
             dict: Orchestrator result
         """
-
         print(f"Invoking orchestrator with state: {state}")
         print(f"Thread ID: {thread_id}")
 
@@ -115,7 +110,7 @@ class BaseEventHandler(ABC):
                 "timestamp": datetime.utcnow().isoformat(),
             }
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(f"Orchestrator timeout for thread {thread_id}")
             return {
                 "status": "timeout",
@@ -135,8 +130,7 @@ class BaseEventHandler(ABC):
             }
 
     def generate_thread_id(self, event: Dict[str, Any]) -> str:
-        """
-        Generate a unique thread ID for the event.
+        """Generate a unique thread ID for the event.
 
         Args:
             event: GitHub webhook event data
@@ -251,8 +245,7 @@ class HandlerRegistry:
     """Registry for event handlers."""
 
     def __init__(self):
-        """
-        Initialize handler registry.
+        """Initialize handler registry.
         """
         self._handlers: List[BaseEventHandler] = []
         self._register_default_handlers()
@@ -264,8 +257,7 @@ class HandlerRegistry:
         self.register(CommentTriggerHandler)
 
     def register(self, handler_class: Type[BaseEventHandler]):
-        """
-        Register a new handler.
+        """Register a new handler.
 
         Args:
             handler_class: Handler class to register
@@ -277,8 +269,7 @@ class HandlerRegistry:
     async def handle_event(
         self, event_type: str, event_data: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """
-        Route event to appropriate handler.
+        """Route event to appropriate handler.
 
         Args:
             event_type: GitHub event type

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Test script for GitHub Event Listener webhook endpoints.
+"""Test script for GitHub Event Listener webhook endpoints.
 
 This script provides easy testing of various webhook events using curl commands.
 """
