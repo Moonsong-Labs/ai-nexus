@@ -21,6 +21,7 @@ from orchestrator.state import State
 
 logger = get_logger(__name__)
 
+
 class CoderPR(TypedDict):
     pr_number: int
     branch: str
@@ -32,14 +33,17 @@ class ScenarioRun(TypedDict):
     pr_number: int
     branch: str
 
+
 @dataclass
 class ScenarioConfig:
     """Configuration for a scenario run"""
+
     name: str
     initial_prompt: str
     orchestrator_config: OrchestratorConfiguration
     recursion_limit: int = 250
     save_run: bool = True
+
 
 class ScenarioRunner:
     """Standardized scenario runner"""
@@ -112,7 +116,9 @@ class ScenarioRunner:
         )
 
         # Handle interrupts
-        interrupt_result = await self._handle_interrupts(orchestrator.compiled_graph, config)
+        interrupt_result = await self._handle_interrupts(
+            orchestrator.compiled_graph, config
+        )
         if interrupt_result is not None:
             result = interrupt_result
 
@@ -121,7 +127,11 @@ class ScenarioRunner:
 
     def _save_scenario(self, result):
         logger.info(result)
-        scenario_runs_dir = Path(os.path.dirname(__file__)) / Path("scenario_runs") / Path(self.config.name)
+        scenario_runs_dir = (
+            Path(os.path.dirname(__file__))
+            / Path("scenario_runs")
+            / Path(self.config.name)
+        )
         os.makedirs(scenario_runs_dir, exist_ok=True)
 
         run_file = scenario_runs_dir / Path(f"{result['run_id']}.json")
@@ -158,7 +168,9 @@ class ScenarioRunner:
 
     def _parse_pr_info(self, coder_output: str) -> dict:
         """Parse PR information from coder output"""
-        llm = init_chat_model("google_genai:gemini-2.0-flash", temperature=0).with_structured_output(CoderPR)
+        llm = init_chat_model(
+            "google_genai:gemini-2.0-flash", temperature=0
+        ).with_structured_output(CoderPR)
 
         try:
             pr_info = llm.invoke(
@@ -167,4 +179,6 @@ class ScenarioRunner:
             logger.debug(f"PR: {pr_info}")
             return pr_info
         except ValueError as e:
-            raise RuntimeError("Failed to parse PR number and branch from coder output") from e
+            raise RuntimeError(
+                "Failed to parse PR number and branch from coder output"
+            ) from e
