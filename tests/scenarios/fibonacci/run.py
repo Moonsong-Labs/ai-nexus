@@ -60,8 +60,12 @@ def config(save_run) -> ScenarioConfig:
             coder_new_pr_agent=SubAgentConfig(use_stub=False),
             coder_change_request_agent=SubAgentConfig(use_stub=False),
             reviewer_agent=CodeReviewerAgentConfig(
-                use_stub=True,
-                stub_messages=MessageWheel(["Everything looks correct."]),
+                use_stub=False,
+                stub_messages=MessageWheel(
+                    [
+                        "Everything looks correct.",
+                    ]
+                ),
             ),
             tester_agent=TesterAgentConfig(
                 use_stub=False,
