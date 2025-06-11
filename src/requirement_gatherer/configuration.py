@@ -14,6 +14,7 @@ class Configuration(AgentConfiguration):
     gatherer_system_prompt: str = prompts.SYSTEM_PROMPT
     use_human_ai: bool = True
     human_ai_product: Optional[str] = None
+    model: str = "google_genai:gemini-2.5-flash-preview-05-20"
 
     def __post_init__(self):
         """Initialize human_ai_product based on use_human_ai.

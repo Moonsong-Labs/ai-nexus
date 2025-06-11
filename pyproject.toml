@@ -17,6 +17,7 @@ dependencies = [
     "langmem~=0.0.25",
     "termcolor~=3.1.0",
     "agentevals~=0.0.7",
+    "behave>=1.2.6",
 ]
 optional-dependencies.dev = [
     "mypy~=1.11.1",
