@@ -69,7 +69,11 @@ test_name = None
 
 parent = selected.parent.name if selected.name != ALL_NAME else None
 if parent is not None:
-    test_path = [node.name for node in selected.parent.path if node.name != ALL_NAME]
+    test_path = [
+        node.name
+        for node in selected.parent.path
+        if node.name not in [ROOT_NAME, ALL_NAME]
+    ]
     if parent.endswith(".py"):
         test_name = selected.name.strip("<>")
     else:
