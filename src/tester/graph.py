@@ -1,6 +1,5 @@
 """Test Agent Graph Implementation."""
 
-import logging
 from datetime import datetime
 from typing import Any, Coroutine, List, Optional
 
@@ -19,13 +18,14 @@ from langgraph.types import Checkpointer
 
 from common.chain import prechain, skip_on_summary_and_tool_errors
 from common.graph import AgentGraph
+from common.logging import get_logger
 from common.tools.list_files import list_files
 from common.tools.read_file import read_file
 from common.tools.summarize import summarize
 from tester.configuration import Configuration
 from tester.state import State
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def get_tester_github_tools():

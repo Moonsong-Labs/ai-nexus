@@ -1,6 +1,5 @@
 """Graph implementation for agent template using AgentGraph."""
 
-import logging
 from typing import Any, Callable, Coroutine, Dict, Optional
 
 from langchain.chat_models import init_chat_model
@@ -17,8 +16,9 @@ from agent_template.prompts import SYSTEM_PROMPT
 from agent_template.state import State
 from common.components.memory import MemoryConfiguration
 from common.graph import AgentGraph
+from common.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def _create_call_model(

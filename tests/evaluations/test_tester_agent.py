@@ -1,11 +1,12 @@
 import pytest
 from langgraph.checkpoint.memory import MemorySaver
 from langsmith import Client
-from testing import create_async_graph_caller, get_logger
+from testing import create_async_graph_caller
 from testing.evaluators import LLMJudge
 
 from common.components.github_mocks import MockGithubApi
 from common.components.github_tools import get_github_tools
+from common.logging import get_logger
 from tester.graph import TesterAgentGraph as Graph
 
 # Setup basic logging for the test
