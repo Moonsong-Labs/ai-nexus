@@ -175,7 +175,10 @@ class OrchestratorGraph(AgentGraph):
             )
         )
         github_tools = get_github_tools(
-            maybe_mock_github(base_branch=self._agent_config.github_base_branch)
+            maybe_mock_github(
+                base_branch=self._agent_config.github_base_branch,
+                allow_mocks=self._agent_config.use_mocks,
+            )
         )
         coder_new_pr_graph = (
             stubs.CoderNewPRStub(

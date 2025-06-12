@@ -119,6 +119,7 @@ class Configuration(AgentConfiguration):
         )
     )
     github_base_branch: str = "main"
+    use_mocks: bool = False
 
 
 __all__ = ["Configuration", "RequirementsAgentConfig", "SubAgentConfig"]
