@@ -2,7 +2,6 @@
 
 import json
 import os
-import sys
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,14 +26,12 @@ logger = get_logger(__name__)
 
 
 def init_github():
-    client = github_utils.app_get_client_from_credentials()
-    repo_name = os.getenv("GITHUB_REPOSITORY")
-
     try:
+        client = github_utils.app_get_client_from_credentials()
+        repo_name = os.getenv("GITHUB_REPOSITORY")
         repo = client.get_repo(repo_name)
     except Exception as e:
-        logger.error(f"Error accessing repository: {str(e)}")
-        sys.exit(1)
+        raise RuntimeError("Error accessing repository") from e
 
     return repo
 
@@ -74,12 +71,12 @@ class ScenarioRunner:
 
         Currently ensures the configured base branch exists.
         """
-        repo = init_github()
         target = self.config.orchestrator_config.github_base_branch
         try:
+            repo = init_github()
             repo.get_branch(target)
-        except Exception:
-            raise Exception(f"Unable to run scenario: branch '{target}' does not exist")
+        except Exception as e:
+            raise RuntimeError(f"Unable to run scenario: branch '{target}' does not exist") from e
 
     async def run(self) -> ScenarioRun:
         """Execute the scenario"""
