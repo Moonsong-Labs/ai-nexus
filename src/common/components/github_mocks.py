@@ -267,13 +267,17 @@ def get_github(base_branch) -> GitHubAPIWrapper:
     - GITHUB_REPOSITORY
     """
     required_vars = ["GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY", "GITHUB_REPOSITORY"]
-    if not all(os.getenv(var) for var in required_vars):
-        raise RuntimeError("Not all required environment variables set for GitHub API")
+    vars = {var: os.getenv(var) for var in required_vars}
+    missing = [var for var, val in vars.items() if val is None]
+    if missing:
+        raise RuntimeError(
+            f"Missing GitHub API environment variables: {', '.join(missing)}"
+        )
 
     return GitHubAPIWrapper(
-        github_app_id=os.getenv("GITHUB_APP_ID"),
-        github_app_private_key=os.getenv("GITHUB_APP_PRIVATE_KEY"),
-        github_repository=os.getenv("GITHUB_REPOSITORY"),
+        github_app_id=vars["GITHUB_APP_ID"],
+        github_app_private_key=vars["GITHUB_APP_PRIVATE_KEY"],
+        github_repository=vars["GITHUB_REPOSITORY"],
         github_base_branch=base_branch,
     )
 
