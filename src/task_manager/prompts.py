@@ -62,34 +62,34 @@ If the user's request contains the word "HOBBY" (in any format like "HOBBY: star
 
 ### HOBBY Mode Behavior:
 - **Single Task Only**: Condense ALL requirements into exactly ONE implementation task
-- **No Testing**: Skip all unit tests, integration tests, and any testing-related steps
 - **No CI/CD**: Skip all CI/CD setup, GitHub Actions, and automation tasks
-- **Implementation Only**: Focus solely on core implementation details and requirements
+- **Implementation + Basic Testing**: Focus on core implementation with essential unit tests for functions
 - **No Roadmap**: Do not create roadmap.md file
 - **Simplified Output**: Create only one task file in the planning directory
-- **Essential Only**: Ignore everything non-essential - focus only on core functionality
-- **Functional Demo**: Create a working demonstration of key features, not just basic setup
+- **Essential Only**: Ignore everything non-essential - focus only on core functionality and basic testing
+- **Functional Demo**: Create a working demonstration of key features with basic test coverage
 
 ### HOBBY Mode Task Structure:
 - The single task must contain ALL implementation requirements including project initialization
 - **Include project initialization**: Repository setup, dependency management, basic project structure
 - Include all necessary setup, configuration, and core functionality
-- Focus on delivering a working implementation without tests or CI
+- Focus on delivering a working implementation with basic unit tests but without CI/CD
 - Combine all features and requirements into one comprehensive task
 - Ensure the task produces a complete, functional deliverable that demonstrates core use cases
 - **Create a meaningful working example**: The deliverable must showcase actual functionality from the project requirements, not just a trivial "hello world"
 - **Demonstrate key features**: Include implementation of at least 2-3 core features from the projectRequirements.md
 - **User-facing functionality**: Include endpoints, UI elements, or command-line interfaces that allow users to interact with the core features
 - **Real data examples**: Use realistic example data that demonstrates the system's purpose and capabilities
-- Skip any infrastructure, tooling, or quality assurance tasks (except basic project setup)
+- Skip complex infrastructure, CI/CD tooling, or advanced quality assurance tasks (include basic project setup and essential unit testing)
 
 ### HOBBY Mode Implementation Sequence:
 The single HOBBY task must follow this logical sequence:
 1. **Project Initialization**: Set up repository, dependencies, and basic project structure
 2. **Core Setup**: Create essential configuration files and initial project framework
 3. **Feature Implementation**: Implement 2-3 core features from requirements
-4. **Integration**: Connect features into a working demonstration
-5. **Verification**: Include steps to build, run, and test the functionality manually
+4. **Basic Testing**: Create essential unit tests for core functions and methods
+5. **Integration**: Connect features into a working demonstration
+6. **Verification**: Include steps to build, run, and test the functionality manually
 
 ### HOBBY Mode Deliverable Requirements:
 - **Beyond Hello World**: The final deliverable must be more than basic project setup - it should demonstrate actual business value
@@ -99,7 +99,7 @@ The single HOBBY task must follow this logical sequence:
 - **Interactive Elements**: Include ways for users to interact with and test the core functionality
 - **Clear Demonstration**: The output should clearly show what the system does and how it provides value
 
-When in HOBBY mode, completely ignore and skip all validation steps for testing and CI requirements from the input files.
+When in HOBBY mode, include basic unit testing for functions but skip complex testing infrastructure and CI requirements from the input files.
 
 ## TASK SPLITTING GUIDELINES
 - Tasks sized for 4-6 hours of work
@@ -215,7 +215,7 @@ Create individual markdown files in the "planning" subdirectory within the confi
   - technicalRequirements: Specific technical specifications from techPatterns.md needed for this task
   - relatedCodingContext: Relevant details from codingContext.md that inform this task's implementation
   - systemPatternGuidance: Architectural or design patterns from systemPatterns.md applicable to this task
-  - testingRequirements: **Normal Mode**: Testing approaches specific to this task extracted from testingContext.md. **HOBBY Mode**: Leave empty or set to "N/A - Hobby mode"
+  - testingRequirements: **Normal Mode**: Testing approaches specific to this task extracted from testingContext.md. **HOBBY Mode**: Include basic unit testing requirements for core functions only
 
 ### roadmap.md
 
@@ -313,14 +313,14 @@ When the user requests task creation, execute these steps in sequence:
    - Verify all eight required files exist in the project directory
    - If any files are missing, respond with "VALIDATION_FAILED: [list missing files]"
    - Read and analyze all input files to understand requirements
-   - **In HOBBY Mode**: Focus on extracting ONLY core implementation requirements, completely ignore and skip testing and CI sections
+   - **In HOBBY Mode**: Focus on extracting core implementation requirements and basic unit testing needs, skip complex testing infrastructure and CI sections
 
 2. **Step 2: Tasks Creation**
    - **For HOBBY Mode**: 
      * Create exactly ONE comprehensive task that combines ALL essential implementation requirements
      * **Include project initialization**: Repository setup, dependency management, and basic project structure
-     * Skip all testing-related requirements and CI/CD setup completely
-     * Skip any advanced infrastructure, tooling, or quality assurance tasks (basic setup is required)
+     * Include basic unit testing for core functions but skip complex testing infrastructure and CI/CD setup completely
+     * Skip any advanced infrastructure, tooling, or quality assurance tasks (basic setup and essential unit tests are required)
      * Focus on core functionality and implementation that delivers value
      * Set filename as "{project_path}/planning/task-01-hobby-implementation.md"
      * **Project Initialization Requirements**:
@@ -347,7 +347,7 @@ When the user requests task creation, execute these steps in sequence:
      * Incorporate coding feature-specific details from codingContext.md
      * Include applicable design patterns or architectural guidance from systemPatterns.md
      * **Normal Mode Only**: Extract testing requirements and approaches from testingContext.md
-     * **HOBBY Mode**: Completely skip and ignore all testingContext.md content
+     * **HOBBY Mode**: Extract only basic unit testing patterns from testingContext.md, skip complex testing infrastructure
    - Each task must be completely self-contained with all necessary context
    - Never reference external files - instead extract and include the relevant information
    - Create individual markdown files for each task with all required fields in the {project_path}/planning subdirectory
@@ -356,7 +356,7 @@ When the user requests task creation, execute these steps in sequence:
    - For each task, create a comprehensive description that includes:
      * General description: Clear explanation of what the task accomplishes and its purpose  
      * High-level steps: Numbered list of major steps required to complete the task
-     * **HOBBY Mode**: Include project initialization, basic setup, and core implementation steps. Skip all test, CI, and non-essential infrastructure steps
+     * **HOBBY Mode**: Include project initialization, basic setup, core implementation, and essential unit testing steps. Skip CI and non-essential infrastructure steps
      * **Normal Mode**: Include implementation approach, testing approach, and verification steps
      * Use natural language descriptions and specifications (never include actual code)
      * Structure as clear guidance that another agent can follow
@@ -596,7 +596,7 @@ When creating tasks for CI/CD setup:
 - **Normal Mode**: Test implementation is MANDATORY for all functional tasks
 - **Normal Mode**: CI setup using GitHub Actions is REQUIRED regardless of input specifications
 - **Normal Mode**: CI/CD setup MUST be scheduled AFTER repository initialization and basic project setup
-- **HOBBY Mode**: Skip all testing and CI/CD requirements entirely
+- **HOBBY Mode**: Include basic unit testing for functions, skip CI/CD requirements entirely
 - **HOBBY Mode**: Create only ONE comprehensive implementation task
 - **HOBBY Mode**: Do not create roadmap.md file
 - Every task MUST result in a buildable, runnable deliverable - no incomplete functionality

@@ -14,7 +14,7 @@ class AgentConfiguration:
 
     # langgraph config
     user_id: str = "default"
-    model: str = "google_genai:gemini-2.0-flash"
+    model: str = "google_genai:gemini-2.5-flash-preview-05-20"
     provider: str | None = None
 
     # extended config
