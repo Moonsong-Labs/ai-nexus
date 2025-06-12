@@ -2,6 +2,7 @@
 
 import json
 import os
+import sys
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,11 +18,25 @@ from langgraph.types import Command
 from termcolor import colored
 
 from common.logging import get_logger
+from common.utils import github as github_utils
 from orchestrator.configuration import Configuration as OrchestratorConfiguration
 from orchestrator.graph import OrchestratorGraph
 from orchestrator.state import State
 
 logger = get_logger(__name__)
+
+
+def init_github():
+    client = github_utils.app_get_client_from_credentials()
+    repo_name = os.getenv("GITHUB_REPOSITORY")
+
+    try:
+        repo = client.get_repo(repo_name)
+    except Exception as e:
+        logger.error(f"Error accessing repository: {str(e)}")
+        sys.exit(1)
+
+    return repo
 
 
 class CoderPR(TypedDict):
@@ -41,10 +56,11 @@ class ScenarioConfig:
     """Configuration for a scenario run"""
 
     name: str
+    base_branch: str
     initial_prompt: str
     orchestrator_config: OrchestratorConfiguration
-    recursion_limit: int = 250
     save_run: bool = True
+    recursion_limit: int = 250
 
 
 class ScenarioRunner:
@@ -54,10 +70,24 @@ class ScenarioRunner:
         self.config = config
         self.run_id = str(uuid.uuid4())
 
+    def setup(self):
+        """Do the necessary setup for the scenario to run
+
+        Currently ensures the configured base branch exists.
+        """
+        repo = init_github()
+        target = self.config.orchestrator_config.github_base_branch
+        try:
+            repo.get_branch(target)
+        except Exception:
+            raise Exception(f"Unable to run scenario: branch '{target}' does not exist")
+
     async def run(self) -> ScenarioRun:
         """Execute the scenario"""
         logger.info(f"Run name: {self.config.name}")
         logger.info(f"Run id: {self.run_id}")
+
+        self.setup()
 
         # Create orchestrator with provided configuration
         orchestrator = self._create_orchestrator()

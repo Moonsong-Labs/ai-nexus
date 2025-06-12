@@ -1,6 +1,5 @@
 """Run all scenarios."""
 
-import os
 import sys
 from typing import List
 
@@ -10,8 +9,8 @@ import stack.run as stack
 from github import GithubException, Repository
 
 from common.logging import get_logger
-from common.utils import github as github_utils
 from scenarios import BASE_BRANCHES
+from scenarios.runner import init_github
 
 logger = get_logger(__name__)
 
@@ -55,19 +54,6 @@ def cleanup_branches(repo: Repository, base_branches: List[str]) -> None:
                 logger.info(f"Deleted branch: {branch}")
             except GithubException as e:
                 logger.error(f"Failed to delete branch '{branch}': {str(e)}")
-
-
-def init_github():
-    client = github_utils.app_get_client_from_credentials()
-    repo_name = os.getenv("GITHUB_REPOSITORY")
-
-    try:
-        repo = client.get_repo(repo_name)
-    except Exception as e:
-        logger.error(f"Error accessing repository: {str(e)}")
-        sys.exit(1)
-
-    return repo
 
 
 def setup():
