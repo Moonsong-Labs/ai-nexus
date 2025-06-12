@@ -1,8 +1,8 @@
 import json
 import os
+import re
 import subprocess
 import sys
-import re
 
 from common.logging import get_logger
 from common.utils import github as github_utils
@@ -219,7 +219,7 @@ def test_evaluator(repo_path: str) -> bool:
         
         return True
         
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         # If unit tests fail, try running all tests as fallback
         logger.warning("Unit tests failed, trying all tests...")
         try:
