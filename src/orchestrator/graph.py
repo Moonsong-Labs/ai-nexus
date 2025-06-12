@@ -1,7 +1,6 @@
 """Graphs that orchestrates a software project."""
 
 import os
-
 from datetime import datetime
 from typing import Any, Coroutine, Optional
 
@@ -302,7 +301,7 @@ graph = OrchestratorGraph(
         reviewer_agent=CodeReviewerAgentConfig(
             use_stub=False, config=AgentConfiguration()
         ),
-        use_mocks=os.getenv("AI_NEXUS_MOCKS") is not None
+        use_mocks=os.getenv("AI_NEXUS_MOCKS") is not None,
     )
 ).compiled_graph
 
