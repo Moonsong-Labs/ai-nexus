@@ -16,17 +16,18 @@ from orchestrator.configuration import Configuration as OrchestratorConfiguratio
 from requirement_gatherer.configuration import (
     Configuration as RequirementsConfiguration,
 )
-from scenarios.cp import BASE_BRANCH
+from scenarios.lru_cache import BASE_BRANCH
 from scenarios.runner import ScenarioConfig, ScenarioRun, ScenarioRunner
 
 dotenv.load_dotenv()
 logger = get_logger(__name__)
 
+
 def config(save_run) -> ScenarioConfig:
     return ScenarioConfig(
-        name="scenarios-cp",
+        name="scenarios-lru-cache",
         save_run=save_run,
-        initial_prompt="I want to build a Rust CLI using clap that copies a file from <source> to <destination>.",
+        initial_prompt="I want to build a library that implements an least recently used (LRU) cache in Rust.",
         orchestrator_config=OrchestratorConfiguration(
             github_base_branch=BASE_BRANCH,
             requirements_agent=RequirementsAgentConfig(
@@ -34,11 +35,15 @@ def config(save_run) -> ScenarioConfig:
                 config=RequirementsConfiguration(
                     use_human_ai=True,
                     human_ai_product="""
-                    This is a hobby project. Create a Rust CLI using clap that copies a file from <source> to <destination>.
+                    This is a hobby project. A Rust cargo package that exports a generic least recently used (LRU) cache struct.
+                    The struct should have three functions: new, that receives the capacity and returns the struct; put, that receives self, key and value and puts the value into the key; and get, that receives self and key and returns the value.
+                    If there's an overflow in the capacity, the least used value is to be deleted in favor of the new one.
                     """,
                 ),
             ),
-            architect_agent=ArchitectAgentConfig(use_stub=False),
+            architect_agent=ArchitectAgentConfig(
+                use_stub=False
+            ),
             task_manager_agent=TaskManagerAgentConfig(
                 use_stub=False,
                 config=TaskManagerConfiguration(),
@@ -55,12 +60,15 @@ def config(save_run) -> ScenarioConfig:
             tester_agent=TesterAgentConfig(
                 use_stub=False,
             ),
-        )
+        ),
     )
 
+
 def run(save_run=False) -> ScenarioRun:
+    """Run LRU cache scenario"""
     runner = ScenarioRunner(config=config(save_run))
     return asyncio.run(runner.run())
+
 
 if __name__ == "__main__":
     run(True)
