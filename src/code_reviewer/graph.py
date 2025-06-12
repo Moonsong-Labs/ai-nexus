@@ -61,7 +61,7 @@ class CodeReviewerInstanceConfig:
 
 def local_code_reviewer_config():
     """Instance config for code reviewer with tools to use the local environment for code."""
-    name="LocalCodeReviewer"
+    name = "LocalCodeReviewer"
     return CodeReviewerInstanceConfig(
         name=name,
         system_prompt=LOCAL_REVIEW_PROMPT,
