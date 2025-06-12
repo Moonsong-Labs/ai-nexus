@@ -136,7 +136,7 @@ class RequirementsGraph(AgentGraph):
             ),
             tools.set_project,
             tools.create_memorize_tool(self._agent_config),
-            common.tools.summarize,
+            common.tools.create_summarize_tool(self._name),
         ]
 
         llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)

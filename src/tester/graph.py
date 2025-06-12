@@ -21,7 +21,7 @@ from common.graph import AgentGraph
 from common.logging import get_logger
 from common.tools.list_files import list_files
 from common.tools.read_file import read_file
-from common.tools.summarize import summarize
+from common.tools.summarize import create_summarize_tool
 from tester.configuration import Configuration
 from tester.state import State
 
@@ -188,7 +188,12 @@ class TesterAgentGraph(AgentGraph):
         )
 
         # Initialize the language model and the tools
-        all_tools = [*filtered_github_tools, summarize, list_files, read_file]
+        all_tools = [
+            *filtered_github_tools,
+            create_summarize_tool(self._name),
+            list_files,
+            read_file,
+        ]
 
         # Define node names explicitly to avoid confusion
         call_model_name = "call_model"

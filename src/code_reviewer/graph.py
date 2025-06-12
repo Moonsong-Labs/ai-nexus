@@ -61,12 +61,13 @@ class CodeReviewerInstanceConfig:
 
 def local_code_reviewer_config():
     """Instance config for code reviewer with tools to use the local environment for code."""
+    name = ("LocalCodeReviewer",)
     return CodeReviewerInstanceConfig(
-        name="LocalCodeReviewer",
+        name=name,
         system_prompt=LOCAL_REVIEW_PROMPT,
         github_tools_filter=[],
         other_tools=[
-            common.tools.summarize,
+            common.tools.create_summarize_tool(name),
             common.tools.list_files,
             common.tools.read_file,
         ],

@@ -257,7 +257,7 @@ class OrchestratorGraph(AgentGraph):
             tools.create_read_task_planning_tool(
                 self._agent_config.task_manager_agent.use_stub
             ),
-            common.tools.summarize,
+            common.tools.create_summarize_tool(self._name),
         ] + [tool for tool in github_tools if tool.name == "get_issue_body"]
         tool_node = ToolNode(all_tools, name="tools")
         llm = init_chat_model(self._agent_config.model).bind_tools(all_tools)

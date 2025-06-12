@@ -151,7 +151,7 @@ class TaskManagerGraph(AgentGraph):
             common.tools.create_file,
             common.tools.list_files,
             common.tools.read_file,
-            common.tools.summarize,
+            common.tools.create_summarize_tool(self._name),
         ]
 
         llm = init_chat_model(model=TASK_MANAGER_MODEL).bind_tools(all_tools)
