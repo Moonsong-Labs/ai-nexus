@@ -1,17 +1,18 @@
 """Run all scenarios."""
 
-import os
 import sys
 from typing import List
 
 import binary_search.run as binary_search
+import cp.run as cp
 import fibonacci.run as fibonacci
+import lru_cache.run as lru_cache
 import stack.run as stack
 from github import GithubException, Repository
 
 from common.logging import get_logger
-from common.utils import github as github_utils
 from scenarios import BASE_BRANCHES
+from scenarios.runner import init_github
 
 logger = get_logger(__name__)
 
@@ -57,19 +58,6 @@ def cleanup_branches(repo: Repository, base_branches: List[str]) -> None:
                 logger.error(f"Failed to delete branch '{branch}': {str(e)}")
 
 
-def init_github():
-    client = github_utils.app_get_client_from_credentials()
-    repo_name = os.getenv("GITHUB_REPOSITORY")
-
-    try:
-        repo = client.get_repo(repo_name)
-    except Exception as e:
-        logger.error(f"Error accessing repository: {str(e)}")
-        sys.exit(1)
-
-    return repo
-
-
 def setup():
     """Setup function to create branches."""
     repo = init_github()
@@ -85,7 +73,9 @@ def teardown():
 scenarios = {
     "stack": stack.run,
     "fibonacci": fibonacci.run,
-    "binary_search": binary_search.run,
+    "binary-search": binary_search.run,
+    "cp": cp.run,
+    "lru-cache": lru_cache.run,
 }
 
 
