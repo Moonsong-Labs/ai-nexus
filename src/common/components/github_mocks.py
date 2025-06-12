@@ -258,33 +258,37 @@ class MockGithubApi:
         return ""
 
 
-def maybe_mock_github(
-    base_branch: str = "main",
-    allow_mocks: bool = True,
-) -> Union[GitHubAPIWrapper, MockGithubApi]:
-    """Get either a real GitHub API wrapper or a mock based on environment variables.
+def get_github(base_branch) -> GitHubAPIWrapper:
+    """Initialize a GitHub API wrapper instance based on environment variables.
 
-    Required environment variables for real GitHub API:
+    Required environment variables for GitHub API:
     - GITHUB_APP_ID
     - GITHUB_APP_PRIVATE_KEY
     - GITHUB_REPOSITORY
     """
     required_vars = ["GITHUB_APP_ID", "GITHUB_APP_PRIVATE_KEY", "GITHUB_REPOSITORY"]
+    if not all(os.getenv(var) for var in required_vars):
+        raise RuntimeError("Not all required environment variables set for GitHub API")
 
-    if all(os.getenv(var) for var in required_vars):
-        logger.info("Using live GitHub API toolkit")
-        return GitHubAPIWrapper(
-            github_app_id=os.getenv("GITHUB_APP_ID"),
-            github_app_private_key=os.getenv("GITHUB_APP_PRIVATE_KEY"),
-            github_repository=os.getenv("GITHUB_REPOSITORY"),
-            github_base_branch=base_branch,
-        )
+    return GitHubAPIWrapper(
+        github_app_id=os.getenv("GITHUB_APP_ID"),
+        github_app_private_key=os.getenv("GITHUB_APP_PRIVATE_KEY"),
+        github_repository=os.getenv("GITHUB_REPOSITORY"),
+        github_base_branch=base_branch,
+    )
 
-    if any(os.getenv(var) for var in required_vars):
-        logger.warning("Some but not all required GitHub environment variables are set")
+def get_mock_github() -> MockGithubApi:
+    """Get a mock GitHub API wrapper."""
+    return MockGithubApi()
 
-    if allow_mocks:
-        logger.info("Using mock GitHub API toolkit")
-        return MockGithubApi()
-
-    raise RuntimeError("Unable to initialize GitHub API toolkit")
+def maybe_mock_github(
+    base_branch: str = "main",
+    allow_mocks_fallback: bool = True,
+) -> Union[GitHubAPIWrapper, MockGithubApi]:
+    """Get either a real GitHub API wrapper or a mock based configuration."""
+    try:
+        return get_github(base_branch)
+    except RuntimeError as e:
+        if allow_mocks_fallback:
+            return get_mock_github()
+        raise RuntimeError("Unable to initialize GitHub API wrapper") from e

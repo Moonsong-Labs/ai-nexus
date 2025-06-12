@@ -25,7 +25,7 @@ from code_reviewer.graph import (
 )
 from coder.graph import CoderChangeRequestGraph, CoderNewPRGraph
 from common.chain import prechain, skip_on_summary_and_tool_errors
-from common.components.github_mocks import maybe_mock_github
+from common.components.github_mocks import get_github, get_mock_github
 from common.components.github_tools import get_github_tools
 from common.configuration import AgentConfiguration
 from common.graph import AgentGraph
@@ -174,12 +174,12 @@ class OrchestratorGraph(AgentGraph):
                 store=self._store,
             )
         )
-        github_tools = get_github_tools(
-            maybe_mock_github(
-                base_branch=self._agent_config.github_base_branch,
-                allow_mocks=self._agent_config.use_mocks,
-            )
+        github_source = (
+            get_github(self._agent_config.github_base_branch)
+            if not self._agent_config.use_mocks
+            else get_mock_github()
         )
+        github_tools = get_github_tools(github_source)
         coder_new_pr_graph = (
             stubs.CoderNewPRStub(
                 agent_config=self._agent_config,
