@@ -277,9 +277,11 @@ def get_github(base_branch) -> GitHubAPIWrapper:
         github_base_branch=base_branch,
     )
 
+
 def get_mock_github() -> MockGithubApi:
     """Get a mock GitHub API wrapper."""
     return MockGithubApi()
+
 
 def maybe_mock_github(
     base_branch: str = "main",
