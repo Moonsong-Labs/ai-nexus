@@ -4,6 +4,7 @@ import sys
 from typing import List
 
 import binary_search.run as binary_search
+import cli_calculator.run as cli_calc
 import cp.run as cp
 import fibonacci.run as fibonacci
 import lru_cache.run as lru_cache
@@ -76,6 +77,7 @@ scenarios = {
     "binary-search": binary_search.run,
     "cp": cp.run,
     "lru-cache": lru_cache.run,
+    "cli-calc": cli_calc.run,
 }
 
 
