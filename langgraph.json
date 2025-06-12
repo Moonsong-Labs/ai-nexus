@@ -14,6 +14,9 @@
     "architect": "./src/architect/graph.py:graph",
     "pr_memory_updater": "./src/pr_memory_updater/graph.py:graph"
   },
+  "http": {
+    "app": "./src/webapp.py:app"
+  },
   "env": ".env",
   "python_version": "3.12",
   "dependencies": ["."]

@@ -166,6 +166,20 @@ make demo-ai
 make demo-human
 ```
 
+### Local Github Integration
+
+Requires: `smee` for receiving github payloads to your local server.
+
+```sh
+npm install --global smee-client
+```
+
+1. Install a GithubApp on a repo or organization and subscribe for events as needed.
+2. Run `make serve` to start the langgraph api server and interact with it.
+3. Run  `make smee` or `make smee-[CUSTOM_TAG]` to open a `smee` endpoint to your local server.
+4. Use the smee endpoint in your GithubApp.
+5. Create issues, PRs, comments, etc.
+
 ### Example Agent Usage
 
 `make run` should open the LangGraph with the default model to interact with. 

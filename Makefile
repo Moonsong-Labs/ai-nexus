@@ -1,4 +1,4 @@
-.PHONY: all clean check deps sync run fmt lint spell_check spell_fix test test_unit test_graphs test_watch help extended_tests ci-build-check demo
+.PHONY: all clean check deps sync run fmt lint spell_check spell_fix test test_unit test_graphs test_watch help extended_tests ci-build-check demo smee
 
 # Default target executed when no arguments are given to make.
 all: help
@@ -13,6 +13,16 @@ deps: sync
 
 run: deps
 	uv run --env-file .env -- langgraph dev --allow-blocking --debug-port 2025
+
+smee: smee-mPfw041ExPaQji0
+
+smee-%:
+	@echo "Direct your webhook payloads to: https://smee.io/$*"
+	@echo
+	smee -u https://smee.io/$* -t http://127.0.0.1:8123/github-hook
+
+serve:
+	uv run --env-file .env -- langgraph up
 
 ci-build-check: deps
 	@timeout 30s uv run --env-file .env -- langgraph dev --no-browser --no-reload; status=$$?; [ $$status -eq 0 ] || [ $$status -eq 124 ]
