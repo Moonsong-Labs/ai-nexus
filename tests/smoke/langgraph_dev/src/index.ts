@@ -36,6 +36,7 @@ async function runTest(): Promise<void> {
       cwd: "../../../",
       stdio: ["pipe", "pipe", "pipe"],
       shell: true,
+      env: { "AI_NEXUS_MOCKS": "true" }
     }
   );
 
