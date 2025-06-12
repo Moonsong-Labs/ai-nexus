@@ -56,7 +56,6 @@ class ScenarioConfig:
     """Configuration for a scenario run"""
 
     name: str
-    base_branch: str
     initial_prompt: str
     orchestrator_config: OrchestratorConfiguration
     save_run: bool = True

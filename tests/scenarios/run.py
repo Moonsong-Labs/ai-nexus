@@ -4,7 +4,9 @@ import sys
 from typing import List
 
 import binary_search.run as binary_search
+import cp.run as cp
 import fibonacci.run as fibonacci
+import lru_cache.run as lru_cache
 import stack.run as stack
 from github import GithubException, Repository
 
@@ -71,7 +73,9 @@ def teardown():
 scenarios = {
     "stack": stack.run,
     "fibonacci": fibonacci.run,
-    "binary_search": binary_search.run,
+    "binary-search": binary_search.run,
+    "cp": cp.run,
+    "lru-cache": lru_cache.run,
 }
 
 
