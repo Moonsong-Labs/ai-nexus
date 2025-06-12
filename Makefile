@@ -14,6 +14,9 @@ deps: sync
 run: deps
 	uv run --env-file .env -- langgraph dev --allow-blocking --debug-port 2025
 
+serve:
+	uv run --env-file .env -- langgraph up
+
 ci-build-check: deps
 	@timeout 30s uv run --env-file .env -- langgraph dev --no-browser --no-reload; status=$$?; [ $$status -eq 0 ] || [ $$status -eq 124 ]
 
