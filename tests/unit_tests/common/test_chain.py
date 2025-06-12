@@ -140,7 +140,7 @@ async def test_summary_is_propagated() -> None:
             return call_model.__name__
 
     tool_node = ToolNode(
-        [tools.summarize], name="tools", handle_tool_errors=lambda e: str(e)
+        [tools.create_summarize_tool("test")], name="tools", handle_tool_errors=lambda e: str(e)
     )
 
     builder = StateGraph(AgentState, config_schema=AgentConfiguration)
