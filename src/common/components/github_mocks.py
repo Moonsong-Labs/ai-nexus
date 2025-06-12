@@ -247,6 +247,11 @@ class MockGithubApi:
         logger.warning("create_pull_request_review mock is not implemented")
         return ""
 
+    def get_issue_body(self, issue_number: int) -> str:
+        """Get the body of an issue."""
+        logger.warning("get_issue_body mock is not implemented")
+        return ""
+
     def get_latest_pr_workflow_run(self, pr_number: str) -> str:
         """Get the most recent workflow run for a PR."""
         logger.warning("get_latest_pr_workflow_run mock is not implemented")
