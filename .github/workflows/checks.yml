@@ -61,6 +61,15 @@ jobs:
         run: make deps
       - name: Run tests
         run: make test-unit
+      - name: Run tests with coverage
+        run: make test-coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          flags: unittests
+          name: codecov-umbrella
   smoke-test:
     name: Smoke test
     runs-on: ubuntu-latest
