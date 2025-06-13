@@ -45,6 +45,13 @@ test: test-unit
 test-unit:
 	uv run pytest tests/unit_tests
 
+test-coverage:
+	uv run pytest tests/unit_tests --cov=src --cov-report=html --cov-report=term
+
+coverage-report:
+	uv run coverage html
+	@echo "Coverage report generated in htmlcov/index.html"
+
 test-graphs:
 	uv run --env-file .env pytest -rs tests/graph_tests
 
@@ -121,6 +128,8 @@ help:
 	@echo 'tests                        - run unit tests'
 	@echo 'test TEST_FILE=<test_file>   - run all tests in file'
 	@echo 'test_watch                   - run unit tests in watch mode'
+	@echo 'test-coverage                - run unit tests with coverage report'
+	@echo 'coverage-report              - generate HTML coverage report'
 	@echo 'ci-build-check               - run build check for CI'
 	@echo 'demo                         - run demo orchestration script'
 

@@ -2,11 +2,14 @@ import os
 import shutil
 
 import pytest
+from langchain_core.messages import ToolMessage
+from langgraph.types import Command
 
 from common.tools.create_directory import create_directory
 from common.tools.create_file import create_file
 from common.tools.list_files import list_files
 from common.tools.read_file import read_file
+from common.tools.summarize import create_summarize_tool
 
 # Test directory for file operations
 TEST_DIR = "test_tools_dir"
@@ -220,3 +223,92 @@ class TestCreateFile:
         with open(test_file, "r") as f:
             content = f.read()
         assert content == new_content
+
+
+class TestSummarize:
+    """Tests for the summarize tool."""
+
+    @pytest.mark.asyncio
+    async def test_create_summarize_tool(self, capsys):
+        """Test creating and using a summarize tool."""
+        agent_name = "TestAgent"
+        summarize_tool = create_summarize_tool(agent_name)
+        
+        # Verify tool properties
+        assert summarize_tool.name == "summarize"
+        assert "summary" in summarize_tool.description.lower()
+        
+        # Test invoking the tool
+        test_summary = "This is a test summary of the agent's work"
+        result = await summarize_tool.ainvoke({
+            "summary": test_summary,
+            "tool_call_id": "test_call_123"
+        })
+        
+        # Verify the result is a Command
+        assert isinstance(result, Command)
+        assert "messages" in result.update
+        assert "summary" in result.update
+        
+        # Verify the summary was stored correctly
+        assert result.update["summary"] == test_summary
+        
+        # Verify the tool message
+        messages = result.update["messages"]
+        assert len(messages) == 1
+        assert isinstance(messages[0], ToolMessage)
+        assert messages[0].content == test_summary
+        assert messages[0].tool_call_id == "test_call_123"
+        
+        # Verify console output
+        captured = capsys.readouterr()
+        assert f"======= Summary for {agent_name} =======" in captured.out
+        assert test_summary in captured.out
+        assert "==========================================" in captured.out
+
+    @pytest.mark.asyncio
+    async def test_summarize_tool_with_different_agents(self, capsys):
+        """Test that different agents have different summarize tools."""
+        agent1_name = "Agent1"
+        agent2_name = "Agent2"
+        
+        summarize1 = create_summarize_tool(agent1_name)
+        summarize2 = create_summarize_tool(agent2_name)
+        
+        # Both should have the same tool name
+        assert summarize1.name == summarize2.name == "summarize"
+        
+        # Test agent 1
+        await summarize1.ainvoke({
+            "summary": "Agent 1 summary",
+            "tool_call_id": "call_1"
+        })
+        
+        captured1 = capsys.readouterr()
+        assert f"======= Summary for {agent1_name} =======" in captured1.out
+        assert "Agent 1 summary" in captured1.out
+        
+        # Test agent 2
+        await summarize2.ainvoke({
+            "summary": "Agent 2 summary",
+            "tool_call_id": "call_2"
+        })
+        
+        captured2 = capsys.readouterr()
+        assert f"======= Summary for {agent2_name} =======" in captured2.out
+        assert "Agent 2 summary" in captured2.out
+
+    @pytest.mark.asyncio
+    async def test_summarize_empty_summary(self):
+        """Test summarize tool with empty summary."""
+        summarize_tool = create_summarize_tool("TestAgent")
+        
+        result = await summarize_tool.ainvoke({
+            "summary": "",
+            "tool_call_id": "empty_call"
+        })
+        
+        # Should still return a valid Command even with empty summary
+        assert isinstance(result, Command)
+        assert result.update["summary"] == ""
+        assert result.update["messages"][0].content == ""
