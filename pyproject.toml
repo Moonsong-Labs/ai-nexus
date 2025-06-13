@@ -29,6 +29,9 @@ optional-dependencies.dev = [
     "pytest~=8.3.5",
     "pytest-asyncio~=0.26.0",
     "pytest-dotenv~=0.5.2",
+    "pytest-cov>=4.1.0",
+    "coverage[toml]>=7.3.0",
+    "pytest-html>=4.0.0",
     "langgraph-cli[inmem]~=0.3.1",
     "openevals~=0.0.19",
     "debugpy~=1.8.14",
@@ -100,3 +103,31 @@ ignore_errors = false
 
 [tool.codespell]
 skip = "node_modules"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py", 
+    "*/__pycache__/*",
+    "src/demo/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
