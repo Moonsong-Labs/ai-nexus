@@ -14,7 +14,13 @@ deps: sync
 run: deps
 	uv run --env-file .env -- langgraph dev --allow-blocking --debug-port 2025
 
-smee: smee-mPfw041ExPaQji0
+smee:
+	@SMEE_STRING=$$(grep -E '^SMEE_STRING=' .env | cut -d'=' -f2); \
+	if [ -z "$$SMEE_STRING" ]; then \
+		echo "Error: SMEE_STRING not set in .env file"; \
+		exit 1; \
+	fi; \
+	$(MAKE) smee-$$SMEE_STRING
 
 smee-%:
 	@echo "Direct your webhook payloads to: https://smee.io/$*"
